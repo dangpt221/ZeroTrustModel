@@ -1,13 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { 
-  Clock, 
-  MapPin, 
-  Smartphone, 
-  CheckCircle2, 
-  Calendar, 
-  ArrowRight, 
+import { attendanceApi } from '../api';
+import {
+  Clock,
+  MapPin,
+  Smartphone,
+  CheckCircle2,
+  Calendar,
+  ArrowRight,
   ShieldCheck,
   History,
   AlertCircle
@@ -34,12 +35,9 @@ export const Attendance: React.FC = () => {
 
   const fetchHistory = async () => {
     try {
-      const res = await fetch('/api/attendance/history');
-      if (res.ok) {
-        const data = await res.json();
-        setHistory(data.reverse());
-        if (data.length > 0) setLastAction(data[0]);
-      }
+      const data = await attendanceApi.getHistory();
+      setHistory((data || []).reverse());
+      if (data && data.length > 0) setLastAction(data[0]);
     } catch (err) {
       console.error('Fetch history error:', err);
     }
@@ -48,11 +46,9 @@ export const Attendance: React.FC = () => {
   const handleCheckIn = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('/api/attendance/check-in', { method: 'POST' });
-      if (res.ok) {
-        await fetchHistory();
-        alert('Check-in thành công! Vị trí và thiết bị đã được xác thực bởi Zero Trust Gateway.');
-      }
+      await attendanceApi.checkIn();
+      await fetchHistory();
+      alert('Check-in thành công! Vị trí và thiết bị đã được xác thực bởi Zero Trust Gateway.');
     } catch (err) {
       console.error('Check-in error:', err);
     } finally {

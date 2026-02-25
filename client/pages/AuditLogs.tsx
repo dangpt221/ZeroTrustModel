@@ -1,9 +1,29 @@
 
-import React from 'react';
-import { MOCK_AUDIT_LOGS } from '../mockData';
+import React, { useEffect, useState } from 'react';
+import { auditLogsApi } from '../api';
+import { AuditLog } from '../types';
 import { ShieldAlert, Terminal, Clock, MapPin, Monitor } from 'lucide-react';
 
 export const AuditLogs: React.FC = () => {
+  const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchLogs = async () => {
+      try {
+        const data = await auditLogsApi.getAll();
+        setLogs(data || []);
+      } catch (error) {
+        console.error('Error fetching audit logs:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchLogs();
+  }, []);
+
+  const highRiskLogs = logs.filter(l => l.riskLevel === 'HIGH').length;
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="bg-slate-900 text-white p-8 rounded-2xl shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6 overflow-hidden relative">
@@ -20,11 +40,11 @@ export const AuditLogs: React.FC = () => {
         <div className="flex gap-4">
           <div className="bg-white/10 px-4 py-2 rounded-xl border border-white/5">
             <p className="text-[10px] font-bold text-slate-400 uppercase">Alerts</p>
-            <p className="text-xl font-bold">0 Active</p>
+            <p className="text-xl font-bold">{loading ? '...' : highRiskLogs} Active</p>
           </div>
           <div className="bg-white/10 px-4 py-2 rounded-xl border border-white/5">
             <p className="text-[10px] font-bold text-slate-400 uppercase">Logs</p>
-            <p className="text-xl font-bold">{MOCK_AUDIT_LOGS.length}</p>
+            <p className="text-xl font-bold">{loading ? '...' : logs.length}</p>
           </div>
         </div>
       </div>
@@ -43,7 +63,7 @@ export const AuditLogs: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {MOCK_AUDIT_LOGS.map((log) => (
+              {logs.map((log) => (
                 <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2 text-slate-400">

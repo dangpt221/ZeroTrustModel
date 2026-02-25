@@ -1,10 +1,38 @@
 
-import React, { useState } from 'react';
-import { MOCK_DEPARTMENTS, MOCK_USERS } from '../../mockData';
-import { Building2, Users, UserCheck, MoreVertical, Plus, Search, Edit3, Trash2 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { departmentsApi, usersApi } from '../../api';
+import { Department, User } from '../../types';
+import { Building2, Users, UserCheck, MoreVertical, Plus, Trash2 } from 'lucide-react';
 
 export const DepartmentManagement: React.FC = () => {
-  const [departments] = useState(MOCK_DEPARTMENTS);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [deptData, usersData] = await Promise.all([
+          departmentsApi.getAll(),
+          usersApi.getAll()
+        ]);
+        setDepartments(deptData || []);
+        setUsers(usersData || []);
+      } catch (error) {
+        console.error('Error fetching departments:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const handleDelete = async (id: string) => {
+    if (confirm('Are you sure you want to delete this department?')) {
+      await departmentsApi.update(id, { deleted: true });
+      setDepartments(departments.filter(d => d.id !== id));
+    }
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
@@ -20,13 +48,13 @@ export const DepartmentManagement: React.FC = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {departments.map(dept => {
-          const manager = MOCK_USERS.find(u => u.id === dept.managerId);
+          const manager = users.find(u => u.id === dept.managerId);
           return (
             <div key={dept.id} className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm hover:border-blue-200 transition-all group relative overflow-hidden">
               <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
                 <Building2 size={80} />
               </div>
-              
+
               <div className="flex justify-between items-start mb-6">
                 <div className="p-4 bg-blue-50 text-blue-600 rounded-2xl">
                   <Building2 size={24} />
@@ -45,7 +73,7 @@ export const DepartmentManagement: React.FC = () => {
                     <Users size={16} />
                     <span className="text-[10px] font-black uppercase">Nhân sự</span>
                   </div>
-                  <span className="text-sm font-black text-slate-800">{dept.memberCount} thành viên</span>
+                  <span className="text-sm font-black text-slate-800">{loading ? '...' : dept.memberCount} thành viên</span>
                 </div>
 
                 <div className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-transparent group-hover:border-blue-100 transition-all">
@@ -54,8 +82,8 @@ export const DepartmentManagement: React.FC = () => {
                     <span className="text-[10px] font-black uppercase">Quản lý</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <img src={manager?.avatar} className="w-5 h-5 rounded-full object-cover" />
-                    <span className="text-xs font-bold text-blue-600">{manager?.name}</span>
+                    <img src={manager?.avatar || 'https://picsum.photos/seed/default/200'} className="w-5 h-5 rounded-full object-cover" />
+                    <span className="text-xs font-bold text-blue-600">{manager?.name || 'N/A'}</span>
                   </div>
                 </div>
               </div>
@@ -64,7 +92,10 @@ export const DepartmentManagement: React.FC = () => {
                 <button className="flex-1 py-2 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-colors">
                   Chi tiết
                 </button>
-                <button className="px-4 py-2 border border-slate-200 text-slate-400 rounded-xl hover:text-rose-500 hover:bg-rose-50 transition-all">
+                <button
+                  onClick={() => handleDelete(dept.id)}
+                  className="px-4 py-2 border border-slate-200 text-slate-400 rounded-xl hover:text-rose-500 hover:bg-rose-50 transition-all"
+                >
                   <Trash2 size={16} />
                 </button>
               </div>

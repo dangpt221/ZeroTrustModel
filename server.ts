@@ -150,6 +150,42 @@ async function startServer() {
     ipWhitelist: ['192.168.1.0/24', '10.0.0.1']
   };
 
+  // Additional data
+  const projects: any[] = [
+    {
+      id: 'p1',
+      title: 'Cloud Infrastructure Upgrade',
+      description: 'Modernizing core server fleet to Kubernetes clusters.',
+      status: 'IN_PROGRESS',
+      progress: 65,
+      startDate: '2024-01-10',
+      endDate: '2024-08-15',
+      managerId: 'u2',
+      members: ['u1', 'u2', 'u3'],
+      department: 'Engineering'
+    },
+    {
+      id: 'p2',
+      title: 'AI Customer Portal',
+      description: 'Implementing LLM-based customer support chat.',
+      status: 'PLANNING',
+      progress: 20,
+      startDate: '2024-03-01',
+      endDate: '2024-12-31',
+      managerId: 'u2',
+      members: ['u3'],
+      department: 'Engineering'
+    }
+  ];
+
+  const tasks: any[] = [
+    { id: 't1', projectId: 'p1', title: 'Setup Kubernetes cluster', status: 'DONE', assigneeId: 'u1', dueDate: '2024-02-15', priority: 'HIGH' },
+    { id: 't2', projectId: 'p1', title: 'Migrate database', status: 'IN_PROGRESS', assigneeId: 'u2', dueDate: '2024-03-01', priority: 'HIGH' },
+    { id: 't3', projectId: 'p1', title: 'Setup monitoring', status: 'TODO', assigneeId: 'u3', dueDate: '2024-03-15', priority: 'MEDIUM' }
+  ];
+
+  const documentAccessRequests: any[] = [];
+
   // --- Middleware ---
   const authenticateToken = (req: any, res: any, next: any) => {
     const token = req.cookies.token || req.headers['authorization']?.split(' ')[1];
@@ -348,6 +384,203 @@ async function startServer() {
     });
 
     res.json(user);
+  });
+
+  // --- Admin: Departments ---
+  app.get('/api/departments', authenticateToken, (req: any, res) => {
+    res.json(departments);
+  });
+
+  app.post('/api/departments', authenticateToken, (req: any, res) => {
+    if (req.user.role !== 'ADMIN') return res.status(403).json({ message: 'Admin only' });
+    const { name, managerId, description } = req.body;
+    const newDept = {
+      id: `d${Date.now()}`,
+      name,
+      managerId: managerId || '',
+      memberCount: 0,
+      description: description || ''
+    };
+    departments.push(newDept);
+    res.status(201).json(newDept);
+  });
+
+  app.put('/api/departments/:id', authenticateToken, (req: any, res) => {
+    if (req.user.role !== 'ADMIN') return res.status(403).json({ message: 'Admin only' });
+    const { id } = req.params;
+    const dept = departments.find(d => d.id === id);
+    if (!dept) return res.status(404).json({ message: 'Department not found' });
+    Object.assign(dept, req.body);
+    res.json(dept);
+  });
+
+  // --- Admin: Documents ---
+  app.get('/api/documents', authenticateToken, (req: any, res) => {
+    if (req.user.role === 'ADMIN') {
+      return res.json(documents);
+    }
+    // Filter by department for others
+    const userDept = users.find(u => u.id === req.user.id)?.department;
+    const deptDocs = documents.filter(d => d.department === userDept);
+    res.json(deptDocs);
+  });
+
+  app.post('/api/documents', authenticateToken, (req: any, res) => {
+    const { name, type, size, projectId, sensitivity, department } = req.body;
+    const newDoc = {
+      id: `doc${Date.now()}`,
+      projectId: projectId || '',
+      name,
+      type: type || 'pdf',
+      size: size || '1 MB',
+      uploadedBy: req.user.id,
+      uploadedAt: new Date().toISOString().split('T')[0],
+      url: '#',
+      sensitivity: sensitivity || 'LOW',
+      department: department || 'Engineering'
+    };
+    documents.push(newDoc);
+    res.status(201).json(newDoc);
+  });
+
+  app.delete('/api/documents/:id', authenticateToken, (req: any, res) => {
+    const { id } = req.params;
+    const index = documents.findIndex(d => d.id === id);
+    if (index === -1) return res.status(404).json({ message: 'Document not found' });
+    const [removed] = documents.splice(index, 1);
+    res.json(removed);
+  });
+
+  // --- Projects & Tasks ---
+  app.get('/api/projects', authenticateToken, (req: any, res) => {
+    if (req.user.role === 'MEMBER') {
+      const userProjects = projects.filter(p => p.members.includes(req.user.id));
+      return res.json(userProjects);
+    }
+    res.json(projects);
+  });
+
+  app.get('/api/projects/:id', authenticateToken, (req: any, res) => {
+    const project = projects.find(p => p.id === req.params.id);
+    if (!project) return res.status(404).json({ message: 'Project not found' });
+    res.json(project);
+  });
+
+  app.post('/api/projects', authenticateToken, (req: any, res) => {
+    if (req.user.role !== 'ADMIN' && req.user.role !== 'MANAGER') {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+    const { title, description, startDate, endDate, department } = req.body;
+    const newProject = {
+      id: `p${Date.now()}`,
+      title,
+      description: description || '',
+      status: 'PLANNING',
+      progress: 0,
+      startDate: startDate || new Date().toISOString().split('T')[0],
+      endDate: endDate || '',
+      managerId: req.user.id,
+      members: [req.user.id],
+      department: department || 'Engineering'
+    };
+    projects.push(newProject);
+    res.status(201).json(newProject);
+  });
+
+  app.put('/api/projects/:id', authenticateToken, (req: any, res) => {
+    const { id } = req.params;
+    const project = projects.find(p => p.id === id);
+    if (!project) return res.status(404).json({ message: 'Project not found' });
+    Object.assign(project, req.body);
+    res.json(project);
+  });
+
+  app.get('/api/projects/:id/tasks', authenticateToken, (req: any, res) => {
+    const projectTasks = tasks.filter(t => t.projectId === req.params.id);
+    res.json(projectTasks);
+  });
+
+  app.post('/api/projects/:id/tasks', authenticateToken, (req: any, res) => {
+    const { title, status, assigneeId, dueDate, priority } = req.body;
+    const newTask = {
+      id: `t${Date.now()}`,
+      projectId: req.params.id,
+      title,
+      status: status || 'TODO',
+      assigneeId: assigneeId || req.user.id,
+      dueDate: dueDate || '',
+      priority: priority || 'MEDIUM'
+    };
+    tasks.push(newTask);
+    res.status(201).json(newTask);
+  });
+
+  app.put('/api/tasks/:id', authenticateToken, (req: any, res) => {
+    const task = tasks.find(t => t.id === req.params.id);
+    if (!task) return res.status(404).json({ message: 'Task not found' });
+    Object.assign(task, req.body);
+    res.json(task);
+  });
+
+  // --- Document Access Requests ---
+  app.get('/api/document-requests', authenticateToken, (req: any, res) => {
+    if (req.user.role === 'ADMIN' || req.user.role === 'MANAGER') {
+      return res.json(documentAccessRequests);
+    }
+    const myRequests = documentAccessRequests.filter(r => r.userId === req.user.id);
+    res.json(myRequests);
+  });
+
+  app.post('/api/document-requests', authenticateToken, (req: any, res) => {
+    const { documentId, reason } = req.body;
+    const newRequest = {
+      id: `req${Date.now()}`,
+      userId: req.user.id,
+      documentId,
+      reason: reason || '',
+      status: 'PENDING',
+      createdAt: new Date().toISOString()
+    };
+    documentAccessRequests.push(newRequest);
+    res.status(201).json(newRequest);
+  });
+
+  app.put('/api/document-requests/:id', authenticateToken, (req: any, res) => {
+    if (req.user.role !== 'ADMIN' && req.user.role !== 'MANAGER') {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+    const request = documentAccessRequests.find(r => r.id === req.params.id);
+    if (!request) return res.status(404).json({ message: 'Request not found' });
+    request.status = req.body.status || 'PENDING';
+    requestReviewedBy = req.user.id;
+    res.json(request);
+  });
+
+  let requestReviewedBy = '';
+
+  // --- Zero Trust Config ---
+  app.get('/api/zero-trust/config', authenticateToken, (req: any, res) => {
+    if (req.user.role !== 'ADMIN') return res.status(403).json({ message: 'Admin only' });
+    res.json(zeroTrustConfig);
+  });
+
+  app.put('/api/zero-trust/config', authenticateToken, (req: any, res) => {
+    if (req.user.role !== 'ADMIN') return res.status(403).json({ message: 'Admin only' });
+    Object.assign(zeroTrustConfig, req.body);
+
+    auditLogs.push({
+      id: Date.now().toString(),
+      userId: req.user.id,
+      userName: req.user.name,
+      action: 'ADMIN_UPDATE_ZERO_TRUST_CONFIG',
+      timestamp: new Date().toISOString(),
+      details: 'Admin updated Zero Trust configuration',
+      ipAddress: req.ip,
+      status: 'SUCCESS',
+      riskLevel: 'HIGH'
+    });
+
+    res.json(zeroTrustConfig);
   });
 
   // --- Admin: Roles & Permissions (RBAC) ---

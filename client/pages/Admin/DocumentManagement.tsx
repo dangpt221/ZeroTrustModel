@@ -1,13 +1,37 @@
 
-import React, { useState } from 'react';
-import { MOCK_DOCS } from '../../mockData';
-import { FolderLock, Search, Filter, ShieldAlert, Lock, Unlock, Eye, Download, MoreVertical, FileText } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { documentsApi } from '../../api';
+import { Document } from '../../types';
+import { FolderLock, Search, Filter, ShieldAlert, Lock, Eye, MoreVertical, FileText, Plus } from 'lucide-react';
 
 export const DocumentManagement: React.FC = () => {
-  const [docs, setDocs] = useState(MOCK_DOCS);
+  const [docs, setDocs] = useState<Document[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDocs = async () => {
+      try {
+        const data = await documentsApi.getAll();
+        setDocs(data || []);
+      } catch (error) {
+        console.error('Error fetching documents:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDocs();
+  }, []);
 
   const filteredDocs = docs.filter(d => d.name.toLowerCase().includes(searchTerm.toLowerCase()));
+  const criticalDocs = docs.filter(d => d.sensitivity === 'CRITICAL').length;
+
+  const handleDelete = async (id: string) => {
+    if (confirm('Are you sure you want to delete this document?')) {
+      await documentsApi.delete(id);
+      setDocs(docs.filter(d => d.id !== id));
+    }
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
@@ -19,7 +43,7 @@ export const DocumentManagement: React.FC = () => {
         <div className="flex gap-3">
           <div className="bg-amber-50 px-4 py-2 rounded-xl border border-amber-100 flex items-center gap-2">
             <ShieldAlert size={18} className="text-amber-500" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-amber-700">Critical Docs: {docs.filter(d => d.sensitivity === 'CRITICAL').length}</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-amber-700">Critical Docs: {loading ? '...' : criticalDocs}</span>
           </div>
         </div>
       </div>
@@ -27,8 +51,8 @@ export const DocumentManagement: React.FC = () => {
       <div className="flex flex-col md:flex-row gap-4">
         <div className="flex-1 relative group">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} />
-          <input 
-            type="text" 
+          <input
+            type="text"
             placeholder="Tìm tài liệu theo tên hoặc dự án..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -37,6 +61,9 @@ export const DocumentManagement: React.FC = () => {
         </div>
         <button className="bg-white border border-slate-200 text-slate-600 px-6 py-2 rounded-2xl font-bold text-sm flex items-center gap-2 hover:bg-slate-50 transition-all">
           <Filter size={18} /> Lọc độ nhạy cảm
+        </button>
+        <button className="bg-blue-600 text-white px-6 py-2 rounded-2xl font-bold text-sm flex items-center gap-2 hover:bg-blue-700 transition-all">
+          <Plus size={18} /> Thêm tài liệu
         </button>
       </div>
 
@@ -95,7 +122,10 @@ export const DocumentManagement: React.FC = () => {
                     <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all">
                       <Lock size={18} />
                     </button>
-                    <button className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all">
+                    <button
+                      onClick={() => handleDelete(doc.id)}
+                      className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
+                    >
                       <MoreVertical size={18} />
                     </button>
                   </div>

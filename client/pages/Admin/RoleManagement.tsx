@@ -1,6 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Role, Permission } from '../../types';
+import { rolesApi } from '../../api';
 import { Shield, CheckCircle2, MoreVertical, Plus } from 'lucide-react';
 
 export const RoleManagement: React.FC = () => {
@@ -10,18 +11,12 @@ export const RoleManagement: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [rolesRes, permsRes] = await Promise.all([
-          fetch('/api/admin/roles'),
-          fetch('/api/admin/permissions')
+        const [rolesData, permsData] = await Promise.all([
+          rolesApi.getAll(),
+          rolesApi.getPermissions()
         ]);
-        if (rolesRes.ok) {
-          const data = await rolesRes.json();
-          setRoles(data);
-        }
-        if (permsRes.ok) {
-          const data = await permsRes.json();
-          setPermissions(data);
-        }
+        setRoles(rolesData || []);
+        setPermissions(permsData || []);
       } catch (err) {
         console.error('Fetch RBAC data error:', err);
       }
@@ -35,15 +30,8 @@ export const RoleManagement: React.FC = () => {
     if (!name) return;
 
     try {
-      const res = await fetch('/api/admin/roles', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, permissions: [] })
-      });
-      if (res.ok) {
-        const created: Role = await res.json();
-        setRoles(prev => [...prev, created]);
-      }
+      const created = await rolesApi.create({ name, permissions: [] });
+      setRoles(prev => [...prev, created]);
     } catch (err) {
       console.error('Create role error:', err);
     }

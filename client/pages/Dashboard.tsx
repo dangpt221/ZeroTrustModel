@@ -1,51 +1,83 @@
 
-import React from 'react';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer, 
-  PieChart, 
-  Pie, 
-  Cell 
+import React, { useEffect, useState } from 'react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell
 } from 'recharts';
-import { MOCK_PROJECTS, MOCK_TASKS } from '../mockData';
-import { ProjectStatus, TaskStatus } from '../types';
+import { projectsApi } from '../api';
+import { Project, ProjectStatus, TaskStatus } from '../types';
 import { Link } from 'react-router-dom';
-import { 
-  CheckCircle, 
-  Clock, 
-  AlertCircle, 
-  Briefcase, 
+import {
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  Briefcase,
   ChevronRight,
   TrendingUp,
   Target
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export const Dashboard: React.FC = () => {
+  const { user } = useAuth();
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const projectsData = await projectsApi.getAll();
+        setProjects(projectsData || []);
+
+        // Fetch tasks for each project
+        const allTasks: any[] = [];
+        for (const p of projectsData || []) {
+          const projectTasks = await projectsApi.getTasks(p.id);
+          allTasks.push(...projectTasks);
+        }
+        setTasks(allTasks);
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
   const projectStats = [
-    { name: 'Total', value: MOCK_PROJECTS.length, icon: <Briefcase size={20} />, color: 'bg-blue-500' },
-    { name: 'In Progress', value: MOCK_PROJECTS.filter(p => p.status === ProjectStatus.IN_PROGRESS).length, icon: <Clock size={20} />, color: 'bg-indigo-500' },
-    { name: 'Completed', value: MOCK_PROJECTS.filter(p => p.status === ProjectStatus.COMPLETED).length, icon: <CheckCircle size={20} />, color: 'bg-green-500' },
-    { name: 'At Risk', value: MOCK_PROJECTS.filter(p => p.status === ProjectStatus.ON_HOLD).length, icon: <AlertCircle size={20} />, color: 'bg-amber-500' },
+    { name: 'Total', value: projects.length, icon: <Briefcase size={20} />, color: 'bg-blue-500' },
+    { name: 'In Progress', value: projects.filter(p => p.status === ProjectStatus.IN_PROGRESS).length, icon: <Clock size={20} />, color: 'bg-indigo-500' },
+    { name: 'Completed', value: projects.filter(p => p.status === ProjectStatus.COMPLETED).length, icon: <CheckCircle size={20} />, color: 'bg-green-500' },
+    { name: 'At Risk', value: projects.filter(p => p.status === ProjectStatus.ON_HOLD).length, icon: <AlertCircle size={20} />, color: 'bg-amber-500' },
   ];
 
-  const chartData = MOCK_PROJECTS.map(p => ({
+  const chartData = projects.slice(0, 5).map(p => ({
     name: p.title.substring(0, 10) + '...',
     progress: p.progress,
   }));
 
   const pieData = [
-    { name: 'Todo', value: MOCK_TASKS.filter(t => t.status === TaskStatus.TODO).length },
-    { name: 'In Progress', value: MOCK_TASKS.filter(t => t.status === TaskStatus.IN_PROGRESS).length },
-    { name: 'Review', value: MOCK_TASKS.filter(t => t.status === TaskStatus.REVIEW).length },
-    { name: 'Done', value: MOCK_TASKS.filter(t => t.status === TaskStatus.DONE).length },
+    { name: 'Todo', value: tasks.filter(t => t.status === TaskStatus.TODO).length },
+    { name: 'In Progress', value: tasks.filter(t => t.status === TaskStatus.IN_PROGRESS).length },
+    { name: 'Review', value: tasks.filter(t => t.status === TaskStatus.REVIEW).length },
+    { name: 'Done', value: tasks.filter(t => t.status === TaskStatus.DONE).length },
   ];
 
   const COLORS = ['#94a3b8', '#3b82f6', '#f59e0b', '#22c55e'];
+
+  const userProjects = user?.role === 'MEMBER'
+    ? projects.filter(p => p.members.includes(user.id))
+    : projects;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -58,7 +90,7 @@ export const Dashboard: React.FC = () => {
             </div>
             <div>
               <p className="text-slate-500 text-sm font-medium">{stat.name}</p>
-              <p className="text-2xl font-bold text-slate-800">{stat.value}</p>
+              <p className="text-2xl font-bold text-slate-800">{loading ? '...' : stat.value}</p>
             </div>
           </div>
         ))}
@@ -79,7 +111,7 @@ export const Dashboard: React.FC = () => {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
                 <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
-                <Tooltip 
+                <Tooltip
                   cursor={{fill: '#f8fafc'}}
                   contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'}}
                 />
@@ -145,7 +177,7 @@ export const Dashboard: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {MOCK_PROJECTS.map((project) => (
+              {userProjects.map((project) => (
                 <tr key={project.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-6 py-4">
                     <div className="font-semibold text-slate-800">{project.title}</div>

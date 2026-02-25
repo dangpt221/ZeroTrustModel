@@ -1,22 +1,45 @@
 
-import React, { useState } from 'react';
-import { MOCK_DOCS } from '../../mockData';
-import { 
-  FileText, 
-  Search, 
-  Upload, 
-  Filter, 
-  MoreVertical, 
-  Download, 
-  Lock, 
+import React, { useState, useEffect } from 'react';
+import { documentsApi } from '../../api';
+import { Document } from '../../types';
+import {
+  FileText,
+  Search,
+  Upload,
+  Filter,
+  MoreVertical,
+  Download,
+  Lock,
   ShieldAlert,
   CheckCircle2,
   XCircle
 } from 'lucide-react';
 
 export const DepartmentDocuments: React.FC = () => {
-  const [docs, setDocs] = useState(MOCK_DOCS);
+  const [docs, setDocs] = useState<Document[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('ALL');
+  const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    const fetchDocs = async () => {
+      try {
+        const data = await documentsApi.getAll();
+        setDocs(data || []);
+      } catch (error) {
+        console.error('Error fetching documents:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDocs();
+  }, []);
+
+  const filteredDocs = docs.filter(doc => {
+    const matchesSearch = doc.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesFilter = filter === 'ALL' || doc.sensitivity === filter;
+    return matchesSearch && matchesFilter;
+  });
 
   return (
     <div className="space-y-6 animate-in fade-in duration-700">
@@ -32,107 +55,91 @@ export const DepartmentDocuments: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="md:col-span-2 relative group">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-sky-500 transition-colors" size={18} />
-          <input 
-            type="text" 
-            placeholder="Tìm tài liệu, báo cáo kỹ thuật..."
-            className="w-full bg-white border border-slate-200 rounded-2xl py-3.5 pl-12 pr-4 focus:ring-2 focus:ring-sky-500 outline-none transition-all shadow-sm"
+      <div className="flex gap-4">
+        <div className="flex-1 relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+          <input
+            type="text"
+            placeholder="Tìm tài liệu..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full bg-white border border-slate-200 rounded-xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-blue-500 outline-none"
           />
         </div>
-        <div className="flex gap-2">
-          <select 
-            className="flex-1 bg-white border border-slate-200 rounded-2xl px-4 text-sm font-bold text-slate-600 outline-none focus:ring-2 focus:ring-sky-500"
-            onChange={(e) => setFilter(e.target.value)}
-          >
-            <option value="ALL">Mọi mức độ</option>
-            <option value="CRITICAL">Critical Only</option>
-            <option value="HIGH">High Sensitivity</option>
-          </select>
-        </div>
-        <button className="bg-white border border-slate-200 text-slate-600 px-5 py-2 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-slate-50 transition-all">
-          <Filter size={18} /> Bộ lọc nâng cao
-        </button>
+        <select
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          className="bg-white border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none"
+        >
+          <option value="ALL">Tất cả</option>
+          <option value="LOW">Low</option>
+          <option value="MEDIUM">Medium</option>
+          <option value="HIGH">High</option>
+          <option value="CRITICAL">Critical</option>
+        </select>
       </div>
 
-      <div className="bg-white rounded-[32px] shadow-sm border border-slate-100 overflow-hidden">
-        <table className="w-full text-left border-collapse">
-          <thead className="bg-sky-50/50 border-b border-sky-100 text-sky-600 text-[10px] font-black uppercase tracking-widest">
-            <tr>
-              <th className="px-8 py-6">Tên tài liệu</th>
-              <th className="px-8 py-6">Độ nhạy cảm</th>
-              <th className="px-8 py-6">Người tải lên</th>
-              <th className="px-8 py-6">Ngày tạo</th>
-              <th className="px-8 py-6 text-right">Thao tác</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-50">
-            {docs.map(doc => (
-              <tr key={doc.id} className="hover:bg-sky-50/30 transition-colors group">
-                <td className="px-8 py-5">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-sky-100 text-sky-600 rounded-xl">
-                      <FileText size={20} />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-slate-800">{doc.name}</p>
-                      <p className="text-[11px] text-slate-400 font-medium">{doc.size} • {doc.type.toUpperCase()}</p>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-8 py-5">
-                  <span className={`text-[10px] font-black px-2.5 py-1 rounded-lg border ${
-                    doc.sensitivity === 'CRITICAL' ? 'bg-rose-50 text-rose-600 border-rose-100' :
-                    doc.sensitivity === 'HIGH' ? 'bg-amber-50 text-amber-600 border-amber-100' :
-                    'bg-slate-50 text-slate-500 border-slate-100'
-                  }`}>
-                    {doc.sensitivity}
-                  </span>
-                </td>
-                <td className="px-8 py-5 text-sm font-medium text-slate-600">
-                  PM Engineering
-                </td>
-                <td className="px-8 py-5 text-xs text-slate-400 font-medium">
-                  {doc.uploadedAt}
-                </td>
-                <td className="px-8 py-5 text-right">
-                  <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button className="p-2 text-slate-400 hover:text-sky-600 hover:bg-sky-50 rounded-xl transition-all" title="Xem chi tiết">
-                      <Lock size={18} />
-                    </button>
-                    <button className="p-2 text-slate-400 hover:text-sky-600 hover:bg-sky-50 rounded-xl transition-all" title="Tải xuống">
-                      <Download size={18} />
-                    </button>
-                    <button className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all">
-                      <MoreVertical size={18} />
-                    </button>
-                  </div>
-                </td>
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-widest">
+              <tr>
+                <th className="px-6 py-4">Tài liệu</th>
+                <th className="px-6 py-4">Phân loại</th>
+                <th className="px-6 py-4">Người tải lên</th>
+                <th className="px-6 py-4">Ngày tải</th>
+                <th className="px-6 py-4 text-right">Hành động</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="bg-sky-900 rounded-3xl p-8 text-white relative overflow-hidden shadow-2xl">
-        <div className="absolute top-0 right-0 p-8 opacity-10">
-          <ShieldAlert size={100} />
-        </div>
-        <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
-          <div className="flex-1">
-            <h3 className="text-xl font-black mb-2 flex items-center gap-2">
-              <CheckCircle2 className="text-sky-400" />
-              Chế độ Phê duyệt JIT (Just-In-Time)
-            </h3>
-            <p className="text-sm text-sky-200 leading-relaxed max-w-2xl">
-              Tài liệu mức độ <b>CRITICAL</b> yêu cầu phê duyệt tức thời từ Manager. 
-              Quyền truy cập sẽ tự động hết hạn sau 4 giờ để đảm bảo nguyên tắc Zero Trust.
-            </p>
-          </div>
-          <button className="bg-white text-sky-900 px-8 py-3 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-sky-100 transition-all shadow-xl">
-            Cấu hình phê duyệt
-          </button>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {loading ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-12 text-center text-slate-400">Đang tải...</td>
+                </tr>
+              ) : filteredDocs.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-12 text-center text-slate-400">Không tìm thấy tài liệu</td>
+                </tr>
+              ) : (
+                filteredDocs.map(doc => (
+                  <tr key={doc.id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-slate-100 rounded-lg">
+                          <FileText size={18} className="text-slate-400" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-slate-700">{doc.name}</p>
+                          <p className="text-xs text-slate-400">{doc.type} - {doc.size}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`text-[10px] font-bold px-2 py-1 rounded ${
+                        doc.sensitivity === 'CRITICAL' ? 'bg-rose-50 text-rose-600' :
+                        doc.sensitivity === 'HIGH' ? 'bg-amber-50 text-amber-600' :
+                        'bg-emerald-50 text-emerald-600'
+                      }`}>
+                        {doc.sensitivity}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-600">{doc.uploadedBy}</td>
+                    <td className="px-6 py-4 text-sm text-slate-500">{doc.uploadedAt}</td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex justify-end gap-2">
+                        <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg">
+                          <Download size={16} />
+                        </button>
+                        <button className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg">
+                          <Lock size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

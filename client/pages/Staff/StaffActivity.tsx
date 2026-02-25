@@ -1,13 +1,31 @@
 
-import React from 'react';
-import { MOCK_AUDIT_LOGS } from '../../mockData';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { ActivityTable } from '../../components/Staff/ActivityTable';
+import { auditLogsApi } from '../../api';
+import { AuditLog } from '../../types';
 import { History, Download, AlertTriangle, FileText, CheckCircle2 } from 'lucide-react';
 
 export const StaffActivity: React.FC = () => {
   const { user } = useAuth();
-  const myLogs = MOCK_AUDIT_LOGS.filter(log => log.userName === user?.name || log.userId === user?.id);
+  const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchLogs = async () => {
+      try {
+        const data = await auditLogsApi.getAll();
+        const userLogs = (data || []).filter((log: AuditLog) =>
+          log.userName === user?.name || log.userId === user?.id
+        );
+        setLogs(userLogs);
+      } catch (error) {
+        console.error('Error fetching logs:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchLogs();
+  }, [user]);
 
   const handleExport = (format: 'CSV' | 'PDF') => {
     alert(`Nexus SOC: Đang tạo báo cáo hoạt động cá nhân định dạng ${format}. File sẽ được gửi về email ${user?.email} để đảm bảo an toàn.`);
@@ -24,68 +42,85 @@ export const StaffActivity: React.FC = () => {
           <p className="text-slate-500 text-sm font-medium">Theo dõi lịch sử truy cập và các điểm chạm an ninh của bạn</p>
         </div>
         <div className="flex gap-3">
-          <button 
+          <button
             onClick={() => handleExport('CSV')}
             className="bg-white border border-slate-200 text-slate-600 px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm"
           >
-            <Download size={16} /> Export CSV
+            <Download size={16} /> CSV
           </button>
-          <button 
+          <button
             onClick={() => handleExport('PDF')}
-            className="bg-slate-900 text-white px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all flex items-center gap-2 shadow-lg shadow-slate-900/10"
+            className="bg-slate-900 text-white px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center gap-2 shadow-lg shadow-slate-900/20"
           >
-            <FileText size={16} /> Export PDF
+            <FileText size={16} /> PDF
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        <div className="lg:col-span-3">
-          <ActivityTable logs={myLogs} />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+          <div className="flex items-center gap-3 mb-2">
+            <CheckCircle2 size={20} className="text-emerald-500" />
+            <p className="text-xs text-slate-400 font-bold uppercase">Thao tác thành công</p>
+          </div>
+          <p className="text-3xl font-black text-slate-800">{loading ? '...' : logs.filter(l => l.status === 'SUCCESS').length}</p>
         </div>
-
-        <div className="space-y-6">
-          <div className="bg-emerald-600 p-8 rounded-[40px] text-white shadow-xl relative overflow-hidden">
-             <div className="absolute top-0 right-0 p-8 opacity-10">
-               <CheckCircle2 size={80} />
-             </div>
-             <h4 className="font-black text-xs uppercase tracking-widest mb-4">Trạng thái an toàn</h4>
-             <p className="text-3xl font-black mb-2 italic">SECURE</p>
-             <p className="text-[10px] font-medium opacity-90 leading-relaxed">
-               Không có hành vi bất thường nào được ghi nhận trong 7 ngày qua từ thiết bị của bạn.
-             </p>
+        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+          <div className="flex items-center gap-3 mb-2">
+            <AlertTriangle size={20} className="text-amber-500" />
+            <p className="text-xs text-slate-400 font-bold uppercase">Cảnh báo</p>
           </div>
-
-          <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm space-y-4">
-            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Thống kê truy cập</h4>
-            <div className="flex justify-between items-center py-2 border-b border-slate-50">
-              <span className="text-xs font-bold text-slate-600 italic">Mở tài liệu</span>
-              <span className="text-sm font-black text-emerald-600">12</span>
-            </div>
-            <div className="flex justify-between items-center py-2 border-b border-slate-50">
-              <span className="text-xs font-bold text-slate-600 italic">Xác thực 2FA</span>
-              <span className="text-sm font-black text-amber-600">4</span>
-            </div>
-            <div className="flex justify-between items-center py-2">
-              <span className="text-xs font-bold text-slate-600 italic">Lần đăng nhập</span>
-              <span className="text-sm font-black text-sky-600">8</span>
-            </div>
+          <p className="text-3xl font-black text-slate-800">{loading ? '...' : logs.filter(l => l.riskLevel === 'MEDIUM').length}</p>
+        </div>
+        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+          <div className="flex items-center gap-3 mb-2">
+            <History size={20} className="text-blue-500" />
+            <p className="text-xs text-slate-400 font-bold uppercase">Tổng hoạt động</p>
           </div>
+          <p className="text-3xl font-black text-slate-800">{loading ? '...' : logs.length}</p>
+        </div>
+      </div>
 
-          <div className="bg-amber-900 p-8 rounded-[40px] text-white shadow-2xl relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-125 transition-transform">
-              <AlertTriangle size={80} />
-            </div>
-            <div className="relative z-10">
-              <p className="text-[11px] text-amber-200 leading-relaxed font-bold uppercase mb-4">Lưu ý bảo mật:</p>
-              <p className="text-xs font-medium leading-relaxed italic">
-                Nexus SOC liên tục quét các phiên làm việc. Nếu thấy bất kỳ nhật ký nào bạn không thực hiện, hãy khóa tài khoản ngay.
-              </p>
-              <button className="mt-6 w-full py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all">
-                Khóa quyền khẩn cấp
-              </button>
-            </div>
-          </div>
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-widest">
+              <tr>
+                <th className="px-6 py-4">Thời gian</th>
+                <th className="px-6 py-4">Hành động</th>
+                <th className="px-6 py-4">Chi tiết</th>
+                <th className="px-6 py-4">IP</th>
+                <th className="px-6 py-4 text-right">Trạng thái</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {logs.slice(0, 20).map(log => (
+                <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
+                  <td className="px-6 py-4 text-xs font-mono text-slate-400">
+                    {new Date(log.timestamp).toLocaleString()}
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="text-xs font-medium px-2 py-1 bg-slate-100 rounded text-slate-600">
+                      {log.action}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-xs text-slate-500 max-w-xs truncate">
+                    {log.details}
+                  </td>
+                  <td className="px-6 py-4 text-xs font-mono text-slate-400">
+                    {log.ipAddress}
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${
+                      log.status === 'SUCCESS' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
+                    }`}>
+                      {log.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

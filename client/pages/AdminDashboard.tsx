@@ -1,21 +1,21 @@
 
-import React from 'react';
-import { 
-  Users, 
-  UserPlus, 
-  ShieldCheck, 
-  Activity, 
-  TrendingUp, 
+import React, { useEffect, useState } from 'react';
+import {
+  Users,
+  UserPlus,
+  ShieldCheck,
+  Activity,
+  TrendingUp,
   Zap,
   Globe
 } from 'lucide-react';
-import { 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  BarChart, Bar, Cell
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 import { AdminStatsCard } from '../components/Admin/AdminStatsCard';
 import { AdminAlertCard } from '../components/Admin/AdminAlertCard';
-import { MOCK_AUDIT_LOGS } from '../mockData';
+import { auditLogsApi, usersApi } from '../api';
+import { AuditLog } from '../types';
 
 const chartData = [
   { name: 'Mon', users: 400, alerts: 24 },
@@ -28,6 +28,31 @@ const chartData = [
 ];
 
 export const AdminDashboard: React.FC = () => {
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [logsData, usersData] = await Promise.all([
+          auditLogsApi.getAll(),
+          usersApi.getAll()
+        ]);
+        setAuditLogs(logsData || []);
+        setUsers(usersData || []);
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const onlineUsers = users.filter((u: any) => u.status === 'ACTIVE').length;
+  const securityAlerts = auditLogs.filter((l: any) => l.riskLevel === 'HIGH').length;
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700">
       {/* Header Info */}
@@ -49,36 +74,36 @@ export const AdminDashboard: React.FC = () => {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <AdminStatsCard 
-          title="Người dùng trực tuyến" 
-          value="1,248" 
-          trend="12.5%" 
-          isPositive={true} 
-          icon={<Users size={24}/>} 
+        <AdminStatsCard
+          title="Người dùng trực tuyến"
+          value={loading ? '...' : onlineUsers.toString()}
+          trend="12.5%"
+          isPositive={true}
+          icon={<Users size={24}/>}
           color="bg-blue-600"
         />
-        <AdminStatsCard 
-          title="User mới (24h)" 
-          value="48" 
-          trend="5.2%" 
-          isPositive={true} 
-          icon={<UserPlus size={24}/>} 
+        <AdminStatsCard
+          title="User mới (24h)"
+          value={loading ? '...' : '48'}
+          trend="5.2%"
+          isPositive={true}
+          icon={<UserPlus size={24}/>}
           color="bg-emerald-500"
         />
-        <AdminStatsCard 
-          title="Cảnh báo bảo mật" 
-          value="12" 
-          trend="2.4%" 
-          isPositive={false} 
-          icon={<ShieldCheck size={24}/>} 
+        <AdminStatsCard
+          title="Cảnh báo bảo mật"
+          value={loading ? '...' : securityAlerts.toString()}
+          trend="2.4%"
+          isPositive={false}
+          icon={<ShieldCheck size={24}/>}
           color="bg-rose-500"
         />
-        <AdminStatsCard 
-          title="Tốc độ phản hồi" 
-          value="14ms" 
-          trend="8.1%" 
-          isPositive={true} 
-          icon={<Activity size={24}/>} 
+        <AdminStatsCard
+          title="Tốc độ phản hồi"
+          value="14ms"
+          trend="8.1%"
+          isPositive={true}
+          icon={<Activity size={24}/>}
           color="bg-violet-500"
         />
       </div>
@@ -180,7 +205,7 @@ export const AdminDashboard: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800">
-              {MOCK_AUDIT_LOGS.map((log) => (
+              {auditLogs.slice(0, 10).map((log: any) => (
                 <tr key={log.id} className="hover:bg-slate-800/30 transition-colors group">
                   <td className="px-8 py-5">
                     <span className="text-xs font-mono text-slate-400">{new Date(log.timestamp).toLocaleTimeString()}</span>

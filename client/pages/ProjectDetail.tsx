@@ -1,17 +1,15 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { MOCK_PROJECTS, MOCK_TASKS, MOCK_DOCS } from '../mockData';
-import { TaskStatus, Document } from '../types';
-import { summarizeProject } from '../services/geminiService';
-import { 
-  ArrowLeft, 
-  Plus, 
-  Calendar, 
-  User, 
-  Sparkles, 
-  FileText, 
-  CheckSquare, 
+import { projectsApi, documentsApi } from '../api';
+import { Project, TaskStatus, Document } from '../types';
+import {
+  ArrowLeft,
+  Plus,
+  Calendar,
+  User,
+  FileText,
+  CheckSquare,
   Users,
   MessageCircle,
   Download,
@@ -21,237 +19,175 @@ import {
 
 export const ProjectDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const project = MOCK_PROJECTS.find(p => p.id === id);
-  const tasks = MOCK_TASKS.filter(t => t.projectId === id);
-  const docs = MOCK_DOCS.filter(d => d.projectId === id);
-  
+  const [project, setProject] = useState<Project | null>(null);
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [docs, setDocs] = useState<Document[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const [activeTab, setActiveTab] = useState<'tasks' | 'docs' | 'team'>('tasks');
-  const [aiSummary, setAiSummary] = useState<string>('Analyzing project data...');
-  const [loadingAi, setLoadingAi] = useState(false);
 
   useEffect(() => {
-    if (project) {
-      setLoadingAi(true);
-      summarizeProject(project.title, project.description).then(res => {
-        setAiSummary(res || 'Analysis complete.');
-        setLoadingAi(false);
-      });
-    }
-  }, [project]);
+    const fetchData = async () => {
+      if (!id) return;
+      try {
+        const [projectData, tasksData] = await Promise.all([
+          projectsApi.getById(id),
+          projectsApi.getTasks(id)
+        ]);
+        setProject(projectData);
+        setTasks(tasksData || []);
 
-  if (!project) return <div>Project not found</div>;
+        // Fetch all documents and filter
+        const allDocs = await documentsApi.getAll();
+        setDocs((allDocs || []).filter((d: any) => d.projectId === id));
+      } catch (error) {
+        console.error('Error fetching project:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [id]);
+
+  if (loading) return <div className="p-8">Loading...</div>;
+  if (!project) return <div className="p-8">Project not found</div>;
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <Link to="/projects" className="flex items-center gap-2 text-slate-500 hover:text-slate-800 transition-colors text-sm font-medium">
-        <ArrowLeft size={16} /> Back to Projects
+      <Link to="/" className="flex items-center gap-2 text-slate-500 hover:text-slate-800 transition-colors text-sm font-medium">
+        <ArrowLeft size={16} /> Back to Dashboard
       </Link>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Col: Main Details */}
+        {/* Project Info */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
-            <div className="flex justify-between items-start mb-6">
+          <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
+            <div className="flex items-start justify-between mb-6">
               <div>
-                <h2 className="text-3xl font-bold text-slate-800">{project.title}</h2>
-                <p className="text-slate-500 mt-2 max-w-2xl">{project.description}</p>
+                <h2 className="text-2xl font-black text-slate-800">{project.title}</h2>
+                <p className="text-slate-500 mt-1">{project.description}</p>
               </div>
-              <span className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border ${
-                project.status === 'IN_PROGRESS' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-slate-50 text-slate-500 border-slate-100'
+              <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                project.status === 'IN_PROGRESS' ? 'bg-blue-50 text-blue-600' :
+                project.status === 'COMPLETED' ? 'bg-green-50 text-green-600' :
+                'bg-amber-50 text-amber-600'
               }`}>
-                {project.status.replace('_', ' ')}
+                {project.status}
               </span>
             </div>
 
-            <div className="grid grid-cols-3 gap-6 py-6 border-y border-slate-100">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400">
-                  <Calendar size={20} />
-                </div>
-                <div>
-                  <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wide">Deadline</p>
-                  <p className="text-sm font-semibold text-slate-700">{project.endDate}</p>
-                </div>
+            <div className="flex items-center gap-6 text-sm text-slate-500">
+              <div className="flex items-center gap-2">
+                <Calendar size={16} />
+                <span>{project.startDate} - {project.endDate}</span>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400">
-                  <User size={20} />
-                </div>
-                <div>
-                  <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wide">Manager</p>
-                  <p className="text-sm font-semibold text-slate-700">Project Lead</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400">
-                  <Users size={20} />
-                </div>
-                <div>
-                  <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wide">Members</p>
-                  <p className="text-sm font-semibold text-slate-700">{project.members.length} Active</p>
-                </div>
+              <div className="flex items-center gap-2">
+                <Users size={16} />
+                <span>{project.members.length} members</span>
               </div>
             </div>
 
-            <div className="mt-8">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-bold text-slate-700 uppercase tracking-wide">Overall Completion</span>
-                <span className="text-sm font-bold text-blue-600">{project.progress}%</span>
+            <div className="mt-6">
+              <div className="flex justify-between text-sm mb-2">
+                <span className="font-medium text-slate-600">Progress</span>
+                <span className="font-bold text-slate-800">{project.progress}%</span>
               </div>
-              <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden">
-                <div 
-                  className="bg-blue-600 h-full rounded-full transition-all duration-1000 ease-out" 
-                  style={{ width: `${project.progress}%` }}
-                ></div>
+              <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-full bg-blue-500 rounded-full" style={{ width: `${project.progress}%` }}></div>
               </div>
             </div>
           </div>
 
-          {/* AI Insights Card */}
-          <div className="bg-gradient-to-br from-indigo-600 to-violet-700 p-8 rounded-2xl shadow-xl text-white relative overflow-hidden group">
-            <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl transition-transform group-hover:scale-150 duration-700"></div>
-            <div className="relative z-10">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="p-1.5 bg-white/20 rounded-lg">
-                  <Sparkles size={18} className="text-yellow-300 fill-yellow-300" />
-                </div>
-                <h4 className="font-bold tracking-tight">AI Project Insight</h4>
-              </div>
-              <p className={`text-indigo-50 leading-relaxed italic ${loadingAi ? 'animate-pulse' : ''}`}>
-                "{aiSummary}"
-              </p>
-            </div>
-          </div>
-
-          {/* Tabbed Board */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100">
-            <div className="flex border-b border-slate-100 px-6">
-              {[
-                { id: 'tasks', label: 'Tasks', icon: <CheckSquare size={16} /> },
-                { id: 'docs', label: 'Documents', icon: <FileText size={16} /> },
-                { id: 'team', label: 'Team Activity', icon: <MessageCircle size={16} /> }
-              ].map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex items-center gap-2 px-6 py-4 text-sm font-semibold transition-all border-b-2 ${
-                    activeTab === tab.id 
-                      ? 'border-blue-600 text-blue-600' 
-                      : 'border-transparent text-slate-400 hover:text-slate-600'
-                  }`}
-                >
-                  {tab.icon}
-                  {tab.label}
-                </button>
-              ))}
+          {/* Tabs */}
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <div className="flex border-b border-slate-100">
+              <button
+                onClick={() => setActiveTab('tasks')}
+                className={`px-6 py-4 text-sm font-bold ${activeTab === 'tasks' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}
+              >
+                Tasks ({tasks.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('docs')}
+                className={`px-6 py-4 text-sm font-bold ${activeTab === 'docs' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}
+              >
+                Documents ({docs.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('team')}
+                className={`px-6 py-4 text-sm font-bold ${activeTab === 'team' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}
+              >
+                Team ({project.members.length})
+              </button>
             </div>
 
             <div className="p-6">
               {activeTab === 'tasks' && (
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center mb-4">
-                    <h5 className="font-bold text-slate-800">Task Board</h5>
-                    <button className="flex items-center gap-1.5 text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors">
-                      <Plus size={14} /> Add Task
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {tasks.map(task => (
-                      <div key={task.id} className="p-4 rounded-xl border border-slate-100 hover:border-blue-200 hover:shadow-md transition-all group">
-                        <div className="flex justify-between items-start mb-3">
-                          <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-tighter ${
-                            task.priority === 'HIGH' ? 'bg-red-50 text-red-500' : 'bg-slate-50 text-slate-400'
-                          }`}>
-                            {task.priority}
-                          </span>
-                          <span className="text-[10px] font-bold text-slate-400">{task.dueDate}</span>
-                        </div>
-                        <h6 className="font-bold text-slate-800 mb-1 group-hover:text-blue-600 transition-colors">{task.title}</h6>
-                        <p className="text-xs text-slate-500 line-clamp-2 mb-4">{task.description}</p>
-                        <div className="flex justify-between items-center">
-                          <div className="flex items-center gap-2">
-                             <img src={`https://picsum.photos/seed/${task.assigneeId}/200`} className="w-5 h-5 rounded-full" />
-                             <span className="text-[10px] text-slate-400">Assigned</span>
-                          </div>
-                          <span className="text-[10px] font-bold text-blue-500">{task.status.replace('_', ' ')}</span>
-                        </div>
+                <div className="space-y-3">
+                  {tasks.map(task => (
+                    <div key={task.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-2 h-2 rounded-full ${task.status === 'DONE' ? 'bg-green-500' : 'bg-blue-500'}`}></div>
+                        <span className="font-medium text-slate-700">{task.title}</span>
                       </div>
-                    ))}
-                  </div>
+                      <span className={`text-xs font-bold px-2 py-1 rounded ${task.priority === 'HIGH' ? 'bg-rose-50 text-rose-600' : 'bg-slate-100 text-slate-600'}`}>
+                        {task.priority}
+                      </span>
+                    </div>
+                  ))}
+                  {tasks.length === 0 && <p className="text-slate-400 text-sm">No tasks yet</p>}
                 </div>
               )}
 
               {activeTab === 'docs' && (
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center mb-4">
-                    <h5 className="font-bold text-slate-800">Repository</h5>
-                    <label className="cursor-pointer flex items-center gap-1.5 text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors">
-                      <Upload size={14} /> Upload New
-                      <input type="file" className="hidden" />
-                    </label>
-                  </div>
-                  <div className="space-y-2">
-                    {docs.map(doc => (
-                      <div key={doc.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center">
-                            <FileText size={20} />
-                          </div>
-                          <div>
-                            <p className="text-sm font-semibold text-slate-700">{doc.name}</p>
-                            <p className="text-[10px] text-slate-400">{doc.size} • Uploaded {doc.uploadedAt}</p>
-                          </div>
-                        </div>
-                        <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all">
-                          <Download size={18} />
-                        </button>
+                <div className="space-y-3">
+                  {docs.map(doc => (
+                    <div key={doc.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <FileText size={18} className="text-slate-400" />
+                        <span className="font-medium text-slate-700">{doc.name}</span>
                       </div>
-                    ))}
-                  </div>
+                      <span className={`text-xs font-bold px-2 py-1 rounded ${doc.sensitivity === 'HIGH' ? 'bg-amber-50 text-amber-600' : 'bg-slate-100 text-slate-600'}`}>
+                        {doc.sensitivity}
+                      </span>
+                    </div>
+                  ))}
+                  {docs.length === 0 && <p className="text-slate-400 text-sm">No documents yet</p>}
+                </div>
+              )}
+
+              {activeTab === 'team' && (
+                <div className="space-y-3">
+                  {project.members.map(memberId => (
+                    <div key={memberId} className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl">
+                      <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold text-xs">
+                        {memberId.charAt(1).toUpperCase()}
+                      </div>
+                      <span className="font-medium text-slate-700">User {memberId}</span>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
           </div>
         </div>
 
-        {/* Right Col: Side Info */}
+        {/* Sidebar */}
         <div className="space-y-6">
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-            <h4 className="font-bold text-slate-800 mb-6 flex items-center gap-2">
-              <Users size={18} className="text-blue-500" />
-              Project Team
-            </h4>
-            <div className="space-y-5">
-              {project.members.map(memberId => (
-                <div key={memberId} className="flex items-center gap-3">
-                  <img src={`https://picsum.photos/seed/${memberId}/200`} className="w-10 h-10 rounded-xl" />
-                  <div>
-                    <p className="text-sm font-bold text-slate-700">Team Member</p>
-                    <p className="text-[10px] text-slate-400 font-medium">{memberId === 'u1' ? 'Admin' : 'Specialist'}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <button className="w-full mt-6 py-2.5 text-slate-500 hover:text-blue-600 text-xs font-bold uppercase tracking-widest border border-slate-100 hover:border-blue-100 rounded-xl transition-all">
-              Manage Team
-            </button>
-          </div>
-
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-            <h4 className="font-bold text-slate-800 mb-6 flex items-center gap-2">
-              <Shield size={18} className="text-emerald-500" />
-              Security Policy
-            </h4>
-            <div className="space-y-4">
-              <div className="p-3 bg-slate-50 rounded-xl">
-                <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Access Level</p>
-                <p className="text-xs font-semibold text-slate-600">Restricted to Internal VPN</p>
+          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+            <h3 className="font-bold text-slate-800 mb-4">Project Details</h3>
+            <div className="space-y-4 text-sm">
+              <div>
+                <p className="text-slate-400">Department</p>
+                <p className="font-medium text-slate-700">{project.department}</p>
               </div>
-              <div className="p-3 bg-slate-50 rounded-xl">
-                <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Data Sensitivity</p>
-                <p className="text-xs font-semibold text-amber-600 flex items-center gap-1.5">
-                  <AlertCircle size={12} /> Confidential (L2)
-                </p>
+              <div>
+                <p className="text-slate-400">Start Date</p>
+                <p className="font-medium text-slate-700">{project.startDate}</p>
+              </div>
+              <div>
+                <p className="text-slate-400">End Date</p>
+                <p className="font-medium text-slate-700">{project.endDate}</p>
               </div>
             </div>
           </div>
@@ -260,10 +196,3 @@ export const ProjectDetail: React.FC = () => {
     </div>
   );
 };
-
-// Sub-components used for cleaner code
-const Shield = ({ size, className }: { size: number, className: string }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-  </svg>
-);

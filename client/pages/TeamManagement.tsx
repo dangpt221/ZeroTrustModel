@@ -1,15 +1,16 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { 
-  Users, 
-  Plus, 
-  UserPlus, 
-  Search, 
-  Shield, 
-  MoreVertical, 
-  CheckCircle2, 
-  X, 
+import { teamsApi, usersApi } from '../api';
+import {
+  Users,
+  Plus,
+  UserPlus,
+  Search,
+  Shield,
+  MoreVertical,
+  CheckCircle2,
+  X,
   LayoutGrid,
   Info
 } from 'lucide-react';
@@ -31,40 +32,28 @@ export const TeamManagement: React.FC = () => {
   }, []);
 
   const fetchTeams = async () => {
-    const res = await fetch('/api/teams');
-    if (res.ok) setTeams(await res.json());
+    const data = await teamsApi.getAll();
+    setTeams(data || []);
   };
 
   const fetchUsers = async () => {
-    const res = await fetch('/api/users');
-    if (res.ok) setAllUsers(await res.json());
+    const data = await usersApi.getList();
+    setAllUsers(data || []);
   };
 
   const handleCreateTeam = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = await fetch('/api/teams', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newTeam)
-    });
-    if (res.ok) {
-      fetchTeams();
-      setIsModalOpen(false);
-      setNewTeam({ name: '', description: '' });
-    }
+    const created = await teamsApi.create(newTeam);
+    fetchTeams();
+    setIsModalOpen(false);
+    setNewTeam({ name: '', description: '' });
   };
 
   const handleAddMember = async (userId: string) => {
     if (!selectedTeam) return;
-    const res = await fetch(`/api/teams/${selectedTeam.id}/members`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId })
-    });
-    if (res.ok) {
-      fetchTeams();
-      setIsAddMemberModalOpen(false);
-    }
+    await teamsApi.addMember(selectedTeam.id, userId);
+    fetchTeams();
+    setIsAddMemberModalOpen(false);
   };
 
   const filteredUsers = allUsers.filter(u => 

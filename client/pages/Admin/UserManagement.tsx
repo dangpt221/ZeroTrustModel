@@ -1,17 +1,15 @@
 
 import React, { useEffect, useState } from 'react';
 import { User, UserRole } from '../../types';
-import { 
-  Search, 
-  UserPlus, 
-  ShieldCheck, 
-  Lock, 
-  Unlock, 
-  Edit3, 
+import { usersApi } from '../../api';
+import {
+  Search,
+  UserPlus,
+  Lock,
+  Unlock,
   Trash2,
   Filter,
   Monitor,
-  MapPin,
   Smartphone
 } from 'lucide-react';
 
@@ -22,11 +20,8 @@ export const UserManagement: React.FC = () => {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const res = await fetch('/api/admin/users');
-        if (res.ok) {
-          const data = await res.json();
-          setUsers(data);
-        }
+        const data = await usersApi.getAll();
+        setUsers(data || []);
       } catch (err) {
         console.error('Fetch admin users error:', err);
       }
@@ -35,8 +30,8 @@ export const UserManagement: React.FC = () => {
     fetchUsers();
   }, []);
 
-  const filteredUsers = users.filter(u => 
-    u.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+  const filteredUsers = users.filter(u =>
+    u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     u.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -46,15 +41,8 @@ export const UserManagement: React.FC = () => {
     const nextStatus = target.status === 'ACTIVE' ? 'LOCKED' : 'ACTIVE';
 
     try {
-      const res = await fetch(`/api/admin/users/${id}/lock`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: nextStatus })
-      });
-      if (res.ok) {
-        const updated = await res.json();
-        setUsers(prev => prev.map(u => (u.id === id ? updated : u)));
-      }
+      const updated = await usersApi.lock(id, nextStatus);
+      setUsers(prev => prev.map(u => (u.id === id ? updated : u)));
     } catch (err) {
       console.error('Toggle status error:', err);
     }
@@ -66,16 +54,9 @@ export const UserManagement: React.FC = () => {
     const newState = !target.mfaEnabled;
 
     try {
-      const res = await fetch(`/api/admin/users/${id}/mfa`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ enabled: newState })
-      });
-      if (res.ok) {
-        const updated = await res.json();
-        setUsers(prev => prev.map(u => (u.id === id ? updated : u)));
-        alert(`Đã ${newState ? 'Bật' : 'Tắt'} bắt buộc OTP cho người dùng ${updated.name}.`);
-      }
+      const updated = await usersApi.toggleMfa(id, newState);
+      setUsers(prev => prev.map(u => (u.id === id ? updated : u)));
+      alert(`Đã ${newState ? 'Bật' : 'Tắt'} bắt buộc OTP cho người dùng ${updated.name}.`);
     } catch (err) {
       console.error('Toggle MFA error:', err);
     }
