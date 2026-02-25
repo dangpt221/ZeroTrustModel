@@ -45,3 +45,13 @@ export async function createApp() {
 
   return { app, httpServer, io };
 }
+
+export async function startServer(
+  port = process.env.PORT || 5000,
+) {
+  const { httpServer } = await createApp();
+
+  httpServer.listen(port, () => {
+    console.log(` HTTP server listening on port ${port}`);
+  });
+}

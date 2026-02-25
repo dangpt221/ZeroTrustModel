@@ -9,7 +9,9 @@ export default defineConfig(({ mode }) => {
         port: 5173,
         host: '0.0.0.0',
         proxy: {
-          '/api': 'http://localhost:3001',
+          // Proxy toàn bộ API backend sang port 5000
+          // Dùng '/api/' (có dấu / ở cuối) để KHÔNG bắt nhầm file '/api.ts'
+          '/api/': 'http://localhost:5000',
         },
       },
       plugins: [react()],
