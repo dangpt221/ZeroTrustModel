@@ -1,0 +1,7 @@
+{
+  "name": "Nexus Project Management System",
+  "description": "An enterprise-grade internal project management system featuring MFA, role-based access control, Zero Trust security monitoring, and interactive project analytics.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
