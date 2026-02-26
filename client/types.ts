@@ -15,6 +15,7 @@ export interface Permission {
 export interface Role {
   id: string;
   name: string;
+  description?: string;
   permissions: string[]; // Permission IDs
   color: string;
 }

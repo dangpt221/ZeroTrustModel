@@ -31,7 +31,7 @@ export const Messaging: React.FC = () => {
     });
 
     // Initial fetch
-    fetch('/api/messages')
+    fetch('http://localhost:5000/api/messages')
       .then(res => res.json())
       .then(data => setMessages(data.filter((m: any) => m.room === activeRoom)));
 

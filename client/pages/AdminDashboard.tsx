@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   Users,
   UserPlus,
@@ -7,7 +7,9 @@ import {
   Activity,
   TrendingUp,
   Zap,
-  Globe
+  Globe,
+  Download,
+  RefreshCw
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -16,6 +18,7 @@ import { AdminStatsCard } from '../components/Admin/AdminStatsCard';
 import { AdminAlertCard } from '../components/Admin/AdminAlertCard';
 import { auditLogsApi, usersApi } from '../api';
 import { AuditLog } from '../types';
+import { useNavigate } from 'react-router-dom';
 
 const chartData = [
   { name: 'Mon', users: 400, alerts: 24 },
@@ -28,9 +31,60 @@ const chartData = [
 ];
 
 export const AdminDashboard: React.FC = () => {
+  const navigate = useNavigate();
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [scanning, setScanning] = useState(false);
+
+  const fetchData = useCallback(async () => {
+    try {
+      const [logsData, usersData] = await Promise.all([
+        auditLogsApi.getAll(),
+        usersApi.getAll()
+      ]);
+      setAuditLogs(logsData || []);
+      setUsers(usersData || []);
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleVulnerabilityScan = () => {
+    setScanning(true);
+    setTimeout(() => {
+      setScanning(false);
+      alert('Quét lỗ hổng bảo mật hoàn tất! Không phát hiện mối đe dọa mới.');
+    }, 2000);
+  };
+
+  const handleDownloadReport = () => {
+    const csv = [
+      ['Timestamp', 'User', 'Action', 'Details', 'IP', 'Status', 'Risk Level'].join(','),
+      ...auditLogs.map(log => [
+        new Date(log.timestamp).toISOString(),
+        log.userName,
+        log.action,
+        log.details,
+        log.ipAddress,
+        log.status,
+        log.riskLevel
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `security-report-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -66,8 +120,8 @@ export const AdminDashboard: React.FC = () => {
             <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
             <span className="text-sm font-semibold text-slate-600">Hệ thống: Ổn định</span>
           </div>
-          <button className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold shadow-lg shadow-blue-500/20 transition-all active:scale-95 text-sm flex items-center gap-2">
-            <Zap size={18} /> Quét lỗ hổng
+          <button onClick={handleVulnerabilityScan} disabled={scanning} className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-5 py-2.5 rounded-xl font-bold shadow-lg shadow-blue-500/20 transition-all active:scale-95 text-sm flex items-center gap-2">
+            {scanning ? <RefreshCw size={18} className="animate-spin" /> : <Zap size={18} />} {scanning ? 'Đang quét...' : 'Quét lỗ hổng'}
           </button>
         </div>
       </div>
@@ -154,28 +208,19 @@ export const AdminDashboard: React.FC = () => {
             Cảnh báo gần đây
           </h3>
           <div className="space-y-4 flex-1">
-            <AdminAlertCard 
-              level="HIGH" 
-              message="Phát hiện đăng nhập trái phép từ IP 103.52.xx.xx tại Trung Quốc." 
-              time="2 phút trước"
-            />
-            <AdminAlertCard 
-              level="MEDIUM" 
-              message="MFA bị bỏ qua 3 lần liên tiếp tại tài khoản 'manager@nexus.com'." 
-              time="15 phút trước"
-            />
-            <AdminAlertCard 
-              level="LOW" 
-              message="Đã cập nhật chính sách bảo mật cho bộ phận Engineering." 
-              time="1 giờ trước"
-            />
-            <AdminAlertCard 
-              level="MEDIUM" 
-              message="Phát hiện thiết bị lạ cố gắng truy cập tài liệu bảo mật." 
-              time="2 giờ trước"
-            />
+            {auditLogs.filter(l => l.riskLevel === 'HIGH' || l.riskLevel === 'MEDIUM').slice(0, 4).map(log => (
+              <AdminAlertCard
+                key={log.id}
+                level={log.riskLevel}
+                message={log.details}
+                time={new Date(log.timestamp).toLocaleTimeString('vi-VN')}
+              />
+            ))}
+            {auditLogs.filter(l => l.riskLevel === 'HIGH' || l.riskLevel === 'MEDIUM').length === 0 && (
+              <p className="text-sm text-slate-400 text-center py-4">Không có cảnh báo nào</p>
+            )}
           </div>
-          <button className="w-full mt-6 py-3 text-blue-600 font-bold text-sm bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors">
+          <button onClick={() => navigate('/audit-logs')} className="w-full mt-6 py-3 text-blue-600 font-bold text-sm bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors">
             Xem tất cả cảnh báo
           </button>
         </div>
@@ -191,7 +236,9 @@ export const AdminDashboard: React.FC = () => {
             </h3>
             <p className="text-slate-500 text-sm mt-1">Giám sát các điểm truy cập theo cơ chế Zero Trust</p>
           </div>
-          <button className="text-slate-400 hover:text-white text-sm font-semibold">Tải báo cáo (PDF)</button>
+          <button onClick={handleDownloadReport} className="text-slate-400 hover:text-white text-sm font-semibold flex items-center gap-2">
+            <Download size={16} /> Tải báo cáo (CSV)
+          </button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left">

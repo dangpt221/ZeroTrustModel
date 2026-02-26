@@ -2,12 +2,16 @@
 import React, { useEffect, useState } from 'react';
 import { departmentsApi, usersApi } from '../../api';
 import { Department, User } from '../../types';
-import { Building2, Users, UserCheck, MoreVertical, Plus, Trash2 } from 'lucide-react';
+import { Building2, Users, UserCheck, Plus, Trash2, Edit2 } from 'lucide-react';
+import { Modal } from '../../components/Admin/Modal';
 
 export const DepartmentManagement: React.FC = () => {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingDept, setEditingDept] = useState<Department | null>(null);
+  const [formData, setFormData] = useState({ name: '', description: '', managerId: '' });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -28,10 +32,48 @@ export const DepartmentManagement: React.FC = () => {
   }, []);
 
   const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this department?')) {
-      await departmentsApi.update(id, { deleted: true });
-      setDepartments(departments.filter(d => d.id !== id));
+    if (confirm('Bạn có chắc chắn muốn xóa bộ phận này?')) {
+      try {
+        await departmentsApi.update(id, { deleted: true });
+        setDepartments(departments.filter(d => d.id !== id));
+        alert('Xóa bộ phận thành công!');
+      } catch (err) {
+        console.error('Delete department error:', err);
+        alert('Xóa bộ phận thất bại!');
+      }
     }
+  };
+
+  const handleCreateOrUpdate = async () => {
+    try {
+      if (editingDept) {
+        await departmentsApi.update(editingDept.id, formData);
+        setDepartments(departments.map(d => d.id === editingDept.id ? { ...d, ...formData } : d));
+        alert('Cập nhật bộ phận thành công!');
+      } else {
+        const created = await departmentsApi.create(formData);
+        setDepartments([...departments, { ...created, id: created.id, memberCount: 0 }]);
+        alert('Tạo bộ phận thành công!');
+      }
+      setIsModalOpen(false);
+      setEditingDept(null);
+      setFormData({ name: '', description: '', managerId: '' });
+    } catch (err) {
+      console.error('Save department error:', err);
+      alert('Thao tác thất bại!');
+    }
+  };
+
+  const openCreateModal = () => {
+    setEditingDept(null);
+    setFormData({ name: '', description: '', managerId: '' });
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (dept: Department) => {
+    setEditingDept(dept);
+    setFormData({ name: dept.name, description: dept.description || '', managerId: dept.managerId });
+    setIsModalOpen(true);
   };
 
   return (
@@ -41,7 +83,7 @@ export const DepartmentManagement: React.FC = () => {
           <h2 className="text-2xl font-black text-slate-800 tracking-tight uppercase italic">Cấu trúc tổ chức</h2>
           <p className="text-slate-500 text-sm font-medium">Quản lý các phòng ban và phân bổ nhân sự cốt lõi</p>
         </div>
-        <button className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-blue-500/20 active:scale-95 transition-all">
+        <button onClick={openCreateModal} className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-blue-500/20 active:scale-95 transition-all">
           <Plus size={18} /> Thêm bộ phận mới
         </button>
       </div>
@@ -59,8 +101,8 @@ export const DepartmentManagement: React.FC = () => {
                 <div className="p-4 bg-blue-50 text-blue-600 rounded-2xl">
                   <Building2 size={24} />
                 </div>
-                <button className="text-slate-300 hover:text-slate-600">
-                  <MoreVertical size={20} />
+                <button onClick={() => openEditModal(dept)} className="text-slate-300 hover:text-blue-600">
+                  <Edit2 size={20} />
                 </button>
               </div>
 
@@ -103,6 +145,56 @@ export const DepartmentManagement: React.FC = () => {
           );
         })}
       </div>
+
+      {/* Department Modal */}
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title={editingDept ? 'Chỉnh sửa bộ phận' : 'Thêm bộ phận mới'}
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs font-bold text-slate-500 uppercase">Tên bộ phận</label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="w-full mt-1 px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+              placeholder="Phòng Kỹ thuật"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-bold text-slate-500 uppercase">Mô tả</label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="w-full mt-1 px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+              rows={3}
+              placeholder="Mô tả bộ phận..."
+            />
+          </div>
+          <div>
+            <label className="text-xs font-bold text-slate-500 uppercase">Quản lý</label>
+            <select
+              value={formData.managerId}
+              onChange={(e) => setFormData({ ...formData, managerId: e.target.value })}
+              className="w-full mt-1 px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+            >
+              <option value="">Chọn quản lý</option>
+              {users.map(user => (
+                <option key={user.id} value={user.id}>{user.name}</option>
+              ))}
+            </select>
+          </div>
+          <button
+            onClick={handleCreateOrUpdate}
+            disabled={!formData.name}
+            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white py-3 rounded-xl font-bold transition-all"
+          >
+            {editingDept ? 'Cập nhật' : 'Tạo bộ phận'}
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 };

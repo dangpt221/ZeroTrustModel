@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { User, UserRole } from '../../types';
-import { usersApi } from '../../api';
+import { usersApi, departmentsApi } from '../../api';
 import {
   Search,
   UserPlus,
@@ -10,12 +10,27 @@ import {
   Trash2,
   Filter,
   Monitor,
-  Smartphone
+  Smartphone,
+  X
 } from 'lucide-react';
+import { Modal } from '../../components/Admin/Modal';
 
 export const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [filterRole, setFilterRole] = useState<string>('ALL');
+  const [filterStatus, setFilterStatus] = useState<string>('ALL');
+  const [departments, setDepartments] = useState<any[]>([]);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    role: 'MEMBER',
+    department: '',
+    mfaEnabled: false
+  });
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -27,13 +42,65 @@ export const UserManagement: React.FC = () => {
       }
     };
 
+    const fetchDepartments = async () => {
+      try {
+        const data = await departmentsApi.getAll();
+        setDepartments(data || []);
+      } catch (err) {
+        console.error('Fetch departments error:', err);
+      }
+    };
+
     fetchUsers();
+    fetchDepartments();
   }, []);
 
-  const filteredUsers = users.filter(u =>
-    u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    u.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredUsers = users.filter(u => {
+    const matchSearch = u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      u.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchRole = filterRole === 'ALL' || u.role === filterRole;
+    const matchStatus = filterStatus === 'ALL' || u.status === filterStatus;
+    return matchSearch && matchRole && matchStatus;
+  });
+
+  const handleCreateUser = async () => {
+    try {
+      const newUser = await usersApi.create({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        role: formData.role,
+        department: formData.department,
+        mfaEnabled: formData.mfaEnabled
+      });
+      setUsers([...users, { ...newUser, id: newUser.id, status: 'PENDING', trustScore: 50, device: 'Unknown', avatar: 'https://picsum.photos/seed/default/200' }]);
+      setIsModalOpen(false);
+      setFormData({ name: '', email: '', password: '', role: 'MEMBER', department: '', mfaEnabled: false });
+      alert('Tạo người dùng thành công!');
+    } catch (err) {
+      console.error('Create user error:', err);
+      alert('Tạo người dùng thất bại!');
+    }
+  };
+
+  const handleDeleteUser = async (id: string) => {
+    if (confirm('Bạn có chắc chắn muốn xóa người dùng này?')) {
+      try {
+        await usersApi.delete(id);
+        setUsers(users.filter(u => u.id !== id));
+        alert('Xóa người dùng thành công!');
+      } catch (err) {
+        console.error('Delete user error:', err);
+        alert('Xóa người dùng thất bại!');
+      }
+    }
+  };
+
+  const clearFilters = () => {
+    setFilterRole('ALL');
+    setFilterStatus('ALL');
+    setSearchTerm('');
+  };
 
   const toggleStatus = async (id: string) => {
     const target = users.find(u => u.id === id);
@@ -69,7 +136,7 @@ export const UserManagement: React.FC = () => {
           <h2 className="text-2xl font-black text-slate-800 tracking-tight uppercase italic">Quản lý định danh</h2>
           <p className="text-slate-500 text-sm">Quản lý truy cập và trạng thái tin cậy của nhân sự toàn hệ thống</p>
         </div>
-        <button className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold shadow-lg shadow-blue-500/20 flex items-center gap-2 transition-all active:scale-95">
+        <button onClick={() => setIsModalOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold shadow-lg shadow-blue-500/20 flex items-center gap-2 transition-all active:scale-95">
           <UserPlus size={18} /> Thêm nhân sự mới
         </button>
       </div>
@@ -85,10 +152,49 @@ export const UserManagement: React.FC = () => {
             className="w-full bg-white border border-slate-200 rounded-2xl py-3.5 pl-12 pr-4 focus:ring-2 focus:ring-blue-500 outline-none transition-all shadow-sm"
           />
         </div>
-        <button className="bg-white border border-slate-200 text-slate-600 px-5 py-2 rounded-2xl font-bold text-sm flex items-center gap-2 hover:bg-slate-50 transition-all">
-          <Filter size={18} /> Bộ lọc
+        <button onClick={() => setIsFilterOpen(!isFilterOpen)} className={`bg-white border px-5 py-2 rounded-2xl font-bold text-sm flex items-center gap-2 transition-all ${isFilterOpen ? 'border-blue-500 text-blue-600' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+          <Filter size={18} /> Bộ lọc {(filterRole !== 'ALL' || filterStatus !== 'ALL') && <span className="w-2 h-2 bg-blue-500 rounded-full"></span>}
         </button>
       </div>
+
+      {/* Filter Panel */}
+      {isFilterOpen && (
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-lg animate-in slide-in-from-top-2">
+          <div className="flex items-center justify-between mb-4">
+            <h4 className="font-bold text-slate-800">Lọc người dùng</h4>
+            <button onClick={clearFilters} className="text-sm text-blue-600 hover:underline">Xóa bộ lọc</button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="text-xs font-bold text-slate-500 uppercase">Vai trò</label>
+              <select value={filterRole} onChange={(e) => setFilterRole(e.target.value)} className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-xl text-sm">
+                <option value="ALL">Tất cả</option>
+                <option value="ADMIN">Admin</option>
+                <option value="MANAGER">Manager</option>
+                <option value="MEMBER">Member</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-bold text-slate-500 uppercase">Trạng thái</label>
+              <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-xl text-sm">
+                <option value="ALL">Tất cả</option>
+                <option value="ACTIVE">Hoạt động</option>
+                <option value="LOCKED">Bị khóa</option>
+                <option value="PENDING">Chờ duyệt</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-bold text-slate-500 uppercase">Bộ phận</label>
+              <select className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-xl text-sm">
+                <option value="">Tất cả</option>
+                {departments.map(dept => (
+                  <option key={dept.id} value={dept.id}>{dept.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white rounded-[32px] shadow-sm border border-slate-100 overflow-hidden">
         <div className="overflow-x-auto">
@@ -172,7 +278,7 @@ export const UserManagement: React.FC = () => {
                       >
                         {user.status === 'ACTIVE' ? <Lock size={18} /> : <Unlock size={18} />}
                       </button>
-                      <button className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-all">
+                      <button onClick={() => handleDeleteUser(user.id)} className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-all">
                         <Trash2 size={18} />
                       </button>
                     </div>
@@ -183,6 +289,91 @@ export const UserManagement: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* Add User Modal */}
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Thêm nhân sự mới">
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs font-bold text-slate-500 uppercase">Họ và tên</label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="w-full mt-1 px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+              placeholder="Nguyễn Văn A"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-bold text-slate-500 uppercase">Email</label>
+            <input
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              className="w-full mt-1 px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+              placeholder="user@company.com"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-bold text-slate-500 uppercase">Mật khẩu</label>
+            <input
+              type="password"
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              className="w-full mt-1 px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+              placeholder="******"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-bold text-slate-500 uppercase">Vai trò</label>
+              <select
+                value={formData.role}
+                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                className="w-full mt-1 px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+              >
+                <option value="MEMBER">Member</option>
+                <option value="MANAGER">Manager</option>
+                <option value="ADMIN">Admin</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-bold text-slate-500 uppercase">Bộ phận</label>
+              <select
+                value={formData.department}
+                onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                className="w-full mt-1 px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+              >
+                <option value="">Chọn bộ phận</option>
+                {departments.map(dept => (
+                  <option key={dept.id} value={dept.id}>{dept.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+            <div>
+              <p className="text-sm font-bold text-slate-700">Bắt buộc MFA</p>
+              <p className="text-xs text-slate-400">Yêu cầu xác thực 2 bước</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.mfaEnabled}
+                onChange={() => setFormData({ ...formData, mfaEnabled: !formData.mfaEnabled })}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
+          </div>
+          <button
+            onClick={handleCreateUser}
+            disabled={!formData.name || !formData.email}
+            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white py-3 rounded-xl font-bold transition-all"
+          >
+            Tạo người dùng
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 };

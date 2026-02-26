@@ -1,36 +1,86 @@
 
 import React, { useEffect, useState } from 'react';
-import { documentsApi } from '../../api';
+import { documentsApi, departmentsApi } from '../../api';
 import { Document } from '../../types';
-import { FolderLock, Search, Filter, ShieldAlert, Lock, Eye, MoreVertical, FileText, Plus } from 'lucide-react';
+import { Search, Filter, ShieldAlert, Eye, MoreVertical, FileText, Plus, Download } from 'lucide-react';
+import { Modal } from '../../components/Admin/Modal';
 
 export const DocumentManagement: React.FC = () => {
   const [docs, setDocs] = useState<Document[]>([]);
+  const [departments, setDepartments] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [filterSensitivity, setFilterSensitivity] = useState<string>('ALL');
+  const [viewingDoc, setViewingDoc] = useState<Document | null>(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    type: 'PDF',
+    size: '1MB',
+    department: '',
+    sensitivity: 'LOW',
+    uploadedBy: ''
+  });
 
   useEffect(() => {
-    const fetchDocs = async () => {
+    const fetchData = async () => {
       try {
-        const data = await documentsApi.getAll();
-        setDocs(data || []);
+        const [docsData, deptsData] = await Promise.all([
+          documentsApi.getAll(),
+          departmentsApi.getAll()
+        ]);
+        setDocs(docsData || []);
+        setDepartments(deptsData || []);
       } catch (error) {
         console.error('Error fetching documents:', error);
       } finally {
         setLoading(false);
       }
     };
-    fetchDocs();
+    fetchData();
   }, []);
 
-  const filteredDocs = docs.filter(d => d.name.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredDocs = docs.filter(d => {
+    const matchSearch = d.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchSensitivity = filterSensitivity === 'ALL' || d.sensitivity === filterSensitivity;
+    return matchSearch && matchSensitivity;
+  });
   const criticalDocs = docs.filter(d => d.sensitivity === 'CRITICAL').length;
 
   const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this document?')) {
-      await documentsApi.delete(id);
-      setDocs(docs.filter(d => d.id !== id));
+    if (confirm('Bạn có chắc chắn muốn xóa tài liệu này?')) {
+      try {
+        await documentsApi.delete(id);
+        setDocs(docs.filter(d => d.id !== id));
+        alert('Xóa tài liệu thành công!');
+      } catch (err) {
+        console.error('Delete document error:', err);
+        alert('Xóa tài liệu thất bại!');
+      }
     }
+  };
+
+  const handleCreateDoc = async () => {
+    try {
+      const created = await documentsApi.create({
+        ...formData,
+        uploadedAt: new Date().toISOString(),
+        url: '#'
+      });
+      setDocs([...docs, { ...created, id: created.id || Date.now().toString() }]);
+      setIsModalOpen(false);
+      setFormData({ name: '', type: 'PDF', size: '1MB', department: '', sensitivity: 'LOW', uploadedBy: '' });
+      alert('Tạo tài liệu thành công!');
+    } catch (err) {
+      console.error('Create document error:', err);
+      alert('Tạo tài liệu thất bại!');
+    }
+  };
+
+  const clearFilters = () => {
+    setFilterSensitivity('ALL');
+    setSearchTerm('');
   };
 
   return (
@@ -59,13 +109,54 @@ export const DocumentManagement: React.FC = () => {
             className="w-full bg-white border border-slate-200 rounded-2xl py-3.5 pl-12 pr-4 focus:ring-2 focus:ring-blue-500 outline-none transition-all shadow-sm font-medium"
           />
         </div>
-        <button className="bg-white border border-slate-200 text-slate-600 px-6 py-2 rounded-2xl font-bold text-sm flex items-center gap-2 hover:bg-slate-50 transition-all">
-          <Filter size={18} /> Lọc độ nhạy cảm
+        <button onClick={() => setIsFilterOpen(!isFilterOpen)} className={`bg-white border px-6 py-2 rounded-2xl font-bold text-sm flex items-center gap-2 transition-all ${isFilterOpen ? 'border-blue-500 text-blue-600' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+          <Filter size={18} /> Lọc độ nhạy cảm {filterSensitivity !== 'ALL' && <span className="w-2 h-2 bg-blue-500 rounded-full"></span>}
         </button>
-        <button className="bg-blue-600 text-white px-6 py-2 rounded-2xl font-bold text-sm flex items-center gap-2 hover:bg-blue-700 transition-all">
+        <button onClick={() => setIsModalOpen(true)} className="bg-blue-600 text-white px-6 py-2 rounded-2xl font-bold text-sm flex items-center gap-2 hover:bg-blue-700 transition-all">
           <Plus size={18} /> Thêm tài liệu
         </button>
       </div>
+
+      {/* Filter Panel */}
+      {isFilterOpen && (
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-lg animate-in slide-in-from-top-2">
+          <div className="flex items-center justify-between mb-4">
+            <h4 className="font-bold text-slate-800">Lọc tài liệu</h4>
+            <button onClick={clearFilters} className="text-sm text-blue-600 hover:underline">Xóa bộ lọc</button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="text-xs font-bold text-slate-500 uppercase">Độ nhạy cảm</label>
+              <select value={filterSensitivity} onChange={(e) => setFilterSensitivity(e.target.value)} className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-xl text-sm">
+                <option value="ALL">Tất cả</option>
+                <option value="CRITICAL">Critical</option>
+                <option value="HIGH">High</option>
+                <option value="MEDIUM">Medium</option>
+                <option value="LOW">Low</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-bold text-slate-500 uppercase">Bộ phận</label>
+              <select className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-xl text-sm">
+                <option value="">Tất cả</option>
+                {departments.map(dept => (
+                  <option key={dept.id} value={dept.id}>{dept.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-bold text-slate-500 uppercase">Định dạng</label>
+              <select className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-xl text-sm">
+                <option value="">Tất cả</option>
+                <option value="PDF">PDF</option>
+                <option value="DOCX">DOCX</option>
+                <option value="XLSX">XLSX</option>
+                <option value="PPTX">PPTX</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white rounded-[32px] shadow-sm border border-slate-100 overflow-hidden">
         <table className="w-full text-left">
@@ -116,11 +207,11 @@ export const DocumentManagement: React.FC = () => {
                 </td>
                 <td className="px-8 py-5 text-right">
                   <div className="flex justify-end gap-1">
-                    <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all">
+                    <button onClick={() => setViewingDoc(doc)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all">
                       <Eye size={18} />
                     </button>
                     <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all">
-                      <Lock size={18} />
+                      <Download size={18} />
                     </button>
                     <button
                       onClick={() => handleDelete(doc.id)}
@@ -135,6 +226,136 @@ export const DocumentManagement: React.FC = () => {
           </tbody>
         </table>
       </div>
+
+      {/* Add Document Modal */}
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Thêm tài liệu mới" size="lg">
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs font-bold text-slate-500 uppercase">Tên tài liệu</label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="w-full mt-1 px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+              placeholder="Tài liệu dự án ABC"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-bold text-slate-500 uppercase">Định dạng</label>
+              <select
+                value={formData.type}
+                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                className="w-full mt-1 px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+              >
+                <option value="PDF">PDF</option>
+                <option value="DOCX">DOCX</option>
+                <option value="XLSX">XLSX</option>
+                <option value="PPTX">PPTX</option>
+                <option value="TXT">TXT</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-bold text-slate-500 uppercase">Kích thước</label>
+              <select
+                value={formData.size}
+                onChange={(e) => setFormData({ ...formData, size: e.target.value })}
+                className="w-full mt-1 px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+              >
+                <option value="100KB">100KB</option>
+                <option value="500KB">500KB</option>
+                <option value="1MB">1MB</option>
+                <option value="5MB">5MB</option>
+                <option value="10MB">10MB</option>
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-bold text-slate-500 uppercase">Bộ phận</label>
+              <select
+                value={formData.department}
+                onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                className="w-full mt-1 px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+              >
+                <option value="">Chọn bộ phận</option>
+                {departments.map(dept => (
+                  <option key={dept.id} value={dept.name}>{dept.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-bold text-slate-500 uppercase">Độ nhạy cảm</label>
+              <select
+                value={formData.sensitivity}
+                onChange={(e) => setFormData({ ...formData, sensitivity: e.target.value })}
+                className="w-full mt-1 px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+              >
+                <option value="LOW">Low</option>
+                <option value="MEDIUM">Medium</option>
+                <option value="HIGH">High</option>
+                <option value="CRITICAL">Critical</option>
+              </select>
+            </div>
+          </div>
+          <button
+            onClick={handleCreateDoc}
+            disabled={!formData.name}
+            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white py-3 rounded-xl font-bold transition-all"
+          >
+            Tạo tài liệu
+          </button>
+        </div>
+      </Modal>
+
+      {/* View Document Modal */}
+      <Modal isOpen={!!viewingDoc} onClose={() => setViewingDoc(null)} title="Chi tiết tài liệu">
+        {viewingDoc && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl">
+              <div className="p-4 bg-blue-100 text-blue-600 rounded-xl">
+                <FileText size={32} />
+              </div>
+              <div>
+                <h4 className="font-bold text-slate-800">{viewingDoc.name}</h4>
+                <p className="text-sm text-slate-500">{viewingDoc.type} • {viewingDoc.size}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-xs font-bold text-slate-400 uppercase">Bộ phận</p>
+                <p className="font-bold text-slate-700">{viewingDoc.department}</p>
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-400 uppercase">Độ nhạy cảm</p>
+                <span className={`text-[10px] font-black px-2 py-1 rounded uppercase ${
+                  viewingDoc.sensitivity === 'CRITICAL' ? 'bg-rose-100 text-rose-600' :
+                  viewingDoc.sensitivity === 'HIGH' ? 'bg-amber-100 text-amber-600' :
+                  'bg-emerald-100 text-emerald-600'
+                }`}>
+                  {viewingDoc.sensitivity}
+                </span>
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-400 uppercase">Người tải lên</p>
+                <p className="font-bold text-slate-700">{viewingDoc.uploadedBy}</p>
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-400 uppercase">Ngày tải lên</p>
+                <p className="font-bold text-slate-700">{new Date(viewingDoc.uploadedAt).toLocaleDateString('vi-VN')}</p>
+              </div>
+            </div>
+            <div className="flex gap-2 pt-4">
+              <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2">
+                <Download size={18} /> Tải xuống
+              </button>
+              <button onClick={() => handleDelete(viewingDoc.id)} className="px-6 py-3 border border-rose-200 text-rose-600 rounded-xl font-bold hover:bg-rose-50 transition-all">
+                <MoreVertical size={18} />
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };

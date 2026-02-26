@@ -1,6 +1,7 @@
 
-import React, { useState } from 'react';
-import { Fingerprint, ShieldAlert, Monitor, Globe, Bell, Zap, Save } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Fingerprint, ShieldAlert, Monitor, Globe, Bell, Zap, Save, X, Plus, CheckCircle } from 'lucide-react';
+import { zeroTrustApi } from '../../api';
 
 export const ZeroTrustSettings: React.FC = () => {
   const [config, setConfig] = useState({
@@ -8,8 +9,52 @@ export const ZeroTrustSettings: React.FC = () => {
     maxLoginFails: 5,
     trustScoreThreshold: 70,
     allowExternalIP: false,
-    alertOnNewDevice: true
+    alertOnNewDevice: true,
+    ipWhitelist: ['192.168.1.0/24', '10.0.0.1']
   });
+  const [newIP, setNewIP] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const data = await zeroTrustApi.getConfig();
+        if (data) {
+          setConfig(prev => ({ ...prev, ...data }));
+        }
+      } catch (err) {
+        console.error('Error fetching zero trust config:', err);
+      }
+    };
+    fetchConfig();
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await zeroTrustApi.updateConfig(config);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+      alert('Lưu cấu hình thành công!');
+    } catch (err) {
+      console.error('Error saving config:', err);
+      alert('Lưu cấu hình thất bại!');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAddIP = () => {
+    if (newIP && !config.ipWhitelist.includes(newIP)) {
+      setConfig({ ...config, ipWhitelist: [...config.ipWhitelist, newIP] });
+      setNewIP('');
+    }
+  };
+
+  const handleRemoveIP = (ip: string) => {
+    setConfig({ ...config, ipWhitelist: config.ipWhitelist.filter(i => i !== ip) });
+  };
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -18,8 +63,9 @@ export const ZeroTrustSettings: React.FC = () => {
           <h2 className="text-2xl font-black text-slate-800 uppercase italic">Cấu hình Zero Trust</h2>
           <p className="text-slate-500 text-sm">Thiết lập các rào cản bảo mật và quy tắc xác thực động</p>
         </div>
-        <button className="bg-slate-900 text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-xl hover:bg-slate-800 transition-all">
-          <Save size={18} /> Lưu cấu hình
+        <button onClick={handleSave} disabled={saving} className="bg-slate-900 text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-xl hover:bg-slate-800 transition-all disabled:opacity-50">
+          {saved ? <CheckCircle size={18} className="text-emerald-400" /> : <Save size={18} />}
+          {saving ? 'Đang lưu...' : saved ? 'Đã lưu!' : 'Lưu cấu hình'}
         </button>
       </div>
 
@@ -80,9 +126,27 @@ export const ZeroTrustSettings: React.FC = () => {
             <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
               <p className="text-[10px] font-black text-slate-400 uppercase mb-2">Whitelist IPs Hiện tại</p>
               <div className="flex flex-wrap gap-2">
-                <span className="text-[10px] font-bold bg-white px-2 py-1 rounded-lg border border-slate-200">192.168.1.0/24</span>
-                <span className="text-[10px] font-bold bg-white px-2 py-1 rounded-lg border border-slate-200">10.0.0.1</span>
-                <button className="text-[10px] font-black text-blue-600">+ Thêm IP</button>
+                {config.ipWhitelist.map(ip => (
+                  <span key={ip} className="text-[10px] font-bold bg-white px-2 py-1 rounded-lg border border-slate-200 flex items-center gap-1">
+                    {ip}
+                    <button onClick={() => handleRemoveIP(ip)} className="text-slate-400 hover:text-rose-500 ml-1">
+                      <X size={12} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+              <div className="mt-3 flex gap-2">
+                <input
+                  type="text"
+                  value={newIP}
+                  onChange={(e) => setNewIP(e.target.value)}
+                  placeholder="Nhập IP mới (vd: 192.168.1.100)"
+                  className="flex-1 text-xs px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  onKeyPress={(e) => e.key === 'Enter' && handleAddIP()}
+                />
+                <button onClick={handleAddIP} className="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                  <Plus size={14} />
+                </button>
               </div>
             </div>
           </div>

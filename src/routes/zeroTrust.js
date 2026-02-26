@@ -15,7 +15,13 @@ export function registerZeroTrustRoutes(router) {
       const cfg = await getOrCreateConfig();
       res.json({
         id: cfg._id.toString(),
+        mfaRequired: cfg.mfaRequired,
         mfaRequiredForAdmins: cfg.mfaRequiredForAdmins,
+        maxLoginFails: cfg.maxLoginFails,
+        trustScoreThreshold: cfg.trustScoreThreshold,
+        allowExternalIP: cfg.allowExternalIP,
+        alertOnNewDevice: cfg.alertOnNewDevice,
+        ipWhitelist: cfg.ipWhitelist,
         deviceTrustThreshold: cfg.deviceTrustThreshold,
         geofencingEnabled: cfg.geofencingEnabled,
       });
@@ -31,12 +37,28 @@ export function registerZeroTrustRoutes(router) {
     async (req, res, next) => {
       try {
         const cfg = await getOrCreateConfig();
-        cfg.mfaRequiredForAdmins =
-          req.body.mfaRequiredForAdmins ?? cfg.mfaRequiredForAdmins;
-        cfg.deviceTrustThreshold =
-          req.body.deviceTrustThreshold ?? cfg.deviceTrustThreshold;
-        cfg.geofencingEnabled =
-          req.body.geofencingEnabled ?? cfg.geofencingEnabled;
+        const {
+          mfaRequired,
+          mfaRequiredForAdmins,
+          maxLoginFails,
+          trustScoreThreshold,
+          allowExternalIP,
+          alertOnNewDevice,
+          ipWhitelist,
+          deviceTrustThreshold,
+          geofencingEnabled
+        } = req.body;
+
+        if (mfaRequired !== undefined) cfg.mfaRequired = mfaRequired;
+        if (mfaRequiredForAdmins !== undefined) cfg.mfaRequiredForAdmins = mfaRequiredForAdmins;
+        if (maxLoginFails !== undefined) cfg.maxLoginFails = maxLoginFails;
+        if (trustScoreThreshold !== undefined) cfg.trustScoreThreshold = trustScoreThreshold;
+        if (allowExternalIP !== undefined) cfg.allowExternalIP = allowExternalIP;
+        if (alertOnNewDevice !== undefined) cfg.alertOnNewDevice = alertOnNewDevice;
+        if (ipWhitelist !== undefined) cfg.ipWhitelist = ipWhitelist;
+        if (deviceTrustThreshold !== undefined) cfg.deviceTrustThreshold = deviceTrustThreshold;
+        if (geofencingEnabled !== undefined) cfg.geofencingEnabled = geofencingEnabled;
+
         await cfg.save();
         res.json({
           id: cfg._id.toString(),
