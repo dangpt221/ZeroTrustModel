@@ -7,7 +7,8 @@ function toClientUser(user) {
     id: user._id.toString(),
     name: user.name,
     email: user.email,
-    role: user.role,
+    // Map backend role 'STAFF' -> frontend enum 'MEMBER'
+    role: user.role === 'STAFF' ? 'MEMBER' : user.role,
     departmentId: user.departmentId || null,
     trustScore: user.trustScore ?? 95,
   };
