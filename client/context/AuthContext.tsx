@@ -1,16 +1,21 @@
-
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User } from '../types';
+
+interface SecurityInfo {
+  riskScore: number;
+  riskFactors: string[];
+}
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  login: (email: string, password?: string, mfaCode?: string) => Promise<boolean>;
+  login: (email: string, password?: string, mfaCode?: string) => Promise<{ success: boolean; warning?: string; security?: SecurityInfo }>;
   logout: () => void;
   needsMFA: boolean;
   setNeedsMFA: (val: boolean) => void;
   tempUser: User | null;
   isLoading: boolean;
+  securityInfo: SecurityInfo | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -20,6 +25,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [needsMFA, setNeedsMFA] = useState(false);
   const [tempUser, setTempUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [securityInfo, setSecurityInfo] = useState<SecurityInfo | null>(null);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('nexus_user');
@@ -29,44 +35,71 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(false);
   }, []);
 
-  const login = async (email: string, password?: string, mfaCode?: string): Promise<boolean> => {
+  const login = async (email: string, password?: string, mfaCode?: string) => {
     try {
-      const response = await fetch('http://localhost:5000/api/auth/login', {
+      const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, mfaCode })
       });
 
+      const data = await response.json();
+
       if (response.ok) {
-        const data = await response.json();
+        if (data.needsMFA) {
+          setNeedsMFA(true);
+          setTempUser({ email, role: 'MEMBER' } as User);
+          if (data.riskScore !== undefined) {
+            setSecurityInfo({ riskScore: data.riskScore, riskFactors: data.riskFactors || [] });
+          }
+          return {
+            success: false,
+            warning: data.message,
+            security: data.riskScore ? { riskScore: data.riskScore, riskFactors: data.riskFactors || [] } : undefined
+          };
+        }
+
         setUser(data.user);
+        setNeedsMFA(false);
+        setTempUser(null);
         localStorage.setItem('nexus_user', JSON.stringify(data.user));
-        return true;
+
+        if (data.riskScore !== undefined) {
+          setSecurityInfo({ riskScore: data.riskScore, riskFactors: data.riskFactors || [] });
+        }
+
+        return { success: true, security: data.riskScore ? { riskScore: data.riskScore, riskFactors: data.riskFactors || [] } : undefined };
       }
+
+      const warning = data.warning || null;
+      console.error('Login failed:', data.message);
+      return { success: false, warning };
     } catch (error) {
       console.error('Login error:', error);
+      return { success: false };
     }
-    return false;
   };
 
   const logout = async () => {
-    await fetch('http://localhost:5000/api/auth/logout', { method: 'POST' });
+    await fetch('/api/auth/logout', { method: 'POST' });
     setUser(null);
     setNeedsMFA(false);
     setTempUser(null);
+    setSecurityInfo(null);
     localStorage.removeItem('nexus_user');
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      isAuthenticated: !!user, 
-      login, 
-      logout, 
-      needsMFA, 
-      setNeedsMFA, 
+    <AuthContext.Provider value={{
+      user,
+      isAuthenticated: !!user,
+      login,
+      logout,
+      needsMFA,
+      setNeedsMFA,
       tempUser,
-      isLoading
+      isLoading,
+      securityInfo
     }}>
       {!isLoading && children}
     </AuthContext.Provider>

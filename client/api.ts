@@ -28,6 +28,11 @@ export const authApi = {
 // Users
 export const usersApi = {
   getAll: async () => {
+    const res = await fetch(`${API_BASE}/users`, { credentials: 'include' });
+    return res.json();
+  },
+
+  getAdmin: async () => {
     const res = await fetch(`${API_BASE}/admin/users`, { credentials: 'include' });
     return res.json();
   },

@@ -1,13 +1,37 @@
-
+import { AlertTriangle, CheckCircle2, Lock, Mail, Shield, Smartphone } from 'lucide-react';
 import React, { useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { Shield, Lock, Mail, Smartphone, CheckCircle2 } from 'lucide-react';
-import { 
-  LoginButton, 
-  OAuthGoogleButton, 
-  AuthErrorMessage 
+import {
+    AuthErrorMessage,
+    LoginButton,
+    OAuthGoogleButton
 } from '../components/Auth/AuthComponents';
+import { useAuth } from '../context/AuthContext';
+
+// RiskBadge component
+const RiskBadge: React.FC<{ score: number }> = ({ score }) => {
+  let color = 'bg-green-500';
+  let label = 'An toàn';
+
+  if (score >= 70) {
+    color = 'bg-red-500';
+    label = 'Nguy cơ cao';
+  } else if (score >= 50) {
+    color = 'bg-orange-500';
+    label = 'Nguy cơ trung bình';
+  } else if (score >= 30) {
+    color = 'bg-yellow-500';
+    label = 'Nguy cơ thấp';
+  }
+
+  return (
+    <div className="flex items-center gap-2 bg-white/5 rounded-lg px-3 py-2">
+      <div className={`w-2 h-2 rounded-full ${color} animate-pulse`}></div>
+      <span className="text-xs font-bold text-slate-300">{label}</span>
+      <span className="text-xs text-slate-500">Risk: {score}%</span>
+    </div>
+  );
+};
 
 export const Login: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -17,7 +41,9 @@ export const Login: React.FC = () => {
     rememberMe: false
   });
   const [error, setError] = useState('');
+  const [warning, setWarning] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [riskScore, setRiskScore] = useState<number | null>(null);
   const { login, needsMFA, tempUser, isAuthenticated } = useAuth();
 
   // Nếu đã đăng nhập thành công, chuyển hướng ngay về Dashboard
@@ -34,16 +60,28 @@ export const Login: React.FC = () => {
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setWarning('');
+    setRiskScore(null);
     setIsLoading(true);
 
     try {
       if (needsMFA) {
-        const success = await login(tempUser!.email, undefined, formData.mfaCode);
-        if (!success) setError('Mã xác thực không hợp lệ. Vui lòng thử lại.');
+        const result = await login(tempUser!.email, undefined, formData.mfaCode);
+        if (!result.success) {
+          setError('Mã xác thực không hợp lệ. Vui lòng thử lại.');
+        } else if (result.security) {
+          setRiskScore(result.security.riskScore);
+        }
       } else {
-        const success = await login(formData.email, formData.password);
-        if (!success) {
-          setError('Thông tin đăng nhập không chính xác hoặc email không tồn tại trong hệ thống.');
+        const result = await login(formData.email, formData.password);
+        if (!result.success) {
+          if (result.warning) {
+            setWarning(result.warning);
+          } else {
+            setError('Thông tin đăng nhập không chính xác hoặc email không tồn tại trong hệ thống.');
+          }
+        } else if (result.security) {
+          setRiskScore(result.security.riskScore);
         }
       }
     } catch (err) {
@@ -76,6 +114,14 @@ export const Login: React.FC = () => {
           {/* Internal gradient line */}
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent opacity-50"></div>
 
+          {/* Zero Trust Security Badge */}
+          <div className="absolute top-4 right-4">
+            <div className="flex items-center gap-1.5 bg-blue-500/10 border border-blue-500/20 rounded-full px-2 py-1">
+              <Shield size={12} className="text-blue-400" />
+              <span className="text-[9px] font-bold text-blue-400 uppercase tracking-wider">Zero Trust</span>
+            </div>
+          </div>
+
           <h2 className="text-xl font-bold text-white mb-8 text-center">
             {needsMFA ? 'Xác thực hai lớp' : 'Đăng nhập hệ thống'}
           </h2>
@@ -83,13 +129,35 @@ export const Login: React.FC = () => {
           <form onSubmit={handleAuth} className="space-y-6">
             {error && <AuthErrorMessage message={error} />}
 
+            {/* Security Warning */}
+            {warning && (
+              <div className="bg-orange-500/10 border border-orange-500/20 text-orange-400 px-4 py-3 rounded-xl text-xs font-bold flex items-center gap-2 animate-in fade-in zoom-in-95 duration-200">
+                <AlertTriangle size={14} /> {warning}
+              </div>
+            )}
+
+            {/* Risk Score Display */}
+            {riskScore !== null && (
+              <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-3 animate-in fade-in zoom-in-95 duration-200">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-green-400 flex items-center gap-2">
+                    <Shield size={14} /> Đăng nhập thành công
+                  </span>
+                  <RiskBadge score={riskScore} />
+                </div>
+                <p className="text-[10px] text-slate-400">
+                  Phiên đăng nhập đang được giám sát theo mô hình Zero Trust
+                </p>
+              </div>
+            )}
+
             {!needsMFA ? (
               <div className="space-y-5">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Email nội bộ</label>
                   <div className="relative group">
                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-400 transition-colors" size={18} />
-                    <input 
+                    <input
                       name="email"
                       type="email"
                       required
@@ -107,8 +175,8 @@ export const Login: React.FC = () => {
                     <a href="#" className="text-[10px] font-bold text-blue-500 hover:text-blue-400 uppercase">Quên mật khẩu?</a>
                   </div>
                   <div className="relative group">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-400 transition-colors" size={18} />
-                    <input 
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-400 transition-colors" size={18}/>
+                    <input
                       name="password"
                       type="password"
                       required
@@ -123,7 +191,7 @@ export const Login: React.FC = () => {
                 <div className="flex items-center justify-between py-2">
                   <label className="flex items-center gap-3 cursor-pointer group">
                     <div className="relative">
-                      <input 
+                      <input
                         name="rememberMe"
                         type="checkbox"
                         checked={formData.rememberMe}
@@ -148,7 +216,7 @@ export const Login: React.FC = () => {
                   <p className="text-xs text-slate-400 px-6">Mã 6 chữ số từ ứng dụng Google Authenticator. Nhập mã bất kỳ (vd: 000000) để tiếp tục.</p>
                 </div>
                 <div className="relative max-w-[240px] mx-auto">
-                  <input 
+                  <input
                     name="mfaCode"
                     type="text"
                     maxLength={6}
@@ -191,8 +259,8 @@ export const Login: React.FC = () => {
           </p>
           <div className="p-4 rounded-2xl bg-white/5 border border-white/5 inline-block">
             <p className="text-[10px] text-slate-500 italic leading-relaxed">
-              Tài khoản: admin@nexus.com (có MFA) hoặc member@nexus.com (không MFA)<br/>
-              Mật khẩu: bất kỳ. OTP: bất kỳ 6 số.
+              Tài khoản: admin@nexus.com (có MFA) hoặc manager@nexus.com, staff@nexus.com (không MFA)<br/>
+              Mật khẩu: nexus123. OTP: 000000.
             </p>
           </div>
         </div>

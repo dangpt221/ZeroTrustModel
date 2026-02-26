@@ -69,7 +69,7 @@ export const AdminDashboard: React.FC = () => {
       ['Timestamp', 'User', 'Action', 'Details', 'IP', 'Status', 'Risk Level'].join(','),
       ...auditLogs.map(log => [
         new Date(log.timestamp).toISOString(),
-        log.userName,
+        log.userName || 'Unknown',
         log.action,
         log.details,
         log.ipAddress,
@@ -260,9 +260,9 @@ export const AdminDashboard: React.FC = () => {
                   <td className="px-8 py-5">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-xs border border-blue-500/20">
-                        {log.userName.charAt(0)}
+                        {(log.userName || 'U').charAt(0)}
                       </div>
-                      <span className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors">{log.userName}</span>
+                      <span className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors">{log.userName || 'Unknown'}</span>
                     </div>
                   </td>
                   <td className="px-8 py-5">
