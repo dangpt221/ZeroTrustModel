@@ -12,6 +12,7 @@ import {
 } from '../middleware/securityMiddleware.js';
 import passport from '../configs/passport.js';
 import { User } from '../models/User.js';
+import { sendOTP } from '../utils/emailService.js';
 
 function toClientUser(user) {
   return {
@@ -58,6 +59,16 @@ export function registerAuthRoutes(router) {
           mfaPendingLogins.delete(email);
           logSecurityEvent('LOGIN_BLOCKED', { email, ip: clientIP, reason: 'Locked account' });
           return res.status(401).json({ message: 'Account locked or not found' });
+        }
+
+        // If it was a NEW_DEVICE, add to knownDevices
+        if (pending.riskFactors && pending.riskFactors.includes('NEW_DEVICE')) {
+          if (!user.knownDevices) user.knownDevices = [];
+          if (!user.knownDevices.includes(deviceFingerprint)) {
+            user.knownDevices.push(deviceFingerprint);
+            await user.save();
+            logSecurityEvent('DEVICE_REGISTERED', { email, deviceFingerprint });
+          }
         }
 
         mfaPendingLogins.delete(email);
@@ -128,51 +139,42 @@ export function registerAuthRoutes(router) {
       // Risk assessment before login completion
       const { riskScore, riskFactors } = await assessLoginRisk(req, user);
 
-      // High risk - force MFA regardless of user setting
-      if (riskScore >= 50 || riskFactors.includes('NEW_DEVICE')) {
-        // Generate a mock MFA code (in production, this would send real OTP)
-        const mockMfaCode = '000000';
+      // Always force OTP for every login (Zero Trust)
+      const shouldForceOTP = true;
+
+      if (shouldForceOTP) {
+        // Generate a 6-digit OTP
+        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+        // Send OTP via Email
+        const emailSent = await sendOTP(user.email, otpCode);
+
         mfaPendingLogins.set(email, {
           userId: user._id.toString(),
-          mfaCode: mockMfaCode,
+          mfaCode: otpCode,
           expiresAt: Date.now() + 5 * 60 * 1000,
           riskScore,
           riskFactors
         });
 
-        logSecurityEvent('RISK_DETECTED', {
+        logSecurityEvent('MFA_ENFORCED', {
           email,
           ip: clientIP,
           riskScore,
           riskFactors,
-          action: 'MFA_FORCED'
+          message: 'Zero Trust: OTP mandatory for all logins',
+          emailSent
         });
 
         return res.json({
           needsMFA: true,
-          message: 'Xác thực bảo mật bổ sung được yêu cầu do phát hiện hoạt động bất thường',
+          message: 'Xác thực bảo mật là bắt buộc (Zero Trust). Mã xác thực đã được gửi đến email của bạn.',
           riskScore,
           riskFactors
         });
       }
 
-      // Check if MFA is enabled
-      if (user.mfaEnabled) {
-        // Generate a mock MFA code (in production, this would send real OTP)
-        const mockMfaCode = '000000';
-        mfaPendingLogins.set(email, {
-          userId: user._id.toString(),
-          mfaCode: mockMfaCode,
-          expiresAt: Date.now() + 5 * 60 * 1000, // 5 minutes
-        });
-
-        return res.json({
-          needsMFA: true,
-          message: 'MFA verification required'
-        });
-      }
-
-      // Clear failed attempts on success
+      // Clear failed attempts on success (In case we reached here without MFA, though shouldn't happen with shouldForceOTP=true)
       clearFailedAttempts(clientIP, email);
 
       // No MFA, complete login

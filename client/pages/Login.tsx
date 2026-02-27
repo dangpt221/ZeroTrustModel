@@ -236,8 +236,10 @@ export const Login: React.FC = () => {
                   <Smartphone size={40} className="animate-bounce" />
                 </div>
                 <div className="space-y-2">
-                  <h3 className="text-lg font-bold text-white">Nhập mã OTP</h3>
-                  <p className="text-xs text-slate-400 px-6">Mã 6 chữ số từ ứng dụng Google Authenticator. Nhập mã bất kỳ (vd: 000000) để tiếp tục.</p>
+                  <h3 className="text-lg font-bold text-white">Xác minh bảo mật</h3>
+                  <p className="text-xs text-slate-400 px-6">
+                    Vì lý do bảo mật (Zero Trust), mã xác thực đã được gửi đến email của bạn.
+                  </p>
                 </div>
                 <div className="relative max-w-[240px] mx-auto">
                   <input

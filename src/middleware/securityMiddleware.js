@@ -79,10 +79,10 @@ export function clearFailedAttempts(ip, email) {
  */
 export function getClientIP(req) {
   return req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
-         req.headers['x-real-ip'] ||
-         req.connection?.remoteAddress ||
-         req.socket?.remoteAddress ||
-         'unknown';
+    req.headers['x-real-ip'] ||
+    req.connection?.remoteAddress ||
+    req.socket?.remoteAddress ||
+    'unknown';
 }
 
 /**
@@ -155,9 +155,8 @@ export async function assessLoginRisk(req, user) {
   const riskFactors = [];
 
   // Check 1: New device (not seen before)
-  const sessionKey = `${user._id}:${deviceFingerprint}`;
-  const knownDevice = deviceSessions.get(sessionKey);
-  if (!knownDevice) {
+  const isKnownDevice = user.knownDevices && user.knownDevices.includes(deviceFingerprint);
+  if (!isKnownDevice) {
     riskScore += 30;
     riskFactors.push('NEW_DEVICE');
   }
