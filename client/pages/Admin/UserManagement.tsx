@@ -12,7 +12,9 @@ import {
   Monitor,
   Smartphone,
   X,
-  Edit2
+  Edit2,
+  Check,
+  UserMinus
 } from 'lucide-react';
 import { Modal } from '../../components/Admin/Modal';
 
@@ -179,6 +181,30 @@ export const UserManagement: React.FC = () => {
     }
   };
 
+  const handleApprove = async (id: string) => {
+    try {
+      await usersApi.approve(id);
+      setUsers(prev => prev.map(u => (u.id === id ? { ...u, status: 'ACTIVE' } : u)));
+      alert('Phê duyệt người dùng thành công!');
+    } catch (err) {
+      console.error('Approve user error:', err);
+      alert('Phê duyệt người dùng thất bại!');
+    }
+  };
+
+  const handleReject = async (id: string) => {
+    if (confirm('Bạn có chắc chắn muốn TỪ CHỐI và XÓA yêu cầu đăng ký này?')) {
+      try {
+        await usersApi.reject(id);
+        setUsers(prev => prev.filter(u => u.id !== id));
+        alert('Đã từ chối và xóa người dùng.');
+      } catch (err) {
+        console.error('Reject user error:', err);
+        alert('Thao tác thất bại!');
+      }
+    }
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -194,8 +220,8 @@ export const UserManagement: React.FC = () => {
       <div className="flex flex-col md:flex-row gap-4">
         <div className="flex-1 relative group">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} />
-          <input 
-            type="text" 
+          <input
+            type="text"
             placeholder="Tìm theo tên, email hoặc bộ phận..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -276,18 +302,16 @@ export const UserManagement: React.FC = () => {
                   </td>
                   <td className="px-8 py-5">
                     <div className="flex flex-col gap-1">
-                      <span className={`w-fit text-[10px] font-black px-2 py-0.5 rounded uppercase border ${
-                        user.role === UserRole.ADMIN ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                        user.role === UserRole.MANAGER ? 'bg-amber-50 text-amber-600 border-amber-100' :
-                        'bg-slate-50 text-slate-500 border-slate-200'
-                      }`}>
+                      <span className={`w-fit text-[10px] font-black px-2 py-0.5 rounded uppercase border ${user.role === UserRole.ADMIN ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                          user.role === UserRole.MANAGER ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                            'bg-slate-50 text-slate-500 border-slate-200'
+                        }`}>
                         {user.role}
                       </span>
-                      <button 
+                      <button
                         onClick={() => toggleMFA(user.id)}
-                        className={`w-fit flex items-center gap-1 text-[9px] font-black uppercase tracking-tighter py-0.5 px-1.5 rounded border transition-all ${
-                          user.mfaEnabled ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-100 text-slate-400 border-slate-200'
-                        }`}
+                        className={`w-fit flex items-center gap-1 text-[9px] font-black uppercase tracking-tighter py-0.5 px-1.5 rounded border transition-all ${user.mfaEnabled ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-100 text-slate-400 border-slate-200'
+                          }`}
                       >
                         <Smartphone size={10} /> {user.mfaEnabled ? 'MFA ACTIVE' : 'FORCE MFA'}
                       </button>
@@ -299,9 +323,9 @@ export const UserManagement: React.FC = () => {
                         <span className={user.trustScore > 80 ? 'text-emerald-500' : 'text-amber-500'}>{user.trustScore}% Verified</span>
                       </div>
                       <div className="w-28 bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                        <div 
-                          className={`h-full transition-all duration-1000 ${user.trustScore > 80 ? 'bg-emerald-500' : 'bg-amber-500'}`} 
-                          style={{width: `${user.trustScore}%`}}
+                        <div
+                          className={`h-full transition-all duration-1000 ${user.trustScore > 80 ? 'bg-emerald-500' : 'bg-amber-500'}`}
+                          style={{ width: `${user.trustScore}%` }}
                         ></div>
                       </div>
                     </div>
@@ -314,14 +338,31 @@ export const UserManagement: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-8 py-5">
-                    <span className={`text-[10px] font-black px-3 py-1 rounded-full ${
-                      user.status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-rose-500/10 text-rose-600'
-                    }`}>
+                    <span className={`text-[10px] font-black px-3 py-1 rounded-full ${user.status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-rose-500/10 text-rose-600'
+                      }`}>
                       {user.status}
                     </span>
                   </td>
                   <td className="px-8 py-5 text-right">
                     <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {user.status === 'PENDING' && (
+                        <>
+                          <button
+                            onClick={() => handleApprove(user.id)}
+                            className="p-2 text-emerald-500 hover:bg-emerald-50 rounded-xl transition-all"
+                            title="Phê duyệt"
+                          >
+                            <Check size={18} />
+                          </button>
+                          <button
+                            onClick={() => handleReject(user.id)}
+                            className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
+                            title="Từ chối"
+                          >
+                            <UserMinus size={18} />
+                          </button>
+                        </>
+                      )}
                       <button
                         onClick={() => handleEditUser(user)}
                         className="p-2 text-blue-500 hover:bg-blue-50 rounded-xl transition-all"
@@ -332,7 +373,7 @@ export const UserManagement: React.FC = () => {
                         onClick={() => toggleStatus(user.id)}
                         className={`p-2 rounded-xl transition-all ${user.status === 'ACTIVE' ? 'text-amber-500 hover:bg-amber-50' : 'text-emerald-500 hover:bg-emerald-50'}`}
                       >
-                        {user.status === 'ACTIVE' ? <Lock size={18}/> : <Unlock size={18} />}
+                        {user.status === 'ACTIVE' ? <Lock size={18} /> : <Unlock size={18} />}
                       </button>
                       <button onClick={() => handleDeleteUser(user.id)} className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-all">
                         <Trash2 size={18} />

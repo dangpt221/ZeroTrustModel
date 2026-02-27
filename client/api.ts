@@ -85,6 +85,22 @@ export const usersApi = {
     return res.json();
   },
 
+  approve: async (id: string) => {
+    const res = await fetch(`${API_BASE}/admin/users/${id}/approve`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+    return res.json();
+  },
+
+  reject: async (id: string) => {
+    const res = await fetch(`${API_BASE}/admin/users/${id}/reject`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+    return res.json();
+  },
+
   getList: async () => {
     const res = await fetch(`${API_BASE}/users`, { credentials: 'include' });
     return res.json();

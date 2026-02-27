@@ -9,7 +9,9 @@ import {
   Zap,
   Globe,
   Download,
-  RefreshCw
+  RefreshCw,
+  UserCheck,
+  UserX
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -62,6 +64,27 @@ export const AdminDashboard: React.FC = () => {
       setScanning(false);
       alert('Quét lỗ hổng bảo mật hoàn tất! Không phát hiện mối đe dọa mới.');
     }, 2000);
+  };
+
+  const handleApprove = async (id: string) => {
+    try {
+      await usersApi.approve(id);
+      setUsers(prev => prev.map(u => (u.id === id ? { ...u, status: 'ACTIVE' } : u)));
+      alert('Phê duyệt người dùng thành công!');
+    } catch (err) {
+      console.error('Approve error:', err);
+    }
+  };
+
+  const handleReject = async (id: string) => {
+    if (confirm('Từ chối và xóa yêu cầu này?')) {
+      try {
+        await usersApi.reject(id);
+        setUsers(prev => prev.filter(u => u.id !== id));
+      } catch (err) {
+        console.error('Reject error:', err);
+      }
+    }
   };
 
   const handleDownloadReport = () => {
@@ -217,6 +240,51 @@ export const AdminDashboard: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Pending Approvals Section */}
+      {users.filter(u => u.status === 'PENDING').length > 0 && (
+        <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm animate-in fade-in zoom-in-95 duration-500">
+          <div className="flex items-center justify-between mb-8">
+            <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+              <UserPlus size={22} className="text-amber-500" />
+              Yêu cầu phê duyệt mới ({users.filter(u => u.status === 'PENDING').length})
+            </h3>
+            <button onClick={() => navigate('/admin/users')} className="text-sm font-bold text-blue-600 hover:underline px-4 py-2 bg-blue-50 rounded-lg">Quản lý tất cả</button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {users.filter(u => u.status === 'PENDING').map(pendingUser => (
+              <div key={pendingUser.id} className="bg-slate-50 border border-slate-100 p-5 rounded-2xl flex items-center justify-between group hover:border-blue-200 hover:bg-white transition-all shadow-sm hover:shadow-md">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center font-bold text-blue-600 shadow-sm">
+                    {pendingUser.name?.charAt(0) || 'U'}
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-800 line-clamp-1">{pendingUser.name}</h4>
+                    <p className="text-[10px] text-slate-400 font-medium">{pendingUser.email}</p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleApprove(pendingUser.id)}
+                    className="p-2.5 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 shadow-lg shadow-emerald-500/20 active:scale-90 transition-all"
+                    title="Phê duyệt"
+                  >
+                    <UserCheck size={18} />
+                  </button>
+                  <button
+                    onClick={() => handleReject(pendingUser.id)}
+                    className="p-2.5 bg-rose-500 text-white rounded-xl hover:bg-rose-600 shadow-lg shadow-rose-500/20 active:scale-90 transition-all"
+                    title="Từ chối"
+                  >
+                    <UserX size={18} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Recent Logs Table */}
       <div className="bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-slate-800">

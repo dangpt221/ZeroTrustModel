@@ -5,7 +5,7 @@ import { Role } from '../models/Role.js';
 
 export function registerAdminRoutes(router) {
   // ============= USERS API =============
-  
+
   // Get all users (ADMIN only - full details)
   router.get('/admin/users', requireAuth, requireRole(['ADMIN']), async (_req, res, next) => {
     try {
@@ -54,7 +54,7 @@ export function registerAdminRoutes(router) {
       const { id } = req.params;
       const user = await User.findById(id).lean();
       if (!user) return res.status(404).json({ message: 'User not found' });
-      
+
       // Only ADMIN can see full details, others see limited
       const isAdmin = req.user.role === 'ADMIN';
       res.json({
@@ -76,7 +76,7 @@ export function registerAdminRoutes(router) {
   router.post('/admin/users', requireAuth, requireRole(['ADMIN']), async (req, res, next) => {
     try {
       const { name, email, password, role, departmentId, mfaEnabled } = req.body;
-      
+
       // Check if email already exists
       const existing = await User.findOne({ email });
       if (existing) {
@@ -85,7 +85,7 @@ export function registerAdminRoutes(router) {
 
       const plain = password || 'Password123!';
       const passwordHash = await bcrypt.hash(plain, 10);
-      
+
       const user = await User.create({
         name,
         email,
@@ -96,10 +96,10 @@ export function registerAdminRoutes(router) {
         trustScore: 95,
         isLocked: false,
       });
-      
-      res.status(201).json({ 
+
+      res.status(201).json({
         id: user._id.toString(),
-        message: 'User created successfully' 
+        message: 'User created successfully'
       });
     } catch (err) {
       next(err);
@@ -144,12 +144,12 @@ export function registerAdminRoutes(router) {
   router.delete('/admin/users/:id', requireAuth, requireRole(['ADMIN']), async (req, res, next) => {
     try {
       const { id } = req.params;
-      
+
       // Prevent self-deletion
       if (id === req.user.id) {
         return res.status(400).json({ message: 'Cannot delete yourself' });
       }
-      
+
       await User.findByIdAndDelete(id);
       res.json({ success: true, message: 'User deleted' });
     } catch (err) {
@@ -163,12 +163,40 @@ export function registerAdminRoutes(router) {
       const { id } = req.params;
       const { status } = req.body;
       const isLocked = status === 'LOCKED';
-      
-      await User.findByIdAndUpdate(id, { isLocked });
-      res.json({ 
-        success: true, 
-        message: isLocked ? 'User locked' : 'User unlocked' 
+
+      await User.findByIdAndUpdate(id, { isLocked, status: isLocked ? 'LOCKED' : 'ACTIVE' });
+      res.json({
+        success: true,
+        message: isLocked ? 'User locked' : 'User unlocked'
       });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Approve user (ADMIN only)
+  router.post('/admin/users/:id/approve', requireAuth, requireRole(['ADMIN']), async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const user = await User.findByIdAndUpdate(id, { status: 'ACTIVE', isLocked: false }, { new: true });
+      if (!user) return res.status(404).json({ message: 'User not found' });
+
+      console.log(`[ADMIN] Approved user: ${user.email}`);
+      res.json({ success: true, message: 'User approved' });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Reject user (ADMIN only - deletes the user)
+  router.post('/admin/users/:id/reject', requireAuth, requireRole(['ADMIN']), async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const user = await User.findByIdAndDelete(id);
+      if (!user) return res.status(404).json({ message: 'User not found' });
+
+      console.log(`[ADMIN] Rejected/Deleted user: ${user.email}`);
+      res.json({ success: true, message: 'User rejected and removed' });
     } catch (err) {
       next(err);
     }
@@ -180,11 +208,11 @@ export function registerAdminRoutes(router) {
       const { id } = req.params;
       const { enabled } = req.body;
       await User.findByIdAndUpdate(id, { mfaEnabled: !!enabled });
-      res.json({ 
-        success: true, 
-        message: enabled ? 'MFA enabled' : 'MFA disabled' 
+      res.json({
+        success: true,
+        message: enabled ? 'MFA enabled' : 'MFA disabled'
       });
-    }catch (err) {
+    } catch (err) {
       next(err);
     }
   });
@@ -196,7 +224,7 @@ export function registerAdminRoutes(router) {
       const { newPassword } = req.body;
       const plain = newPassword || 'Password123!';
       const passwordHash = await bcrypt.hash(plain, 10);
-      
+
       await User.findByIdAndUpdate(id, { passwordHash });
       res.json({ success: true, message: 'Password reset successfully' });
     } catch (err) {
@@ -227,10 +255,10 @@ export function registerAdminRoutes(router) {
   // Create role
   router.post('/admin/roles', requireAuth, requireRole(['ADMIN']), async (req, res, next) => {
     try {
-      const { name, description, permissions, color }= req.body;
-      const role = await Role.create({ 
-        name, 
-        description, 
+      const { name, description, permissions, color } = req.body;
+      const role = await Role.create({
+        name,
+        description,
         permissions: permissions || [],
         color: color || '#6366f1'
       });

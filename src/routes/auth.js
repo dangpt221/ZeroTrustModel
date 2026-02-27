@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import bcrypt from 'bcryptjs';
 import { clearAuthCookie, requireAuth, setAuthCookie, signUserToken } from '../middleware/auth.js';
 import {
@@ -26,7 +27,7 @@ function toClientUser(user) {
     trustScore: user.trustScore ?? 95,
     ipAddress: '192.168.1.105', // Mock or get from req if possible (needs req arg)
     device: 'Chrome / Windows 11', // Mock
-    status: user.isLocked ? 'LOCKED' : 'ACTIVE',
+    status: user.status || (user.isLocked ? 'LOCKED' : 'ACTIVE'),
     departmentId: user.departmentId || null,
   };
 }
@@ -93,8 +94,16 @@ export function registerAuthRoutes(router) {
       }
 
       if (user.isLocked) {
-        logSecurityEvent('LOGIN_BLOCKED', { email, ip: clientIP, reason: 'Account locked' });
+        logSecurityEvent('LOGIN_BLOCKED', { email: user.email, ip: clientIP, reason: 'Account locked' });
         return res.status(401).json({ message: 'Account is locked' });
+      }
+
+      if (user.status === 'PENDING') {
+        return res.status(403).json({
+          message: 'Account pending approval',
+          user: toClientUser(user),
+          needsApproval: true
+        });
       }
 
       const ok = await bcrypt.compare(password || '', user.passwordHash);
@@ -198,6 +207,9 @@ export function registerAuthRoutes(router) {
     try {
       const user = await User.findById(req.user.id).lean();
       if (!user) return res.status(404).json({ message: 'User not found' });
+
+      console.log(`[AUTH_CHECK] User: ${user.email}, Status: ${user.status || 'N/A'}`);
+
       res.json(toClientUser(user));
     } catch (err) {
       res.status(500).json({ message: err.message });

@@ -24,13 +24,14 @@ import { Attendance } from './pages/Attendance';
 import { ProjectDetail } from './pages/ProjectDetail';
 import { AuditLogs } from './pages/AuditLogs';
 import { UserRole } from './types';
-import { FileCheck } from 'lucide-react';
 import { NotificationManagement } from './pages/Admin/NotificationManagement';
+import { PendingApproval } from './pages/PendingApproval';
 
 const PrivateRoute: React.FC<{ children: React.ReactNode; roles?: UserRole[] }> = ({ children, roles }) => {
   const { isAuthenticated, user } = useAuth();
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (user?.status === 'PENDING') return <Navigate to="/pending-approval" replace />;
   if (roles && user && !roles.includes(user.role)) return <Navigate to="/" replace />;
 
   return <>{children}</>;
@@ -50,7 +51,8 @@ const App: React.FC = () => {
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
-          
+          <Route path="/pending-approval" element={<PendingApproval />} />
+
           <Route path="/" element={
             <PrivateRoute>
               <Layout><DashboardSelector /></Layout>
@@ -174,7 +176,7 @@ const App: React.FC = () => {
 const DashboardSelectorProfileWrapper: React.FC = () => {
   const { user } = useAuth();
   if (user?.role === UserRole.MEMBER) return <StaffProfile />;
-  
+
   return (
     <div className="bg-white p-10 rounded-3xl border border-slate-100 shadow-sm max-w-4xl mx-auto">
       <div className="flex items-center gap-6 mb-10 pb-10 border-b border-slate-50">

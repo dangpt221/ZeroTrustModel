@@ -16,6 +16,7 @@ interface AuthContextType {
   tempUser: User | null;
   isLoading: boolean;
   securityInfo: SecurityInfo | null;
+  checkSession: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -27,35 +28,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
   const [securityInfo, setSecurityInfo] = useState<SecurityInfo | null>(null);
 
-  useEffect(() => {
-    const checkSession = async () => {
-      const storedUser = localStorage.getItem('nexus_user');
-      if (storedUser) {
-        try {
-          // Attempt parsing first
-          const parsedUser = JSON.parse(storedUser);
-
-          // Verify with backend
-          const res = await fetch('/api/auth/me', { credentials: 'include' });
-          if (res.ok) {
-            const userData = await res.json();
-            setUser(userData);
-            localStorage.setItem('nexus_user', JSON.stringify(userData));
-          } else {
-            // Token expired or invalid
-            setUser(null);
-            localStorage.removeItem('nexus_user');
-          }
-        } catch (error) {
-          // JSON parse error or network error, fallback to null
-          console.error("Session verification failed", error);
-          setUser(null);
-          localStorage.removeItem('nexus_user');
-        }
+  const checkSession = async () => {
+    try {
+      const res = await fetch('/api/auth/me', { credentials: 'include' });
+      if (res.ok) {
+        const userData = await res.json();
+        setUser(userData);
+        localStorage.setItem('nexus_user', JSON.stringify(userData));
+      } else {
+        setUser(null);
+        localStorage.removeItem('nexus_user');
       }
+    } catch (error) {
+      console.error("Session verification failed", error);
+      setUser(null);
+      localStorage.removeItem('nexus_user');
+    } finally {
       setIsLoading(false);
-    };
+    }
+  };
 
+  useEffect(() => {
     checkSession();
   }, []);
 
@@ -123,7 +116,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setNeedsMFA,
       tempUser,
       isLoading,
-      securityInfo
+      securityInfo,
+      checkSession // Exporting for manual/interval refresh
     }}>
       {!isLoading && children}
     </AuthContext.Provider>

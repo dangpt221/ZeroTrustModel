@@ -14,6 +14,11 @@ const UserSchema = new mongoose.Schema(
     avatar: { type: String },
     departmentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Department' },
     isLocked: { type: Boolean, default: false },
+    status: {
+      type: String,
+      enum: ['ACTIVE', 'LOCKED', 'PENDING'],
+      default: 'ACTIVE',
+    },
     mfaEnabled: { type: Boolean, default: false },
     trustScore: { type: Number, default: 95 },
   },

@@ -46,11 +46,6 @@ export const Login: React.FC = () => {
   const [riskScore, setRiskScore] = useState<number | null>(null);
   const { login, needsMFA, tempUser, isAuthenticated } = useAuth();
 
-  // Nếu đã đăng nhập thành công, chuyển hướng ngay về Dashboard
-  if (isAuthenticated) {
-    return <Navigate to="/" replace />;
-  }
-
   // Handle OAuth errors from URL query parameters
   React.useEffect(() => {
     const params = new URLSearchParams(window.location.hash.split('?')[1]);
@@ -74,6 +69,11 @@ export const Login: React.FC = () => {
       window.history.replaceState(null, '', window.location.pathname + '#/login');
     }
   }, []);
+
+  // Nếu đã đăng nhập thành công, chuyển hướng ngay về Dashboard - Đặt sau tất cả Hooks
+  if (isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;

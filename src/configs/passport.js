@@ -38,6 +38,7 @@ passport.use(
                     if (profile.photos && profile.photos[0] && !user.avatar) {
                         user.avatar = profile.photos[0].value;
                     }
+                    if (!user.status) user.status = 'ACTIVE';
                     await user.save();
                     return done(null, user);
                 }
@@ -50,6 +51,7 @@ passport.use(
                     passwordHash: 'GOOGLE_AUTH_NO_PASSWORD', // Required field, dummy value
                     avatar: profile.photos && profile.photos[0] ? profile.photos[0].value : null,
                     role: 'STAFF', // Default role
+                    status: 'PENDING',
                     trustScore: 90,
                     isLocked: false,
                     mfaEnabled: false
