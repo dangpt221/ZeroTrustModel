@@ -67,7 +67,7 @@ export const AdminDashboard: React.FC = () => {
   const handleDownloadReport = () => {
     const csv = [
       ['Timestamp', 'User', 'Action', 'Details', 'IP', 'Status', 'Risk Level'].join(','),
-      ...auditLogs.map(log => [
+      ...(auditLogs || []).map(log => [
         new Date(log.timestamp).toISOString(),
         log.userName || 'Unknown',
         log.action,
@@ -86,26 +86,18 @@ export const AdminDashboard: React.FC = () => {
     a.click();
   };
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [logsData, usersData] = await Promise.all([
-          auditLogsApi.getAll(),
-          usersApi.getAll()
-        ]);
-        setAuditLogs(logsData || []);
-        setUsers(usersData || []);
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
+  const onlineUsers = users?.filter && users.filter((u: any) => u.status === 'ACTIVE').length || 0;
+  const securityAlerts = auditLogs?.filter && auditLogs.filter((l: any) => l.riskLevel === 'HIGH').length || 0;
 
-  const onlineUsers = users.filter((u: any) => u.status === 'ACTIVE').length;
-  const securityAlerts = auditLogs.filter((l: any) => l.riskLevel === 'HIGH').length;
+  const formatTime = (ts: any) => {
+    try {
+      if (!ts) return '--:--:--';
+      const date = new Date(ts);
+      return isNaN(date.getTime()) ? '--:--:--' : date.toLocaleTimeString();
+    } catch {
+      return '--:--:--';
+    }
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700">
@@ -133,7 +125,7 @@ export const AdminDashboard: React.FC = () => {
           value={loading ? '...' : onlineUsers.toString()}
           trend="12.5%"
           isPositive={true}
-          icon={<Users size={24}/>}
+          icon={<Users size={24} />}
           color="bg-blue-600"
         />
         <AdminStatsCard
@@ -141,7 +133,7 @@ export const AdminDashboard: React.FC = () => {
           value={loading ? '...' : '48'}
           trend="5.2%"
           isPositive={true}
-          icon={<UserPlus size={24}/>}
+          icon={<UserPlus size={24} />}
           color="bg-emerald-500"
         />
         <AdminStatsCard
@@ -149,7 +141,7 @@ export const AdminDashboard: React.FC = () => {
           value={loading ? '...' : securityAlerts.toString()}
           trend="2.4%"
           isPositive={false}
-          icon={<ShieldCheck size={24}/>}
+          icon={<ShieldCheck size={24} />}
           color="bg-rose-500"
         />
         <AdminStatsCard
@@ -157,7 +149,7 @@ export const AdminDashboard: React.FC = () => {
           value="14ms"
           trend="8.1%"
           isPositive={true}
-          icon={<Activity size={24}/>}
+          icon={<Activity size={24} />}
           color="bg-violet-500"
         />
       </div>
@@ -184,14 +176,14 @@ export const AdminDashboard: React.FC = () => {
               <AreaChart data={chartData}>
                 <defs>
                   <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1} />
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} />
-                <Tooltip 
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
+                <Tooltip
                   contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                 />
                 <Area type="monotone" dataKey="users" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorUsers)" />
@@ -208,15 +200,15 @@ export const AdminDashboard: React.FC = () => {
             Cảnh báo gần đây
           </h3>
           <div className="space-y-4 flex-1">
-            {auditLogs.filter(l => l.riskLevel === 'HIGH' || l.riskLevel === 'MEDIUM').slice(0, 4).map(log => (
+            {auditLogs?.filter && auditLogs.filter(l => l.riskLevel === 'HIGH' || l.riskLevel === 'MEDIUM').slice(0, 4).map(log => (
               <AdminAlertCard
                 key={log.id}
                 level={log.riskLevel}
                 message={log.details}
-                time={new Date(log.timestamp).toLocaleTimeString('vi-VN')}
+                time={formatTime(log.timestamp)}
               />
             ))}
-            {auditLogs.filter(l => l.riskLevel === 'HIGH' || l.riskLevel === 'MEDIUM').length === 0 && (
+            {(!auditLogs || !auditLogs.filter || auditLogs.filter(l => l.riskLevel === 'HIGH' || l.riskLevel === 'MEDIUM').length === 0) && (
               <p className="text-sm text-slate-400 text-center py-4">Không có cảnh báo nào</p>
             )}
           </div>
@@ -252,10 +244,10 @@ export const AdminDashboard: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800">
-              {auditLogs.slice(0, 10).map((log: any) => (
+              {auditLogs?.slice && auditLogs.slice(0, 10).map((log: any) => (
                 <tr key={log.id} className="hover:bg-slate-800/30 transition-colors group">
                   <td className="px-8 py-5">
-                    <span className="text-xs font-mono text-slate-400">{new Date(log.timestamp).toLocaleTimeString()}</span>
+                    <span className="text-xs font-mono text-slate-400">{formatTime(log.timestamp)}</span>
                   </td>
                   <td className="px-8 py-5">
                     <div className="flex items-center gap-3">
@@ -273,11 +265,10 @@ export const AdminDashboard: React.FC = () => {
                     <div className="text-[10px] text-slate-600 font-medium">Verified Device: Yes</div>
                   </td>
                   <td className="px-8 py-5 text-right">
-                    <span className={`text-[10px] font-bold px-3 py-1 rounded-full border ${
-                      log.status === 'SUCCESS' 
-                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
-                        : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
-                    }`}>
+                    <span className={`text-[10px] font-bold px-3 py-1 rounded-full border ${log.status === 'SUCCESS'
+                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                      : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                      }`}>
                       {log.status === 'SUCCESS' ? 'SECURE' : 'FAILED'}
                     </span>
                   </td>

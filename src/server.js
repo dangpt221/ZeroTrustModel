@@ -3,11 +3,10 @@
  * Chạy: node src/server.js hoặc npm run dev
  */
 
-import dontenv from 'dotenv';
+import 'dotenv/config';
 import { createApp } from './app.js';
 import { PORT } from './config.js';
 
-dontenv.config();
 
 async function main() {
   try {
@@ -32,7 +31,7 @@ async function main() {
     };
 
     process.on('SIGTERM', () => shutdown('SIGTERM'));
-    process.on('SIGINT',  () => shutdown('SIGINT'));
+    process.on('SIGINT', () => shutdown('SIGINT'));
 
   } catch (err) {
     console.error('❌ Failed to start server:', err);

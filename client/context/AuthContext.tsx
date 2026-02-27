@@ -28,11 +28,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [securityInfo, setSecurityInfo] = useState<SecurityInfo | null>(null);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('nexus_user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-    setIsLoading(false);
+    const checkSession = async () => {
+      const storedUser = localStorage.getItem('nexus_user');
+      if (storedUser) {
+        try {
+          // Attempt parsing first
+          const parsedUser = JSON.parse(storedUser);
+
+          // Verify with backend
+          const res = await fetch('/api/auth/me', { credentials: 'include' });
+          if (res.ok) {
+            const userData = await res.json();
+            setUser(userData);
+            localStorage.setItem('nexus_user', JSON.stringify(userData));
+          } else {
+            // Token expired or invalid
+            setUser(null);
+            localStorage.removeItem('nexus_user');
+          }
+        } catch (error) {
+          // JSON parse error or network error, fallback to null
+          console.error("Session verification failed", error);
+          setUser(null);
+          localStorage.removeItem('nexus_user');
+        }
+      }
+      setIsLoading(false);
+    };
+
+    checkSession();
   }, []);
 
   const login = async (email: string, password?: string, mfaCode?: string) => {

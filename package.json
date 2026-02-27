@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "tsc --noEmit",
-    "server": "node src/sever.js",
+    "server": "node src/server.js",
     "seed:admin": "node scripts/seedAdmin.js"
   },
   "dependencies": {

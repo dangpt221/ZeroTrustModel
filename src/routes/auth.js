@@ -1,14 +1,15 @@
 import bcrypt from 'bcryptjs';
 import { clearAuthCookie, requireAuth, setAuthCookie, signUserToken } from '../middleware/auth.js';
 import {
-    assessLoginRisk,
-    clearFailedAttempts,
-    getClientIP,
-    getDeviceFingerprint,
-    logSecurityEvent,
-    recordFailedAttempt,
-    securityCheck
+  assessLoginRisk,
+  clearFailedAttempts,
+  getClientIP,
+  getDeviceFingerprint,
+  logSecurityEvent,
+  recordFailedAttempt,
+  securityCheck
 } from '../middleware/securityMiddleware.js';
+import passport from '../configs/passport.js';
 import { User } from '../models/User.js';
 
 function toClientUser(user) {
@@ -18,9 +19,15 @@ function toClientUser(user) {
     email: user.email,
     // Map backend role 'STAFF' -> frontend enum 'MEMBER'
     role: user.role === 'STAFF' ? 'MEMBER' : user.role,
-    departmentId: user.departmentId || null,
-    trustScore: user.trustScore ?? 95,
+    avatar: user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`,
     mfaEnabled: user.mfaEnabled || false,
+    department: user.department || 'Phòng ban chung',
+    lastLogin: user.updatedAt || new Date().toISOString(),
+    trustScore: user.trustScore ?? 95,
+    ipAddress: '192.168.1.105', // Mock or get from req if possible (needs req arg)
+    device: 'Chrome / Windows 11', // Mock
+    status: user.isLocked ? 'LOCKED' : 'ACTIVE',
+    departmentId: user.departmentId || null,
   };
 }
 
@@ -219,4 +226,61 @@ export function registerAuthRoutes(router) {
       res.status(500).json({ message: err.message });
     }
   });
+
+  // ================= GOOGLE OAUTH ROUTES =================
+
+  // 1. Kick off Google Auth
+  router.get('/auth/google', passport.authenticate('google', {
+    scope: ['profile', 'email'],
+    session: false
+  }));
+
+  // 2. Google OAuth Callback
+  router.get('/auth/google/callback',
+    passport.authenticate('google', {
+      session: false,
+      failureRedirect: `${process.env.FRONTEND_URL || ''}/#/login?error=GoogleAuthFailed`
+    }),
+    async (req, res) => {
+      try {
+        // req.user will contain the authenticated user from passport.js
+        const user = req.user;
+        const clientIP = req.headers['x-forwarded-for'] || req.connection.remoteAddress || 'unknown';
+        const deviceFingerprint = req.headers['user-agent'] || 'unknown';
+
+        if (!user || user.isLocked) {
+          console.log('--- DEBUG OAUTH BLOCKED ---');
+          console.log('User object:', user);
+          console.log('IsLocked:', user?.isLocked);
+          logSecurityEvent('LOGIN_BLOCKED', { email: user?.email || 'unknown', ip: clientIP, reason: 'Account locked or missing from OAuth' });
+          return res.redirect(`${process.env.FRONTEND_URL || ''}/#/login?error=AccountLocked`);
+        }
+
+        // Generate JWT token
+        const token = signUserToken(user);
+
+        // Set cookie
+        setAuthCookie(res, token);
+
+        // Risk assessment for OAuth
+        const { riskScore, riskFactors } = await assessLoginRisk(req, user);
+
+        logSecurityEvent('LOGIN_SUCCESS', {
+          email: user.email,
+          ip: clientIP,
+          deviceFingerprint,
+          riskScore,
+          riskFactors,
+          authMethod: 'GOOGLE_OAUTH'
+        });
+
+        // Redirect back to frontend dashboard
+        res.redirect(`${process.env.FRONTEND_URL || ''}/#/`);
+
+      } catch (err) {
+        console.error('Google OAuth Callback Error:', err);
+        res.redirect(`${process.env.FRONTEND_URL || ''}/#/login?error=InternalError`);
+      }
+    }
+  );
 }

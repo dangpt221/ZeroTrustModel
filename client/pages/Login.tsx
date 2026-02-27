@@ -2,9 +2,9 @@ import { AlertTriangle, CheckCircle2, Lock, Mail, Shield, Smartphone } from 'luc
 import React, { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import {
-    AuthErrorMessage,
-    LoginButton,
-    OAuthGoogleButton
+  AuthErrorMessage,
+  LoginButton,
+  OAuthGoogleButton
 } from '../components/Auth/AuthComponents';
 import { useAuth } from '../context/AuthContext';
 
@@ -50,6 +50,30 @@ export const Login: React.FC = () => {
   if (isAuthenticated) {
     return <Navigate to="/" replace />;
   }
+
+  // Handle OAuth errors from URL query parameters
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.hash.split('?')[1]);
+    const errorParam = params.get('error');
+    if (errorParam) {
+      switch (errorParam) {
+        case 'AccountLocked':
+          setError('Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.');
+          break;
+        case 'GoogleAuthFailed':
+          setError('Đăng nhập bằng Google thất bại hoặc bị hủy.');
+          break;
+        case 'InternalError':
+          setError('Lỗi hệ thống khi đăng nhập bằng Google.');
+          break;
+        default:
+          setError('Đã xảy ra lỗi khi đăng nhập.');
+      }
+
+      // Clean up the URL
+      window.history.replaceState(null, '', window.location.pathname + '#/login');
+    }
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -175,7 +199,7 @@ export const Login: React.FC = () => {
                     <a href="#" className="text-[10px] font-bold text-blue-500 hover:text-blue-400 uppercase">Quên mật khẩu?</a>
                   </div>
                   <div className="relative group">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-400 transition-colors" size={18}/>
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-400 transition-colors" size={18} />
                     <input
                       name="password"
                       type="password"
@@ -248,7 +272,7 @@ export const Login: React.FC = () => {
                 </div>
               </div>
 
-              <OAuthGoogleButton onClick={() => alert('Chức năng Google Auth đang được tích hợp cho tài khoản doanh nghiệp...')} />
+              <OAuthGoogleButton />
             </div>
           )}
         </div>
@@ -259,7 +283,7 @@ export const Login: React.FC = () => {
           </p>
           <div className="p-4 rounded-2xl bg-white/5 border border-white/5 inline-block">
             <p className="text-[10px] text-slate-500 italic leading-relaxed">
-              Tài khoản: admin@nexus.com (có MFA) hoặc manager@nexus.com, staff@nexus.com (không MFA)<br/>
+              Tài khoản: admin@nexus.com (có MFA) hoặc manager@nexus.com, staff@nexus.com (không MFA)<br />
               Mật khẩu: nexus123. OTP: 000000.
             </p>
           </div>

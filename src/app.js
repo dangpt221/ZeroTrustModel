@@ -10,6 +10,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 
 import { connectDB } from './configs/db.js';
+import passport from './configs/passport.js';
 import { errorHandler, notFound } from './middleware/auth.js';
 import { registerRoutes } from './routes/index.js';
 import { registerSocketHandlers } from './services/socket.js';
@@ -32,6 +33,7 @@ export async function createApp() {
   app.use(express.urlencoded({ extended: true }));
   app.use(cookieParser());
   app.use(cors({ origin: '*', credentials: true }));
+  app.use(passport.initialize());
 
   // 5. API Routes
   registerRoutes(app, io);
