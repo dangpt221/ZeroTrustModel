@@ -2,6 +2,11 @@ import { Message } from '../models/Message.js';
 
 export function registerSocketHandlers(io) {
   io.on('connection', (socket) => {
+    // User joins their personal room for notifications
+    socket.on('join_user_room', (userId) => {
+      socket.join(`user_${userId}`);
+    });
+
     socket.on('join_room', (room) => {
       socket.join(room);
     });

@@ -1,11 +1,11 @@
 
 import React from 'react';
-import { 
-  LayoutDashboard, 
-  Users, 
-  ShieldCheck, 
-  Building2, 
-  FolderLock, 
+import {
+  LayoutDashboard,
+  Users,
+  ShieldCheck,
+  Building2,
+  FolderLock,
   Activity,
   Settings,
   User,
@@ -18,7 +18,8 @@ import {
   UserCheck,
   MessageSquare,
   Clock,
-  LayoutGrid
+  LayoutGrid,
+  Bell
 } from 'lucide-react';
 
 export const COLORS = {
@@ -41,6 +42,7 @@ export const ADMIN_NAVIGATION = [
   { name: 'Quản lý tài liệu', icon: <FolderLock size={20} />, path: '/admin/documents' },
   { name: 'Giám sát SOC Log', icon: <Activity size={20} />, path: '/audit-logs' },
   { name: 'Cấu hình Zero Trust', icon: <Fingerprint size={20} />, path: '/admin/zero-trust' },
+  { name: 'Quản lý thông báo', icon: <Bell size={20} />, path: '/admin/notifications' },
 ];
 
 export const MANAGER_NAVIGATION = [

@@ -25,6 +25,7 @@ import { ProjectDetail } from './pages/ProjectDetail';
 import { AuditLogs } from './pages/AuditLogs';
 import { UserRole } from './types';
 import { FileCheck } from 'lucide-react';
+import { NotificationManagement } from './pages/Admin/NotificationManagement';
 
 const PrivateRoute: React.FC<{ children: React.ReactNode; roles?: UserRole[] }> = ({ children, roles }) => {
   const { isAuthenticated, user } = useAuth();
@@ -84,6 +85,12 @@ const App: React.FC = () => {
           <Route path="/admin/zero-trust" element={
             <PrivateRoute roles={[UserRole.ADMIN]}>
               <Layout><ZeroTrustSettings /></Layout>
+            </PrivateRoute>
+          } />
+
+          <Route path="/admin/notifications" element={
+            <PrivateRoute roles={[UserRole.ADMIN]}>
+              <Layout><NotificationManagement /></Layout>
             </PrivateRoute>
           } />
 

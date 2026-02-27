@@ -346,3 +346,57 @@ export const zeroTrustApi = {
     return res.json();
   },
 };
+
+// Notifications
+export const notificationsApi = {
+  getAll: async () => {
+    const res = await fetch(`${API_BASE}/notifications`, { credentials: 'include' });
+    return res.json();
+  },
+
+  getAllAdmin: async () => {
+    const res = await fetch(`${API_BASE}/notifications/all`, { credentials: 'include' });
+    return res.json();
+  },
+
+  create: async (data: { userId: string; title: string; message: string; type?: string; priority?: string }) => {
+    const res = await fetch(`${API_BASE}/notifications`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+      credentials: 'include',
+    });
+    return res.json();
+  },
+
+  broadcast: async (data: { userIds: string[]; title: string; message: string; type?: string; priority?: string }) => {
+    const res = await fetch(`${API_BASE}/notifications/broadcast`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+      credentials: 'include',
+    });
+    return res.json();
+  },
+
+  markAsRead: async (notificationId: string) => {
+    const res = await fetch(`${API_BASE}/notifications/${notificationId}/read`, {
+      method: 'PUT',
+      credentials: 'include',
+    });
+    return res.json();
+  },
+
+  markAllAsRead: async () => {
+    const res = await fetch(`${API_BASE}/notifications/read-all`, {
+      method: 'PUT',
+      credentials: 'include',
+    });
+    return res.json();
+  },
+
+  getUnreadCount: async () => {
+    const res = await fetch(`${API_BASE}/notifications/unread-count`, { credentials: 'include' });
+    return res.json();
+  },
+};

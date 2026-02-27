@@ -3,10 +3,11 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { ADMIN_NAVIGATION, MANAGER_NAVIGATION, MEMBER_NAVIGATION, COLORS } from '../constants';
-import { 
-  Menu, 
-  X, 
-  Bell, 
+import { NotificationDropdown } from './NotificationDropdown';
+import {
+  Menu,
+  X,
+  Bell,
   Search, 
   ChevronDown, 
   Shield, 
@@ -139,10 +140,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
           <div className="flex items-center gap-8">
             <div className="flex items-center gap-4">
-              <button className={`relative p-3 bg-slate-50 text-slate-400 hover:bg-slate-100 rounded-2xl transition-all ${isMember ? 'hover:text-emerald-600' : 'hover:text-sky-600'}`}>
-                <Bell size={20} />
-                <span className="absolute top-3 right-3 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white"></span>
-              </button>
+              <NotificationDropdown />
             </div>
 
             <div className="h-10 w-px bg-slate-100"></div>

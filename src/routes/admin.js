@@ -110,8 +110,8 @@ export function registerAdminRoutes(router) {
   router.put('/admin/users/:id', requireAuth, requireRole(['ADMIN']), async (req, res, next) => {
     try {
       const { id } = req.params;
-      const { name, email, role, departmentId, trustScore, mfaEnabled } = req.body;
-      
+      const { name, email, role, departmentId, trustScore, mfaEnabled, password } = req.body;
+
       const update = {};
       if (name) update.name = name;
       if (email) update.email = email;
@@ -119,13 +119,21 @@ export function registerAdminRoutes(router) {
       if (departmentId !== undefined) update.departmentId = departmentId;
       if (trustScore !== undefined) update.trustScore = trustScore;
       if (mfaEnabled !== undefined) update.mfaEnabled = mfaEnabled;
+      if (password) {
+        const bcrypt = require('bcryptjs');
+        update.passwordHash = await bcrypt.hash(password, 10);
+      }
 
       const user = await User.findByIdAndUpdate(id, update, { new: true });
       if (!user) return res.status(404).json({ message: 'User not found' });
-      
-      res.json({ 
+
+      res.json({
         id: user._id.toString(),
-        message: 'User updated successfully' 
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        mfaEnabled: user.mfaEnabled,
+        message: 'User updated successfully'
       });
     } catch (err) {
       next(err);

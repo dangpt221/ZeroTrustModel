@@ -11,7 +11,8 @@ import {
   Filter,
   Monitor,
   Smartphone,
-  X
+  X,
+  Edit2
 } from 'lucide-react';
 import { Modal } from '../../components/Admin/Modal';
 
@@ -19,11 +20,21 @@ export const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filterRole, setFilterRole] = useState<string>('ALL');
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [departments, setDepartments] = useState<any[]>([]);
   const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    role: 'MEMBER',
+    department: '',
+    mfaEnabled: false
+  });
+  const [editFormData, setEditFormData] = useState({
     name: '',
     email: '',
     password: '',
@@ -80,6 +91,45 @@ export const UserManagement: React.FC = () => {
     } catch (err) {
       console.error('Create user error:', err);
       alert('Tạo người dùng thất bại!');
+    }
+  };
+
+  const handleEditUser = (user: User) => {
+    setEditingUser(user);
+    setEditFormData({
+      name: user.name,
+      email: user.email,
+      password: '',
+      role: user.role,
+      department: user.department || '',
+      mfaEnabled: user.mfaEnabled
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleUpdateUser = async () => {
+    if (!editingUser) return;
+    try {
+      const updateData: any = {
+        name: editFormData.name,
+        role: editFormData.role,
+        department: editFormData.department,
+        mfaEnabled: editFormData.mfaEnabled
+      };
+      // Only include password if provided
+      if (editFormData.password) {
+        updateData.password = editFormData.password;
+      }
+
+      const updated = await usersApi.update(editingUser.id, updateData);
+      setUsers(prev => prev.map(u => (u.id === editingUser.id ? { ...u, ...updated } : u)));
+      setIsEditModalOpen(false);
+      setEditingUser(null);
+      setEditFormData({ name: '', email: '', password: '', role: 'MEMBER', department: '', mfaEnabled: false });
+      alert('Cập nhật người dùng thành công!');
+    } catch (err) {
+      console.error('Update user error:', err);
+      alert('Cập nhật người dùng thất bại!');
     }
   };
 
@@ -272,11 +322,17 @@ export const UserManagement: React.FC = () => {
                   </td>
                   <td className="px-8 py-5 text-right">
                     <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button 
+                      <button
+                        onClick={() => handleEditUser(user)}
+                        className="p-2 text-blue-500 hover:bg-blue-50 rounded-xl transition-all"
+                      >
+                        <Edit2 size={18} />
+                      </button>
+                      <button
                         onClick={() => toggleStatus(user.id)}
                         className={`p-2 rounded-xl transition-all ${user.status === 'ACTIVE' ? 'text-amber-500 hover:bg-amber-50' : 'text-emerald-500 hover:bg-emerald-50'}`}
                       >
-                        {user.status === 'ACTIVE' ? <Lock size={18} /> : <Unlock size={18} />}
+                        {user.status === 'ACTIVE' ? <Lock size={18}/> : <Unlock size={18} />}
                       </button>
                       <button onClick={() => handleDeleteUser(user.id)} className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-all">
                         <Trash2 size={18} />
@@ -371,6 +427,92 @@ export const UserManagement: React.FC = () => {
             className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white py-3 rounded-xl font-bold transition-all"
           >
             Tạo người dùng
+          </button>
+        </div>
+      </Modal>
+
+      {/* Edit User Modal */}
+      <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Chỉnh sửa người dùng">
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs font-bold text-slate-500 uppercase">Họ và tên</label>
+            <input
+              type="text"
+              value={editFormData.name}
+              onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+              className="w-full mt-1 px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+              placeholder="Nguyễn Văn A"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-bold text-slate-500 uppercase">Email</label>
+            <input
+              type="email"
+              value={editFormData.email}
+              disabled
+              className="w-full mt-1 px-4 py-3 border border-slate-200 rounded-xl bg-slate-50 text-slate-500"
+              placeholder="user@company.com"
+            />
+            <p className="text-xs text-slate-400 mt-1">Email không thể thay đổi</p>
+          </div>
+          <div>
+            <label className="text-xs font-bold text-slate-500 uppercase">Mật khẩu mới (để trống nếu không đổi)</label>
+            <input
+              type="password"
+              value={editFormData.password}
+              onChange={(e) => setEditFormData({ ...editFormData, password: e.target.value })}
+              className="w-full mt-1 px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+              placeholder="******"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-bold text-slate-500 uppercase">Vai trò</label>
+              <select
+                value={editFormData.role}
+                onChange={(e) => setEditFormData({ ...editFormData, role: e.target.value })}
+                className="w-full mt-1 px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+              >
+                <option value="MEMBER">Member</option>
+                <option value="MANAGER">Manager</option>
+                <option value="ADMIN">Admin</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-bold text-slate-500 uppercase">Bộ phận</label>
+              <select
+                value={editFormData.department}
+                onChange={(e) => setEditFormData({ ...editFormData, department: e.target.value })}
+                className="w-full mt-1 px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+              >
+                <option value="">Chọn bộ phận</option>
+                {departments.map(dept => (
+                  <option key={dept.id} value={dept.id}>{dept.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+            <div>
+              <p className="text-sm font-bold text-slate-700">Bắt buộc MFA</p>
+              <p className="text-xs text-slate-400">Yêu cầu xác thực 2 bước</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={editFormData.mfaEnabled}
+                onChange={() => setEditFormData({ ...editFormData, mfaEnabled: !editFormData.mfaEnabled })}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
+          </div>
+          <button
+            onClick={handleUpdateUser}
+            disabled={!editFormData.name}
+            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white py-3 rounded-xl font-bold transition-all"
+          >
+            Lưu thay đổi
           </button>
         </div>
       </Modal>

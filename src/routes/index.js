@@ -10,12 +10,19 @@ import { registerAttendanceRoutes } from './attendance.js';
 import { registerMessageRoutes } from './messages.js';
 import { registerZeroTrustRoutes } from './zeroTrust.js';
 import { registerAuditLogRoutes } from './auditLogs.js';
+import { registerNotificationRoutes } from './notificationRoutes.js';
 
 export function registerRoutes(app, io) {
   const router = express.Router();
 
   // Attach auth middleware for all /api routes
   router.use(authMiddleware);
+
+  // Attach io to request for real-time notifications
+  router.use((req, _res, next) => {
+    req.app.set('io', io);
+    next();
+  });
 
   registerAuthRoutes(router);
   registerAdminRoutes(router);
@@ -27,6 +34,7 @@ export function registerRoutes(app, io) {
   registerMessageRoutes(router);
   registerZeroTrustRoutes(router);
   registerAuditLogRoutes(router);
+  registerNotificationRoutes(router);
 
   app.use('/api', router);
 }

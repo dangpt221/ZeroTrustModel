@@ -123,3 +123,15 @@ export interface Team {
   description: string;
   createdAt: string;
 }
+
+export interface Notification {
+  id: string;
+  userId: string;
+  user?: User;
+  title: string;
+  message: string;
+  type: 'INFO' | 'WARNING' | 'ALERT' | 'SUCCESS';
+  isRead: boolean;
+  priority: 'LOW' | 'NORMAL' | 'HIGH';
+  createdAt: string;
+}

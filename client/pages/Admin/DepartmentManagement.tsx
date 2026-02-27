@@ -11,6 +11,7 @@ export const DepartmentManagement: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDept, setEditingDept] = useState<Department | null>(null);
+  const [detailDept, setDetailDept] = useState<Department | null>(null);
   const [formData, setFormData] = useState({ name: '', description: '', managerId: '' });
 
   useEffect(() => {
@@ -76,6 +77,15 @@ export const DepartmentManagement: React.FC = () => {
     setIsModalOpen(true);
   };
 
+  const openDetailModal = (dept: Department) => {
+    setDetailDept(dept);
+  };
+
+  // Lọc users theo department
+  const getDepartmentMembers = (deptId: string) => {
+    return users.filter(u => u.department === deptId);
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -131,7 +141,10 @@ export const DepartmentManagement: React.FC = () => {
               </div>
 
               <div className="mt-8 flex gap-2 opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0">
-                <button className="flex-1 py-2 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-colors">
+                <button
+                  onClick={() => openDetailModal(dept)}
+                  className="flex-1 py-2 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-colors"
+                >
                   Chi tiết
                 </button>
                 <button
@@ -195,6 +208,100 @@ export const DepartmentManagement: React.FC = () => {
           </button>
         </div>
       </Modal>
+
+      {/* Department Detail Modal */}
+      {detailDept && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-[32px] w-full max-w-2xl max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-8 border-b border-slate-100">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="p-4 bg-blue-50 text-blue-600 rounded-2xl">
+                    <Building2 size={24} />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black text-slate-800">{detailDept.name}</h3>
+                    <p className="text-sm text-slate-500">{detailDept.description || 'Không có mô tả'}</p>
+                  </div>
+                </div>
+                <button onClick={() => setDetailDept(null)} className="p-2 hover:bg-slate-100 rounded-xl">
+                  <Trash2 size={20} className="rotate-45" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-8 overflow-y-auto max-h-[60vh]">
+              {/* Manager Info */}
+              <div className="mb-8">
+                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Quản lý bộ phận</h4>
+                {(() => {
+                  const manager = users.find(u => u.id === detailDept.managerId);
+                  return manager ? (
+                    <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-2xl">
+                      <img src={manager.avatar}className="w-12 h-12 rounded-2xl object-cover" />
+                      <div>
+                        <p className="font-bold text-slate-800">{manager.name}</p>
+                        <p className="text-xs text-slate-500">{manager.email}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-slate-400">Chưa có quản lý</p>
+                  );
+                })()}
+              </div>
+
+              {/* Members List */}
+              <div>
+                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">
+                  Danh sách nhân viên ({getDepartmentMembers(detailDept.id).length})
+                </h4>
+                {getDepartmentMembers(detailDept.id).length > 0 ? (
+                  <div className="space-y-3">
+                    {getDepartmentMembers(detailDept.id).map(member => (
+                      <div key={member.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
+                        <div className="flex items-center gap-3">
+                          <img src={member.avatar} className="w-10 h-10 rounded-xl object-cover" />
+                          <div>
+                            <p className="font-bold text-slate-800 text-sm">{member.name}</p>
+                            <p className="text-xs text-slate-400">{member.email}</p>
+                          </div>
+                        </div>
+                        <span className={`text-[10px] font-black px-2 py-1 rounded uppercase ${
+                          member.role === 'ADMIN' ? 'bg-blue-100 text-blue-600' :
+                          member.role === 'MANAGER' ? 'bg-amber-100 text-amber-600' :
+                          'bg-slate-200 text-slate-600'
+                        }`}>
+                          {member.role}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-400 text-center py-8">Chưa có nhân viên trong bộ phận này</p>
+                )}
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-slate-100 flex justify-end gap-3">
+              <button
+                onClick={() => setDetailDept(null)}
+                className="px-6 py-2.5 border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-50"
+              >
+                Đóng
+              </button>
+              <button
+                onClick={() => {
+                  openEditModal(detailDept);
+                  setDetailDept(null);
+                }}
+                className="px-6 py-2.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700"
+              >
+                Chỉnh sửa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
