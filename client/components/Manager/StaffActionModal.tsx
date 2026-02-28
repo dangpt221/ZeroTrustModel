@@ -1,16 +1,17 @@
 
 import React from 'react';
 import { User } from '../../types';
-import { X, Clock, Monitor, MapPin, FileText, ShieldCheck } from 'lucide-react';
+import { X, Clock, Monitor, MapPin, ShieldCheck, Trash2 } from 'lucide-react';
 import { MOCK_AUDIT_LOGS } from '../../mockData';
 
 interface StaffActionModalProps {
   user: User | null;
   isOpen: boolean;
   onClose: () => void;
+  onDelete?: () => void;
 }
 
-export const StaffActionModal: React.FC<StaffActionModalProps> = ({ user, isOpen, onClose }) => {
+export const StaffActionModal: React.FC<StaffActionModalProps> = ({ user, isOpen, onClose, onDelete }) => {
   if (!isOpen || !user) return null;
 
   const logs = MOCK_AUDIT_LOGS.filter(l => l.userName === user.name).slice(0, 5);
@@ -44,7 +45,7 @@ export const StaffActionModal: React.FC<StaffActionModalProps> = ({ user, isOpen
                 </div>
                 <div>
                   <p className="text-[10px] font-black text-slate-400 uppercase">Thiết bị cuối</p>
-                  <p className="text-xs font-bold text-slate-700">{user.device}</p>
+                  <p className="text-xs font-bold text-slate-700">{user.device || '-'}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -53,7 +54,7 @@ export const StaffActionModal: React.FC<StaffActionModalProps> = ({ user, isOpen
                 </div>
                 <div>
                   <p className="text-[10px] font-black text-slate-400 uppercase">Địa chỉ IP</p>
-                  <p className="text-xs font-bold text-slate-700">{user.ipAddress}</p>
+                  <p className="text-xs font-bold text-slate-700">{user.ipAddress || '-'}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -90,13 +91,28 @@ export const StaffActionModal: React.FC<StaffActionModalProps> = ({ user, isOpen
           </div>
         </div>
 
-        <div className="p-8 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
-          <button className="px-6 py-2.5 bg-white text-slate-600 border border-slate-200 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-100 transition-all">
-            Xem log chi tiết
-          </button>
-          <button className="px-6 py-2.5 bg-sky-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-sky-700 transition-all shadow-lg shadow-sky-500/20">
-            Export báo cáo Staff
-          </button>
+        <div className="p-8 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
+          <div>
+            {onDelete && (
+              <button
+                onClick={() => {
+                  onDelete();
+                  onClose();
+                }}
+                className="px-6 py-2.5 bg-rose-50 text-rose-600 border border-rose-200 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-rose-100 transition-all flex items-center gap-2"
+              >
+                <Trash2 size={16} /> Xóa nhân viên
+              </button>
+            )}
+          </div>
+          <div className="flex gap-3">
+            <button className="px-6 py-2.5 bg-white text-slate-600 border border-slate-200 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-100 transition-all">
+              Xem log chi tiết
+            </button>
+            <button className="px-6 py-2.5 bg-sky-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-sky-700 transition-all shadow-lg shadow-sky-500/20">
+              Export báo cáo Staff
+            </button>
+          </div>
         </div>
       </div>
     </div>

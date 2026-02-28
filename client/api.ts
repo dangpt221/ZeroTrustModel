@@ -198,7 +198,9 @@ export const documentsApi = {
       method: 'DELETE',
       credentials: 'include',
     });
-    return res.json();
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error((data as { message?: string }).message || 'Xóa tài liệu thất bại');
+    return data;
   },
 
   getRequests: async () => {
@@ -223,7 +225,9 @@ export const documentsApi = {
       body: JSON.stringify({ status }),
       credentials: 'include',
     });
-    return res.json();
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error((data as { message?: string }).message || 'Cập nhật thất bại');
+    return data;
   },
 };
 
@@ -311,6 +315,25 @@ export const teamsApi = {
     });
     return res.json();
   },
+
+  delete: async (teamId: string) => {
+    const res = await fetch(`${API_BASE}/teams/${teamId}`, {
+      method: 'DELETE',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    let data: { message?: string } = {};
+    try {
+      const text = await res.text();
+      data = text ? JSON.parse(text) : {};
+    } catch {
+      data = { message: 'Phản hồi không hợp lệ từ server' };
+    }
+    if (!res.ok) {
+      throw new Error(data.message || `Xóa thất bại (${res.status})`);
+    }
+    return data;
+  },
 };
 
 // Audit Logs
@@ -323,12 +346,28 @@ export const auditLogsApi = {
 
 // Attendance
 export const attendanceApi = {
-  checkIn: async () => {
+  checkIn: async (data?: { location?: string; device?: string }) => {
     const res = await fetch(`${API_BASE}/attendance/check-in`, {
       method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data || {}),
       credentials: 'include',
     });
-    return res.json();
+    const result = await res.json();
+    if (!res.ok) throw new Error((result as { message?: string }).message || 'Chấm công vào thất bại');
+    return result;
+  },
+
+  checkOut: async (data?: { location?: string; device?: string }) => {
+    const res = await fetch(`${API_BASE}/attendance/check-out`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data || {}),
+      credentials: 'include',
+    });
+    const result = await res.json();
+    if (!res.ok) throw new Error((result as { message?: string }).message || 'Chấm công ra thất bại');
+    return result;
   },
 
   getHistory: async () => {
@@ -339,8 +378,9 @@ export const attendanceApi = {
 
 // Messages
 export const messagesApi = {
-  getAll: async () => {
-    const res = await fetch(`${API_BASE}/messages`, { credentials: 'include' });
+  getAll: async (room?: string) => {
+    const url = room ? `${API_BASE}/messages?room=${encodeURIComponent(room)}` : `${API_BASE}/messages`;
+    const res = await fetch(url, { credentials: 'include' });
     return res.json();
   },
 };

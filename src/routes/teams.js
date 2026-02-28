@@ -10,7 +10,9 @@ export function registerTeamRoutes(router) {
           id: t._id.toString(),
           name: t.name,
           managerId: t.managerId,
-          members: t.members || [],
+          members: (t.members || []).map(m => m?.toString?.() || m),
+          description: t.description || '',
+          createdAt: t.createdAt ? new Date(t.createdAt).toISOString() : null,
         })),
       );
     } catch (err) {
@@ -20,8 +22,8 @@ export function registerTeamRoutes(router) {
 
   router.post('/teams', requireAuth, async (req, res, next) => {
     try {
-      const { name, managerId } = req.body;
-      const team = await Team.create({ name, managerId });
+      const { name, description, managerId } = req.body;
+      const team = await Team.create({ name, description: description || '', managerId });
       res.status(201).json({ id: team._id.toString() });
     } catch (err) {
       next(err);
@@ -39,6 +41,21 @@ export function registerTeamRoutes(router) {
       );
       res.json({ id: team._id.toString(), members: team.members });
     } catch (err) {
+      next(err);
+    }
+  });
+
+  router.delete('/teams/:teamId', requireAuth, async (req, res, next) => {
+    try {
+      const { teamId } = req.params;
+      if (!teamId) return res.status(400).json({ message: 'Team ID is required' });
+      const team = await Team.findByIdAndDelete(teamId);
+      if (!team) return res.status(404).json({ message: 'Team not found' });
+      res.json({ success: true });
+    } catch (err) {
+      if (err.name === 'CastError') {
+        return res.status(400).json({ message: 'Invalid team ID' });
+      }
       next(err);
     }
   });

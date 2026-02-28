@@ -22,11 +22,11 @@ export function registerSocketHandlers(io) {
 
         const data = {
           id: msg._id.toString(),
-          userId: msg.userId,
-          userName: msg.userName,
-          text: msg.text,
-          room: msg.room,
-          timestamp: msg.createdAt,
+          userId: msg.userId?.toString?.() || msg.userId,
+          userName: msg.userName || 'Ẩn danh',
+          text: msg.text || '',
+          room: msg.room || 'general',
+          timestamp: msg.createdAt ? new Date(msg.createdAt).toISOString() : new Date().toISOString(),
         };
 
         io.to(msg.room).emit('receive_message', data);

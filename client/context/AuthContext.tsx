@@ -52,6 +52,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     checkSession();
   }, []);
 
+  // Keep user "online" by pinging /auth/me every 2 min (updates lastActiveAt on server)
+  useEffect(() => {
+    if (!user) return;
+    const interval = setInterval(checkSession, 2 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [user?.id]);
+
   const login = async (email: string, password?: string, mfaCode?: string) => {
     try {
       const response = await fetch('/api/auth/login', {

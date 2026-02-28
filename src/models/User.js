@@ -22,6 +22,8 @@ const UserSchema = new mongoose.Schema(
     mfaEnabled: { type: Boolean, default: false },
     trustScore: { type: Number, default: 95 },
     knownDevices: [{ type: String }], // Store device fingerprints
+    device: { type: String, default: '' }, // e.g. "Điện thoại (Chrome)" or "Máy tính (Chrome)"
+    lastActiveAt: { type: Date, default: null }, // For online/offline status
   },
   { timestamps: true },
 );

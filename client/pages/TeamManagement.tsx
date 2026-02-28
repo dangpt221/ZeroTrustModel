@@ -12,7 +12,7 @@ import {
   CheckCircle2,
   X,
   LayoutGrid,
-  Info
+  Trash2
 } from 'lucide-react';
 import { Team, User } from '../types';
 
@@ -25,6 +25,7 @@ export const TeamManagement: React.FC = () => {
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [openMenuTeamId, setOpenMenuTeamId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchTeams();
@@ -56,6 +57,18 @@ export const TeamManagement: React.FC = () => {
     setIsAddMemberModalOpen(false);
   };
 
+  const handleDeleteTeam = async (teamId: string) => {
+    if (!teamId) return;
+    if (!confirm('Bạn có chắc chắn muốn xóa đội ngũ này?')) return;
+    try {
+      await teamsApi.delete(teamId);
+      setTeams(prev => prev.filter(t => t.id !== teamId));
+    } catch (err) {
+      console.error('Delete team error:', err);
+      alert(err instanceof Error ? err.message : 'Xóa đội ngũ thất bại.');
+    }
+  };
+
   const filteredUsers = allUsers.filter(u => 
     u.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     u.email.toLowerCase().includes(searchTerm.toLowerCase())
@@ -80,19 +93,60 @@ export const TeamManagement: React.FC = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {teams.map(team => (
-          <div key={team.id} className="bg-white rounded-[40px] border border-slate-100 shadow-sm hover:shadow-xl transition-all p-8 flex flex-col h-full group relative overflow-hidden">
+          <div key={team.id} className="bg-white rounded-[40px] border border-slate-100 shadow-sm hover:shadow-xl transition-all p-8 flex flex-col h-full group relative overflow-visible">
             <div className="flex justify-between items-start mb-6">
               <div className="p-4 bg-blue-50 text-blue-600 rounded-2xl group-hover:bg-blue-600 group-hover:text-white transition-colors">
                 <LayoutGrid size={24} />
               </div>
-              <button className="p-2 text-slate-300 hover:text-slate-600 rounded-xl transition-all">
-                <MoreVertical size={20} />
-              </button>
+              <div className="relative">
+                <button
+                  onClick={() => setOpenMenuTeamId(openMenuTeamId === team.id ? null : team.id)}
+                  className="p-2 text-slate-300 hover:text-slate-600 rounded-xl transition-all"
+                >
+                  <MoreVertical size={20} />
+                </button>
+                {openMenuTeamId === team.id && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-10"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOpenMenuTeamId(null);
+                      }}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      aria-hidden
+                    />
+                    <div
+                      className="absolute right-0 top-full mt-1 z-20 min-w-[180px] bg-white rounded-xl border border-slate-200 shadow-lg py-1 overflow-hidden"
+                      onClick={(e) => e.stopPropagation()}
+                      onMouseDown={(e) => e.stopPropagation()}
+                    >
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const idToDelete = team.id;
+                          setOpenMenuTeamId(null);
+                          handleDeleteTeam(idToDelete);
+                        }}
+                        className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-rose-600 hover:bg-rose-50 transition-colors text-sm font-medium"
+                      >
+                        <Trash2 size={16} /> Xóa đội ngũ đó
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
 
             <div className="flex-1 space-y-2 mb-8">
               <h3 className="text-lg font-black text-slate-800 italic">{team.name}</h3>
-              <p className="text-xs text-slate-500 font-medium leading-relaxed">{team.description}</p>
+              <p className="text-xs text-slate-500 font-medium leading-relaxed">{team.description || 'Chưa có mô tả'}</p>
+              {team.createdAt && (
+                <p className="text-[10px] text-slate-400 font-medium pt-1">
+                  Ngày tạo: {new Date(team.createdAt).toLocaleDateString('vi-VN')}
+                </p>
+              )}
             </div>
 
             <div className="space-y-4">
@@ -125,12 +179,11 @@ export const TeamManagement: React.FC = () => {
               </div>
             </div>
 
-            <div className="mt-8 pt-6 border-t border-slate-50 flex items-center justify-between">
+            <div className="mt-8 pt-6 border-t border-slate-50 flex items-center">
               <div className="flex items-center gap-2">
                 <Shield size={14} className="text-emerald-500" />
                 <span className="text-[9px] font-black text-emerald-600 uppercase tracking-tighter">Bảo mật Active</span>
               </div>
-              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">Tạo ngày: {new Date(team.createdAt).toLocaleDateString('vi-VN')}</p>
             </div>
           </div>
         ))}

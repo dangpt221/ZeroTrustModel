@@ -41,6 +41,7 @@ export interface User {
   ipAddress: string;
   device: string;
   status: 'ACTIVE' | 'LOCKED' | 'PENDING';
+  isOnline?: boolean; // true = online, false/undefined = offline (when ACTIVE)
 }
 
 export enum ProjectStatus {

@@ -5,7 +5,7 @@ import { DocumentRequest } from '../models/DocumentRequest.js';
 export function registerDocumentRoutes(router) {
   // ============= DOCUMENTS API =============
 
-  // Get all documents
+  // Get all documents (shape for frontend: name, type, size, uploadedBy, uploadedAt)
   router.get('/documents', requireAuth, async (_req, res, next) => {
     try {
       const docs = await Document.find().lean();
@@ -13,17 +13,23 @@ export function registerDocumentRoutes(router) {
         docs.map((d) => ({
           id: d._id.toString(),
           title: d.title,
-          description: d.description,
+          name: d.title,
+          description: d.description || '',
           classification: d.classification,
-          departmentId: d.departmentId,
-          ownerId: d.ownerId,
+          departmentId: d.departmentId?.toString(),
+          department: d.departmentId?.toString() || '',
+          ownerId: d.ownerId?.toString(),
+          uploadedBy: d.ownerId?.toString() || 'N/A',
           tags: d.tags || [],
-          fileSize: d.fileSize,
-          fileType: d.fileType,
-          url: d.url,
-          sensitivity: d.sensitivity,
+          fileSize: d.fileSize || '',
+          size: d.fileSize || '',
+          fileType: d.fileType || 'PDF',
+          type: d.fileType || 'PDF',
+          url: d.url || '#',
+          sensitivity: d.sensitivity || 'LOW',
           createdAt: d.createdAt,
           updatedAt: d.updatedAt,
+          uploadedAt: d.createdAt ? new Date(d.createdAt).toISOString() : '',
         })),
       );
     } catch (err) {
@@ -57,24 +63,23 @@ export function registerDocumentRoutes(router) {
     }
   });
 
-  // Create new document
+  // Create new document (accept name/title, type/fileType, size/fileSize)
   router.post('/documents', requireAuth, async (req, res, next) => {
     try {
-      const { 
-        title, description, classification, departmentId, 
-        tags, fileSize, fileType, url, sensitivity 
+      const {
+        title, name, description, classification, departmentId, department,
+        tags, fileSize, size, fileType, type, url, sensitivity,
       } = req.body;
-      
       const doc = await Document.create({
-        title,
-        description,
-        classification,
-        departmentId,
+        title: title || name || 'Untitled',
+        description: description || '',
+        classification: classification || 'INTERNAL',
+        departmentId: departmentId || department || null,
         ownerId: req.user.id,
         tags: tags || [],
-        fileSize,
-        fileType,
-        url,
+        fileSize: fileSize || size || '',
+        fileType: fileType || type || 'PDF',
+        url: url || '#',
         sensitivity: sensitivity || 'LOW',
       });
       
@@ -109,8 +114,8 @@ export function registerDocumentRoutes(router) {
     }
   });
 
-  // Delete document
-  router.delete('/documents/:id', requireAuth, requireRole(['ADMIN']), async (req, res, next) => {
+  // Delete document (ADMIN or MANAGER)
+  router.delete('/documents/:id', requireAuth, requireRole(['ADMIN', 'MANAGER']), async (req, res, next) => {
     try {
       const { id } = req.params;
       await Document.findByIdAndDelete(id);
@@ -131,13 +136,13 @@ export function registerDocumentRoutes(router) {
       res.json(
         reqs.map((r) => ({
           id: r._id.toString(),
-          documentId: r.documentId,
-          userId: r.userId,
-          reason: r.reason,
-          status: r.status,
-          reviewedBy: r.reviewedBy,
-          reviewedAt: r.reviewedAt,
-          createdAt: r.createdAt,
+          documentId: r.documentId?.toString?.() || r.documentId,
+          userId: r.userId?.toString?.() || r.userId,
+          reason: r.reason || '',
+          status: r.status || 'PENDING',
+          reviewedBy: r.reviewedBy?.toString?.() || r.reviewedBy,
+          reviewedAt: r.reviewedAt ? new Date(r.reviewedAt).toISOString() : null,
+          createdAt: r.createdAt ? new Date(r.createdAt).toISOString() : null,
         })),
       );
     } catch (err) {

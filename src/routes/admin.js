@@ -30,18 +30,30 @@ export function registerAdminRoutes(router) {
   });
 
   // Get all users (any authenticated user - limited info)
-  router.get('/users', requireAuth, async (_req, res, next) => {
+  const ONLINE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes for online status
+  router.get('/users', requireAuth, async (req, res, next) => {
     try {
       const users = await User.find().lean();
       res.json(
-        users.map((u) => ({
-          id: u._id.toString(),
-          name: u.name,
-          email: u.email,
-          role: u.role,
-          mfaEnabled: u.mfaEnabled,
-          trustScore: u.trustScore ?? 95,
-        })),
+        users.map((u) => {
+          const lastActiveAt = u.lastActiveAt ? new Date(u.lastActiveAt).getTime() : null;
+          const isOnline = lastActiveAt && Date.now() - lastActiveAt < ONLINE_THRESHOLD_MS;
+          return {
+            id: u._id.toString(),
+            name: u.name,
+            email: u.email,
+            role: u.role === 'STAFF' ? 'MEMBER' : u.role,
+            mfaEnabled: u.mfaEnabled,
+            trustScore: u.trustScore ?? 95,
+            device: u.device || 'Chưa xác định',
+            status: u.status || (u.isLocked ? 'LOCKED' : 'ACTIVE'),
+            isOnline: !!isOnline,
+            department: u.departmentId?.toString() || '',
+            avatar: u.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.email}`,
+            ipAddress: '',
+            lastLogin: u.updatedAt ? new Date(u.updatedAt).toISOString() : null,
+          };
+        }),
       );
     } catch (err) {
       next(err);

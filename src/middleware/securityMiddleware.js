@@ -86,6 +86,31 @@ export function getClientIP(req) {
 }
 
 /**
+ * Parse User-Agent to get human-readable device type (phone vs computer)
+ */
+export function parseDeviceFromUserAgent(userAgent = '') {
+  const ua = userAgent.toLowerCase();
+  let deviceType = 'Máy tính';
+  let browser = '';
+
+  if (/mobile|android|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(ua)) {
+    deviceType = 'Điện thoại';
+    if (/iphone|ipad|ipod/.test(ua)) deviceType = 'iPhone';
+    else if (/android/.test(ua)) deviceType = 'Android';
+  } else if (/tablet|ipad/.test(ua)) {
+    deviceType = 'Máy tính bảng';
+  }
+
+  if (/edg\//.test(ua)) browser = 'Edge';
+  else if (/chrome/.test(ua) && !/edg/.test(ua)) browser = 'Chrome';
+  else if (/firefox/.test(ua)) browser = 'Firefox';
+  else if (/safari/.test(ua) && !/chrome/.test(ua)) browser = 'Safari';
+  else if (/msie|trident/.test(ua)) browser = 'IE';
+
+  return browser ? `${deviceType} (${browser})` : deviceType;
+}
+
+/**
  * Generate device fingerprint
  */
 export function getDeviceFingerprint(req) {

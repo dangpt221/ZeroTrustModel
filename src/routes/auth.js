@@ -7,6 +7,7 @@ import {
   getClientIP,
   getDeviceFingerprint,
   logSecurityEvent,
+  parseDeviceFromUserAgent,
   recordFailedAttempt,
   securityCheck
 } from '../middleware/securityMiddleware.js';
@@ -14,23 +15,42 @@ import passport from '../configs/passport.js';
 import { User } from '../models/User.js';
 import { sendOTP } from '../utils/emailService.js';
 
+const ONLINE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
+
 function toClientUser(user) {
+  const lastActiveAt = user.lastActiveAt ? new Date(user.lastActiveAt).getTime() : null;
+  const isOnline = lastActiveAt && Date.now() - lastActiveAt < ONLINE_THRESHOLD_MS;
   return {
     id: user._id.toString(),
     name: user.name,
     email: user.email,
-    // Map backend role 'STAFF' -> frontend enum 'MEMBER'
     role: user.role === 'STAFF' ? 'MEMBER' : user.role,
     avatar: user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`,
     mfaEnabled: user.mfaEnabled || false,
     department: user.department || 'Phòng ban chung',
     lastLogin: user.updatedAt || new Date().toISOString(),
     trustScore: user.trustScore ?? 95,
-    ipAddress: '192.168.1.105', // Mock or get from req if possible (needs req arg)
-    device: 'Chrome / Windows 11', // Mock
+    ipAddress: '192.168.1.105',
+    device: user.device || 'Chưa xác định',
     status: user.status || (user.isLocked ? 'LOCKED' : 'ACTIVE'),
     departmentId: user.departmentId || null,
+    lastActiveAt: user.lastActiveAt ? new Date(user.lastActiveAt).toISOString() : null,
+    isOnline: !!isOnline,
   };
+}
+
+async function updateUserActivity(user, req, forceDevice = false) {
+  const now = new Date();
+  const ua = req?.headers?.['user-agent'] || '';
+  if (forceDevice || !user.device) {
+    user.device = parseDeviceFromUserAgent(ua) || user.device;
+  }
+  // Throttle: only update lastActiveAt if older than 1 min (avoid DB spam on every auth/me)
+  const lastActive = user.lastActiveAt ? new Date(user.lastActiveAt).getTime() : 0;
+  if (forceDevice || Date.now() - lastActive > 60 * 1000) {
+    user.lastActiveAt = now;
+    await user.save();
+  }
 }
 
 // In-memory store for MFA temp tokens (in production, use Redis)
@@ -75,6 +95,8 @@ export function registerAuthRoutes(router) {
 
         // Risk assessment after successful MFA
         const { riskScore, riskFactors } = await assessLoginRisk(req, user);
+
+        await updateUserActivity(user, req, true);
 
         const token = signUserToken(user);
         setAuthCookie(res, token);
@@ -177,6 +199,8 @@ export function registerAuthRoutes(router) {
       // Clear failed attempts on success (In case we reached here without MFA, though shouldn't happen with shouldForceOTP=true)
       clearFailedAttempts(clientIP, email);
 
+      await updateUserActivity(user, req, true);
+
       // No MFA, complete login
       const token = signUserToken(user);
       setAuthCookie(res, token);
@@ -207,8 +231,10 @@ export function registerAuthRoutes(router) {
   // Get current user profile
   router.get('/auth/me', requireAuth, async (req, res) => {
     try {
-      const user = await User.findById(req.user.id).lean();
+      const user = await User.findById(req.user.id);
       if (!user) return res.status(404).json({ message: 'User not found' });
+
+      await updateUserActivity(user, req);
 
       console.log(`[AUTH_CHECK] User: ${user.email}, Status: ${user.status || 'N/A'}`);
 
@@ -269,6 +295,9 @@ export function registerAuthRoutes(router) {
           logSecurityEvent('LOGIN_BLOCKED', { email: user?.email || 'unknown', ip: clientIP, reason: 'Account locked or missing from OAuth' });
           return res.redirect(`${process.env.FRONTEND_URL || ''}/#/login?error=AccountLocked`);
         }
+
+        const userDoc = await User.findById(user._id || user.id);
+        if (userDoc) await updateUserActivity(userDoc, req, true);
 
         // Generate JWT token
         const token = signUserToken(user);
