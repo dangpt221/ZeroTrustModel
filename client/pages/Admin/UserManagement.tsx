@@ -1,22 +1,21 @@
 
-import React, { useEffect, useState } from 'react';
-import { User, UserRole } from '../../types';
-import { usersApi, departmentsApi } from '../../api';
 import {
-  Search,
-  UserPlus,
-  Lock,
-  Unlock,
-  Trash2,
-  Filter,
-  Monitor,
-  Smartphone,
-  X,
-  Edit2,
   Check,
-  UserMinus
+  Edit2,
+  Filter,
+  Lock,
+  Monitor,
+  Search,
+  Smartphone,
+  Trash2,
+  Unlock,
+  UserMinus,
+  UserPlus
 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { departmentsApi, usersApi } from '../../api';
 import { Modal } from '../../components/Admin/Modal';
+import { User, UserRole } from '../../types';
 
 export const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -32,7 +31,7 @@ export const UserManagement: React.FC = () => {
     name: '',
     email: '',
     password: '',
-    role: 'MEMBER',
+    role: 'Staff',
     department: '',
     mfaEnabled: false
   });
@@ -40,7 +39,7 @@ export const UserManagement: React.FC = () => {
     name: '',
     email: '',
     password: '',
-    role: 'MEMBER',
+    role: 'Staff',
     department: '',
     mfaEnabled: false
   });
@@ -83,12 +82,12 @@ export const UserManagement: React.FC = () => {
         email: formData.email,
         password: formData.password,
         role: formData.role,
-        department: formData.department,
+        ...(formData.department ? { departmentId: formData.department } : {}),
         mfaEnabled: formData.mfaEnabled
       });
       setUsers([...users, { ...newUser, id: newUser.id, status: 'PENDING', trustScore: 50, device: 'Unknown', avatar: 'https://picsum.photos/seed/default/200' }]);
       setIsModalOpen(false);
-      setFormData({ name: '', email: '', password: '', role: 'MEMBER', department: '', mfaEnabled: false });
+      setFormData({ name: '', email: '', password: '', role: 'STAFF', department: '', mfaEnabled: false });
       alert('Tạo người dùng thành công!');
     } catch (err) {
       console.error('Create user error:', err);
@@ -115,7 +114,7 @@ export const UserManagement: React.FC = () => {
       const updateData: any = {
         name: editFormData.name,
         role: editFormData.role,
-        department: editFormData.department,
+        ...(editFormData.department ? { departmentId: editFormData.department } : {}),
         mfaEnabled: editFormData.mfaEnabled
       };
       // Only include password if provided
@@ -127,7 +126,7 @@ export const UserManagement: React.FC = () => {
       setUsers(prev => prev.map(u => (u.id === editingUser.id ? { ...u, ...updated } : u)));
       setIsEditModalOpen(false);
       setEditingUser(null);
-      setEditFormData({ name: '', email: '', password: '', role: 'MEMBER', department: '', mfaEnabled: false });
+      setEditFormData({ name: '', email: '', password: '', role: 'STAFF', department: '', mfaEnabled: false });
       alert('Cập nhật người dùng thành công!');
     } catch (err) {
       console.error('Update user error:', err);
@@ -245,9 +244,11 @@ export const UserManagement: React.FC = () => {
               <label className="text-xs font-bold text-slate-500 uppercase">Vai trò</label>
               <select value={filterRole} onChange={(e) => setFilterRole(e.target.value)} className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-xl text-sm">
                 <option value="ALL">Tất cả</option>
+                <option value="SUPER_ADMIN">Super Admin</option>
                 <option value="ADMIN">Admin</option>
                 <option value="MANAGER">Manager</option>
-                <option value="MEMBER">Member</option>
+                <option value="AUDITOR">Auditor</option>
+                <option value="STAFF">Staff</option>
               </select>
             </div>
             <div>
@@ -428,9 +429,10 @@ export const UserManagement: React.FC = () => {
                 onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                 className="w-full mt-1 px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
               >
-                <option value="MEMBER">Member</option>
-                <option value="MANAGER">Manager</option>
-                <option value="ADMIN">Admin</option>
+                <option value="STAFF">Staff - Nhân viên</option>
+                <option value="MANAGER">Manager - Quản lý</option>
+                <option value="ADMIN">Admin - Quản trị</option>
+                <option value="AUDITOR">Auditor - Kiểm toán</option>
               </select>
             </div>
             <div>
@@ -514,9 +516,10 @@ export const UserManagement: React.FC = () => {
                 onChange={(e) => setEditFormData({ ...editFormData, role: e.target.value })}
                 className="w-full mt-1 px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
               >
-                <option value="MEMBER">Member</option>
-                <option value="MANAGER">Manager</option>
-                <option value="ADMIN">Admin</option>
+                <option value="STAFF">Staff - Nhan vien</option>
+                <option value="MANAGER">Manager - Quan ly</option>
+                <option value="ADMIN">Admin - Quan tri</option>
+                <option value="AUDITOR">Auditor - Kiem toan</option>
               </select>
             </div>
             <div>

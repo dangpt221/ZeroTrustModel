@@ -26,6 +26,7 @@ import { AuditLogs } from './pages/AuditLogs';
 import { UserRole } from './types';
 import { NotificationManagement } from './pages/Admin/NotificationManagement';
 import { PendingApproval } from './pages/PendingApproval';
+import { ChatManagement } from './pages/Admin/ChatManagement';
 
 const PrivateRoute: React.FC<{ children: React.ReactNode; roles?: UserRole[] }> = ({ children, roles }) => {
   const { isAuthenticated, user } = useAuth();
@@ -96,33 +97,39 @@ const App: React.FC = () => {
             </PrivateRoute>
           } />
 
-          {/* Manager Specific Routes */}
+          <Route path="/admin/chat" element={
+            <PrivateRoute roles={[UserRole.ADMIN, UserRole.SUPER_ADMIN]}>
+              <Layout><ChatManagement /></Layout>
+            </PrivateRoute>
+          } />
+
+          {/* Manager Specific Routes (Admin can also access) */}
           <Route path="/manager/staff" element={
-            <PrivateRoute roles={[UserRole.MANAGER]}>
+            <PrivateRoute roles={[UserRole.ADMIN, UserRole.MANAGER]}>
               <Layout><StaffManagement /></Layout>
             </PrivateRoute>
           } />
 
           <Route path="/manager/documents" element={
-            <PrivateRoute roles={[UserRole.MANAGER]}>
+            <PrivateRoute roles={[UserRole.ADMIN, UserRole.MANAGER]}>
               <Layout><DepartmentDocuments /></Layout>
             </PrivateRoute>
           } />
 
           <Route path="/manager/reports" element={
-            <PrivateRoute roles={[UserRole.MANAGER]}>
+            <PrivateRoute roles={[UserRole.ADMIN, UserRole.MANAGER]}>
               <Layout><ManagerReports /></Layout>
             </PrivateRoute>
           } />
 
           <Route path="/manager/approvals" element={
-            <PrivateRoute roles={[UserRole.MANAGER]}>
+            <PrivateRoute roles={[UserRole.ADMIN, UserRole.MANAGER]}>
               <Layout><ManagerApprovals /></Layout>
             </PrivateRoute>
           } />
 
           <Route path="/manager/teams" element={
-            <PrivateRoute roles={[UserRole.MANAGER]}>
+            <PrivateRoute roles={[UserRole.ADMIN, UserRole.MANAGER]}>
               <Layout><TeamManagement /></Layout>
             </PrivateRoute>
           } />

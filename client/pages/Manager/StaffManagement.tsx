@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { usersApi, departmentsApi } from '../../api';
 import { User, UserRole } from '../../types';
+import { useAuth } from '../../context/AuthContext';
+import { usePermission } from '../../hooks/usePermission';
 import { StaffActionModal } from '../../components/Manager/StaffActionModal';
 import { Modal } from '../../components/Admin/Modal';
 import {
@@ -17,6 +19,8 @@ import {
 } from 'lucide-react';
 
 export const StaffManagement: React.FC = () => {
+  const { user: currentUser } = useAuth();
+  const { isAdmin } = usePermission();
   const [staff, setStaff] = useState<User[]>([]);
   const [departments, setDepartments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,9 +45,15 @@ export const StaffManagement: React.FC = () => {
   useEffect(() => {
     const fetchStaff = async () => {
       try {
-        const data = await usersApi.getAll();
-        const filtered = (data || []).filter((u: User) => u.role !== UserRole.ADMIN);
-        setStaff(filtered);
+        let data;
+        // Manager gets team members, Admin gets all users
+        if (isAdmin) {
+          data = await usersApi.getAll();
+          data = (data || []).filter((u: User) => u.role !== UserRole.ADMIN);
+        } else {
+          data = await usersApi.getTeamMembers();
+        }
+        setStaff(data || []);
       } catch (error) {
         console.error('Error fetching staff:', error);
       } finally {
@@ -62,7 +72,7 @@ export const StaffManagement: React.FC = () => {
     fetchDepartments();
     const interval = setInterval(fetchStaff, 60000); // Refresh online status every 60s
     return () => clearInterval(interval);
-  }, []);
+  }, [isAdmin]);
 
   const filteredStaff = staff.filter(s => {
     const matchSearch =
@@ -83,7 +93,12 @@ export const StaffManagement: React.FC = () => {
   const handleToggleStatus = async (user: User) => {
     const nextStatus = user.status === 'ACTIVE' ? 'LOCKED' : 'ACTIVE';
     try {
-      const updated = await usersApi.lock(user.id, nextStatus);
+      let updated;
+      if (isAdmin) {
+        updated = await usersApi.lock(user.id, nextStatus);
+      } else {
+        updated = await usersApi.lockTeamMember(user.id, nextStatus);
+      }
       setStaff(prev => prev.map(u => (u.id === user.id ? updated : u)));
     } catch (err) {
       console.error('Toggle status error:', err);
@@ -94,7 +109,12 @@ export const StaffManagement: React.FC = () => {
   const handleToggleMfa = async (user: User) => {
     const newState = !user.mfaEnabled;
     try {
-      const updated = await usersApi.toggleMfa(user.id, newState);
+      let updated;
+      if (isAdmin) {
+        updated = await usersApi.toggleMfa(user.id, newState);
+      } else {
+        updated = await usersApi.updateTeamMember(user.id, { mfaEnabled: newState });
+      }
       setStaff(prev => prev.map(u => (u.id === user.id ? updated : u)));
       alert(`Đã ${newState ? 'Bật' : 'Tắt'} bắt buộc OTP cho ${updated.name}.`);
     } catch (err) {

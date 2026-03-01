@@ -40,6 +40,7 @@ export const ADMIN_NAVIGATION = [
   { name: 'Vai trò & Phân quyền', icon: <ShieldCheck size={20} />, path: '/admin/roles' },
   { name: 'Quản lý bộ phận', icon: <Building2 size={20} />, path: '/admin/departments' },
   { name: 'Quản lý tài liệu', icon: <FolderLock size={20} />, path: '/admin/documents' },
+  { name: 'Quản lý Chat nội bộ', icon: <MessageSquare size={20} />, path: '/admin/chat' },
   { name: 'Giám sát SOC Log', icon: <Activity size={20} />, path: '/audit-logs' },
   { name: 'Cấu hình Zero Trust', icon: <Fingerprint size={20} />, path: '/admin/zero-trust' },
   { name: 'Quản lý thông báo', icon: <Bell size={20} />, path: '/admin/notifications' },

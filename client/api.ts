@@ -1,464 +1,478 @@
-// API Service for Nexus Zero Trust System
-const API_BASE = '/api';
+import {
+  User,
+  Project,
+  Task,
+  Department,
+  Team,
+  Document,
+  Attendance,
+  Message,
+  Notification,
+  AuditLog,
+  Role,
+  Permission,
+  ZeroTrustConfig
+} from './types';
 
-const getAuthHeaders = () => ({
-  'Content-Type': 'application/json',
-});
+// Base API URL
+const API_URL = '/api';
 
-// Auth
-export const authApi = {
-  login: async (email: string, password: string, mfaCode?: string) => {
-    const res = await fetch(`${API_BASE}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, mfaCode }),
-      credentials: 'include',
-    });
-    return res.json();
-  },
+// Helper function for making API requests
+async function apiRequest<T>(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const response = await fetch(`${API_URL}${endpoint}`, {
+    ...options,
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
 
-  logout: async () => {
-    await fetch(`${API_BASE}/auth/logout`, {
-      method: 'POST',
-      credentials: 'include',
-    });
-  },
-};
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: 'Request failed' }));
+    throw new Error(error.message || 'Request failed');
+  }
 
-// Users
-export const usersApi = {
-  getAll: async () => {
-    const res = await fetch(`${API_BASE}/users`, { credentials: 'include' });
-    return res.json();
-  },
+  return response.json();
+}
 
-  getAdmin: async () => {
-    const res = await fetch(`${API_BASE}/admin/users`, { credentials: 'include' });
-    return res.json();
-  },
-
-  create: async (data: any) => {
-    const res = await fetch(`${API_BASE}/admin/users`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(data),
-      credentials: 'include',
-    });
-    return res.json();
-  },
-
-  update: async (id: string, data: any) => {
-    const res = await fetch(`${API_BASE}/admin/users/${id}`, {
-      method: 'PUT',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(data),
-      credentials: 'include',
-    });
-    return res.json();
-  },
-
-  delete: async (id: string) => {
-    const res = await fetch(`${API_BASE}/admin/users/${id}`, {
-      method: 'DELETE',
-      credentials: 'include',
-    });
-    return res.json();
-  },
-
-  lock: async (id: string, status: string) => {
-    const res = await fetch(`${API_BASE}/admin/users/${id}/lock`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ status }),
-      credentials: 'include',
-    });
-    return res.json();
-  },
-
-  toggleMfa: async (id: string, enabled: boolean) => {
-    const res = await fetch(`${API_BASE}/admin/users/${id}/mfa`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ enabled }),
-      credentials: 'include',
-    });
-    return res.json();
-  },
-
-  approve: async (id: string) => {
-    const res = await fetch(`${API_BASE}/admin/users/${id}/approve`, {
-      method: 'POST',
-      credentials: 'include',
-    });
-    return res.json();
-  },
-
-  reject: async (id: string) => {
-    const res = await fetch(`${API_BASE}/admin/users/${id}/reject`, {
-      method: 'POST',
-      credentials: 'include',
-    });
-    return res.json();
-  },
-
-  getList: async () => {
-    const res = await fetch(`${API_BASE}/users`, { credentials: 'include' });
-    return res.json();
-  },
-};
-
-// Departments
-export const departmentsApi = {
-  getAll: async () => {
-    const res = await fetch(`${API_BASE}/departments`, { credentials: 'include' });
-    return res.json();
-  },
-
-  create: async (data: any) => {
-    const res = await fetch(`${API_BASE}/departments`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(data),
-      credentials: 'include',
-    });
-    return res.json();
-  },
-
-  update: async (id: string, data: any) => {
-    const res = await fetch(`${API_BASE}/departments/${id}`, {
-      method: 'PUT',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(data),
-      credentials: 'include',
-    });
-    return res.json();
-  },
-};
-
-// Roles & Permissions
-export const rolesApi = {
-  getAll: async () => {
-    const res = await fetch(`${API_BASE}/admin/roles`, { credentials: 'include' });
-    return res.json();
-  },
-
-  create: async (data: any) => {
-    const res = await fetch(`${API_BASE}/admin/roles`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(data),
-      credentials: 'include',
-    });
-    return res.json();
-  },
-
-  update: async (id: string, data: any) => {
-    const res = await fetch(`${API_BASE}/admin/roles/${id}`, {
-      method: 'PUT',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(data),
-      credentials: 'include',
-    });
-    return res.json();
-  },
-
-  delete: async (id: string) => {
-    const res = await fetch(`${API_BASE}/admin/roles/${id}`, {
-      method: 'DELETE',
-      credentials: 'include',
-    });
-    return res.json();
-  },
-
-  getPermissions: async () => {
-    const res = await fetch(`${API_BASE}/admin/permissions`, { credentials: 'include' });
-    return res.json();
-  },
-};
-
-// Documents
-export const documentsApi = {
-  getAll: async () => {
-    const res = await fetch(`${API_BASE}/documents`, { credentials: 'include' });
-    return res.json();
-  },
-
-  create: async (data: any) => {
-    const res = await fetch(`${API_BASE}/documents`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(data),
-      credentials: 'include',
-    });
-    return res.json();
-  },
-
-  delete: async (id: string) => {
-    const res = await fetch(`${API_BASE}/documents/${id}`, {
-      method: 'DELETE',
-      credentials: 'include',
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error((data as { message?: string }).message || 'Xóa tài liệu thất bại');
-    return data;
-  },
-
-  getRequests: async () => {
-    const res = await fetch(`${API_BASE}/document-requests`, { credentials: 'include' });
-    return res.json();
-  },
-
-  createRequest: async (documentId: string, reason: string) => {
-    const res = await fetch(`${API_BASE}/document-requests`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ documentId, reason }),
-      credentials: 'include',
-    });
-    return res.json();
-  },
-
-  updateRequest: async (id: string, status: string) => {
-    const res = await fetch(`${API_BASE}/document-requests/${id}`, {
-      method: 'PUT',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ status }),
-      credentials: 'include',
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error((data as { message?: string }).message || 'Cập nhật thất bại');
-    return data;
-  },
-};
-
-// Projects
+// ==================== Projects API ====================
 export const projectsApi = {
-  getAll: async () => {
-    const res = await fetch(`${API_BASE}/projects`, { credentials: 'include' });
-    return res.json();
-  },
+  getAll: () => apiRequest<Project[]>('/projects'),
 
-  getById: async (id: string) => {
-    const res = await fetch(`${API_BASE}/projects/${id}`, { credentials: 'include' });
-    return res.json();
-  },
+  getById: (id: string) => apiRequest<Project>(`/projects/${id}`),
 
-  create: async (data: any) => {
-    const res = await fetch(`${API_BASE}/projects`, {
+  create: (data: Partial<Project>) =>
+    apiRequest<Project>('/projects', {
       method: 'POST',
-      headers: getAuthHeaders(),
       body: JSON.stringify(data),
-      credentials: 'include',
-    });
-    return res.json();
-  },
+    }),
 
-  update: async (id: string, data: any) => {
-    const res = await fetch(`${API_BASE}/projects/${id}`, {
+  update: (id: string, data: Partial<Project>) =>
+    apiRequest<Project>(`/projects/${id}`, {
       method: 'PUT',
-      headers: getAuthHeaders(),
       body: JSON.stringify(data),
-      credentials: 'include',
-    });
-    return res.json();
-  },
+    }),
 
-  getTasks: async (projectId: string) => {
-    const res = await fetch(`${API_BASE}/projects/${projectId}/tasks`, { credentials: 'include' });
-    return res.json();
-  },
+  delete: (id: string) =>
+    apiRequest<void>(`/projects/${id}`, { method: 'DELETE' }),
 
-  createTask: async (projectId: string, data: any) => {
-    const res = await fetch(`${API_BASE}/projects/${projectId}/tasks`, {
+  getTasks: (projectId: string) =>
+    apiRequest<Task[]>(`/projects/${projectId}/tasks`),
+
+  createTask: (projectId: string, data: Partial<Task>) =>
+    apiRequest<Task>(`/projects/${projectId}/tasks`, {
       method: 'POST',
-      headers: getAuthHeaders(),
       body: JSON.stringify(data),
-      credentials: 'include',
-    });
-    return res.json();
-  },
+    }),
 
-  updateTask: async (taskId: string, data: any) => {
-    const res = await fetch(`${API_BASE}/tasks/${taskId}`, {
+  updateTask: (taskId: string, data: Partial<Task>) =>
+    apiRequest<Task>(`/tasks/${taskId}`, {
       method: 'PUT',
-      headers: getAuthHeaders(),
       body: JSON.stringify(data),
-      credentials: 'include',
-    });
-    return res.json();
-  },
+    }),
 };
 
-// Teams
+// ==================== Users API ====================
+export const usersApi = {
+  getAll: () => apiRequest<User[]>('/admin/users'),
+
+  getList: () => apiRequest<User[]>('/users'),
+
+  getById: (id: string) => apiRequest<User>(`/users/${id}`),
+
+  create: (data: { name: string; email: string; password: string; role: string; departmentId?: string; mfaEnabled?: boolean }) =>
+    apiRequest<User>('/admin/users', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  update: (id: string, data: Partial<User> & { password?: string }) =>
+    apiRequest<User>(`/admin/users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (id: string) =>
+    apiRequest<void>(`/admin/users/${id}`, { method: 'DELETE' }),
+
+  lock: (id: string, status: string) =>
+    apiRequest<User>(`/admin/users/${id}/lock`, {
+      method: 'POST',
+      body: JSON.stringify({ status }),
+    }),
+
+  approve: (id: string) =>
+    apiRequest<User>(`/admin/users/${id}/approve`, { method: 'POST' }),
+
+  reject: (id: string) =>
+    apiRequest<void>(`/admin/users/${id}/reject`, { method: 'POST' }),
+
+  toggleMfa: (id: string, enabled: boolean) =>
+    apiRequest<User>(`/admin/users/${id}/mfa`, {
+      method: 'POST',
+      body: JSON.stringify({ enabled }),
+    }),
+
+  resetPassword: (id: string) =>
+    apiRequest<{ message: string }>(`/admin/users/${id}/reset-password`, {
+      method: 'POST',
+    }),
+
+  // Manager endpoints
+  getTeamMembers: () => apiRequest<User[]>('/manager/users'),
+
+  updateTeamMember: (id: string, data: { name?: string; role?: string; mfaEnabled?: boolean }) =>
+    apiRequest<User>(`/manager/users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  lockTeamMember: (id: string, status: string) =>
+    apiRequest<User>(`/manager/users/${id}/lock`, {
+      method: 'POST',
+      body: JSON.stringify({ status }),
+    }),
+};
+
+// ==================== Departments API ====================
+export const departmentsApi = {
+  getAll: () => apiRequest<Department[]>('/departments'),
+
+  getById: (id: string) => apiRequest<Department>(`/departments/${id}`),
+
+  create: (data: Partial<Department>) =>
+    apiRequest<Department>('/departments', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  update: (id: string, data: Partial<Department>) =>
+    apiRequest<Department>(`/departments/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (id: string) =>
+    apiRequest<void>(`/departments/${id}`, { method: 'DELETE' }),
+};
+
+// ==================== Teams API ====================
 export const teamsApi = {
-  getAll: async () => {
-    const res = await fetch(`${API_BASE}/teams`, { credentials: 'include' });
-    return res.json();
-  },
+  getAll: () => apiRequest<Team[]>('/teams'),
 
-  create: async (data: any) => {
-    const res = await fetch(`${API_BASE}/teams`, {
+  getById: (id: string) => apiRequest<Team>(`/teams/${id}`),
+
+  create: (data: Partial<Team>) =>
+    apiRequest<Team>('/teams', {
       method: 'POST',
-      headers: getAuthHeaders(),
       body: JSON.stringify(data),
-      credentials: 'include',
-    });
-    return res.json();
-  },
+    }),
 
-  addMember: async (teamId: string, userId: string) => {
-    const res = await fetch(`${API_BASE}/teams/${teamId}/members`, {
+  update: (id: string, data: Partial<Team>) =>
+    apiRequest<Team>(`/teams/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (id: string) =>
+    apiRequest<void>(`/teams/${id}`, { method: 'DELETE' }),
+
+  addMember: (teamId: string, userId: string) =>
+    apiRequest<Team>(`/teams/${teamId}/members`, {
       method: 'POST',
-      headers: getAuthHeaders(),
       body: JSON.stringify({ userId }),
-      credentials: 'include',
-    });
-    return res.json();
-  },
+    }),
 
-  delete: async (teamId: string) => {
-    const res = await fetch(`${API_BASE}/teams/${teamId}`, {
+  removeMember: (teamId: string, userId: string) =>
+    apiRequest<Team>(`/teams/${teamId}/members/${userId}`, {
       method: 'DELETE',
+    }),
+};
+
+// ==================== Documents API ====================
+export const documentsApi = {
+  getAll: (params?: { search?: string; department?: string; project?: string; status?: string; classification?: string; sensitivity?: string; page?: number; limit?: number }) => {
+    const query = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) query.append(key, String(value));
+      });
+    }
+    const queryString = query.toString();
+    return apiRequest<{ documents: Document[]; pagination: any }>(`/documents${queryString ? `?${queryString}` : ''}`);
+  },
+
+  getById: (id: string) => apiRequest<Document>(`/documents/${id}`),
+
+  create: (data: Partial<Document>) =>
+    apiRequest<Document>('/documents', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  // Upload file and get info
+  uploadFile: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch('/api/documents/upload', {
+      method: 'POST',
       credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
+      body: formData,
     });
-    let data: { message?: string } = {};
-    try {
-      const text = await res.text();
-      data = text ? JSON.parse(text) : {};
-    } catch {
-      data = { message: 'Phản hồi không hợp lệ từ server' };
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Upload failed' }));
+      throw new Error(error.message || 'Upload failed');
     }
-    if (!res.ok) {
-      throw new Error(data.message || `Xóa thất bại (${res.status})`);
-    }
-    return data;
+
+    return response.json();
   },
+
+  // Upload new version
+  uploadVersion: async (id: string, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`/api/documents/${id}/upload`, {
+      method: 'POST',
+      credentials: 'include',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Upload failed' }));
+      throw new Error(error.message || 'Upload failed');
+    }
+
+    return response.json();
+  },
+
+  update: (id: string, data: Partial<Document>) =>
+    apiRequest<Document>(`/documents/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (id: string) =>
+    apiRequest<void>(`/documents/${id}`, { method: 'DELETE' }),
+
+  // Approval workflow
+  approve: (id: string) =>
+    apiRequest<Document>(`/documents/${id}/approve`, { method: 'POST' }),
+
+  reject: (id: string, reason?: string) =>
+    apiRequest<Document>(`/documents/${id}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
+
+  // Download
+  download: (id: string) =>
+    apiRequest<{ url: string; fileName: string }>(`/documents/${id}/download`),
+
+  // Statistics
+  getStats: () =>
+    apiRequest<{ total: number; byStatus: Record<string, number>; byClassification: Record<string, number> }>('/documents-stats/stats'),
 };
 
-// Audit Logs
-export const auditLogsApi = {
-  getAll: async () => {
-    const res = await fetch(`${API_BASE}/audit-logs`, { credentials: 'include' });
-    return res.json();
-  },
-};
-
-// Attendance
+// ==================== Attendance API ====================
 export const attendanceApi = {
-  checkIn: async (data?: { location?: string; device?: string }) => {
-    const res = await fetch(`${API_BASE}/attendance/check-in`, {
+  checkIn: (data?: { location?: string; device?: string }) =>
+    apiRequest<Attendance>('/attendance/check-in', {
       method: 'POST',
-      headers: getAuthHeaders(),
       body: JSON.stringify(data || {}),
-      credentials: 'include',
-    });
-    const result = await res.json();
-    if (!res.ok) throw new Error((result as { message?: string }).message || 'Chấm công vào thất bại');
-    return result;
-  },
+    }),
 
-  checkOut: async (data?: { location?: string; device?: string }) => {
-    const res = await fetch(`${API_BASE}/attendance/check-out`, {
+  checkOut: (data?: { location?: string; device?: string }) =>
+    apiRequest<Attendance>('/attendance/check-out', {
       method: 'POST',
-      headers: getAuthHeaders(),
       body: JSON.stringify(data || {}),
-      credentials: 'include',
-    });
-    const result = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      const msg = (result as { message?: string }).message || 'Chấm công ra thất bại';
-      if (res.status === 404) {
-        throw new Error('API chấm công không tồn tại. Vui lòng khởi động lại server backend (npm run server, port 5000).');
-      }
-      throw new Error(msg);
-    }
-    return result;
-  },
+    }),
 
-  getHistory: async () => {
-    const res = await fetch(`${API_BASE}/attendance/history`, { credentials: 'include' });
-    return res.json();
-  },
+  getHistory: () => apiRequest<Attendance[]>('/attendance/history'),
 };
 
-// Messages
+// ==================== Messages API ====================
 export const messagesApi = {
-  getAll: async (room?: string) => {
-    const url = room ? `${API_BASE}/messages?room=${encodeURIComponent(room)}` : `${API_BASE}/messages`;
-    const res = await fetch(url, { credentials: 'include' });
-    return res.json();
-  },
-};
-
-// Zero Trust Config
-export const zeroTrustApi = {
-  getConfig: async () => {
-    const res = await fetch(`${API_BASE}/zero-trust/config`, { credentials: 'include' });
-    return res.json();
+  getMessages: (room?: string) => {
+    const endpoint = room ? `/messages?room=${encodeURIComponent(room)}` : '/messages';
+    return apiRequest<Message[]>(endpoint);
   },
 
-  updateConfig: async (data: any) => {
-    const res = await fetch(`${API_BASE}/zero-trust/config`, {
-      method: 'PUT',
-      headers: getAuthHeaders(),
+  sendMessage: (data: { text: string; room?: string }) =>
+    apiRequest<Message>('/messages', {
+      method: 'POST',
       body: JSON.stringify(data),
-      credentials: 'include',
-    });
-    return res.json();
-  },
+    }),
 };
 
-// Notifications
+// ==================== Notifications API ====================
 export const notificationsApi = {
-  getAll: async () => {
-    const res = await fetch(`${API_BASE}/notifications`, { credentials: 'include' });
-    return res.json();
-  },
+  getAll: () => apiRequest<Notification[]>('/notifications'),
 
-  getAllAdmin: async () => {
-    const res = await fetch(`${API_BASE}/notifications/all`, { credentials: 'include' });
-    return res.json();
-  },
+  getUnreadCount: () => apiRequest<{ count: number }>('/notifications/unread-count'),
 
-  create: async (data: { userId: string; title: string; message: string; type?: string; priority?: string }) => {
-    const res = await fetch(`${API_BASE}/notifications`, {
+  markAsRead: (id: string) =>
+    apiRequest<void>(`/notifications/${id}/read`, { method: 'PUT' }),
+
+  markAllAsRead: () =>
+    apiRequest<void>('/notifications/read-all', { method: 'PUT' }),
+
+  broadcast: (data: { title: string; message: string; type?: string }) =>
+    apiRequest<Notification>('/notifications/broadcast', {
       method: 'POST',
-      headers: getAuthHeaders(),
       body: JSON.stringify(data),
-      credentials: 'include',
-    });
-    return res.json();
-  },
+    }),
+};
 
-  broadcast: async (data: { userIds: string[]; title: string; message: string; type?: string; priority?: string }) => {
-    const res = await fetch(`${API_BASE}/notifications/broadcast`, {
+// ==================== Audit Logs API ====================
+export const auditLogsApi = {
+  getAll: () => apiRequest<AuditLog[]>('/audit-logs'),
+
+  getMine: () => apiRequest<AuditLog[]>('/audit-logs/me'),
+};
+
+// ==================== Zero Trust API ====================
+export const zeroTrustApi = {
+  getConfig: () => apiRequest<ZeroTrustConfig>('/zero-trust/config'),
+
+  updateConfig: (data: Partial<ZeroTrustConfig>) =>
+    apiRequest<{ id: string }>('/zero-trust/config', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+};
+
+// ==================== Roles API ====================
+export const rolesApi = {
+  // Roles
+  getAll: () => apiRequest<Role[]>('/roles'),
+
+  getRoles: () => apiRequest<Role[]>('/roles'),
+
+  getById: (id: string) => apiRequest<Role>(`/roles/${id}`),
+
+  create: (data: { name: string; description?: string; permissions?: string[]; color?: string }) =>
+    apiRequest<Role>('/roles', {
       method: 'POST',
-      headers: getAuthHeaders(),
       body: JSON.stringify(data),
-      credentials: 'include',
-    });
-    return res.json();
-  },
+    }),
 
-  markAsRead: async (notificationId: string) => {
-    const res = await fetch(`${API_BASE}/notifications/${notificationId}/read`, {
+  update: (id: string, data: { name?: string; description?: string; permissions?: string[]; color?: string; isActive?: boolean }) =>
+    apiRequest<Role>(`/roles/${id}`, {
       method: 'PUT',
-      credentials: 'include',
-    });
-    return res.json();
+      body: JSON.stringify(data),
+    }),
+
+  delete: (id: string) =>
+    apiRequest<void>(`/roles/${id}`, { method: 'DELETE' }),
+
+  // Get users by role
+  getUsersByRole: (roleName: string) =>
+    apiRequest<User[]>(`/roles/${encodeURIComponent(roleName)}/users`),
+
+  // Permissions
+  getPermissions: () => apiRequest<Permission[]>('/permissions'),
+};
+
+// ==================== Chat Management API ====================
+export const chatManagementApi = {
+  // Statistics
+  getStats: () => apiRequest<any>('/chat/stats'),
+
+  // Rooms
+  getRooms: (params?: { type?: string; search?: string; isLocked?: boolean; department?: string; page?: number; limit?: number }) => {
+    const query = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) query.append(key, String(value));
+      });
+    }
+    const queryString = query.toString();
+    return apiRequest<{ rooms: any[]; pagination: any }>(`/chat/rooms${queryString ? `?${queryString}` : ''}`);
   },
 
-  markAllAsRead: async () => {
-    const res = await fetch(`${API_BASE}/notifications/read-all`, {
+  getRoomById: (id: string) => apiRequest<any>(`/chat/rooms/${id}`),
+
+  getRoomMessages: (id: string, params?: { page?: number; limit?: number; startDate?: string; endDate?: string; userId?: string }) => {
+    const query = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) query.append(key, String(value));
+      });
+    }
+    const queryString = query.toString();
+    return apiRequest<{ messages: any[]; pagination: any }>(`/chat/rooms/${id}/messages${queryString ? `?${queryString}` : ''}`);
+  },
+
+  // Search messages
+  searchMessages: (params: { keyword?: string; roomId?: string; userId?: string; startDate?: string; endDate?: string; page?: number; limit?: number }) => {
+    const query = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined) query.append(key, String(value));
+    });
+    return apiRequest<{ messages: any[]; pagination: any }>(`/chat/messages/search?${query.toString()}`);
+  },
+
+  // Message actions
+  deleteMessage: (id: string, reason?: string) =>
+    apiRequest<{ success: boolean }>(`/chat/messages/${id}`, {
+      method: 'DELETE',
+      body: JSON.stringify({ reason }),
+    }),
+
+  // Room actions
+  lockRoom: (id: string, lock: boolean, reason?: string) =>
+    apiRequest<any>(`/chat/rooms/${id}/lock`, {
+      method: 'POST',
+      body: JSON.stringify({ lock, reason }),
+    }),
+
+  addRoomMember: (id: string, userId: string, role?: string) =>
+    apiRequest<any>(`/chat/rooms/${id}/members`, {
+      method: 'POST',
+      body: JSON.stringify({ userId, role }),
+    }),
+
+  removeRoomMember: (id: string, userId: string) =>
+    apiRequest<any>(`/chat/rooms/${id}/members/${userId}`, { method: 'DELETE' }),
+
+  sendSystemMessage: (id: string, text: string, attachments?: any[]) =>
+    apiRequest<any>(`/chat/rooms/${id}/system-message`, {
+      method: 'POST',
+      body: JSON.stringify({ text, attachments }),
+    }),
+
+  deleteRoom: (id: string) =>
+    apiRequest<{ success: boolean }>(`/chat/rooms/${id}`, { method: 'DELETE' }),
+
+  // Export
+  exportLogs: (params?: { roomId?: string; startDate?: string; endDate?: string; format?: string }) => {
+    const query = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) query.append(key, String(value));
+      });
+    }
+    return fetch(`/api/chat/export?${query.toString()}`, { credentials: 'include' })
+      .then(res => {
+        if (!res.ok) throw new Error('Export failed');
+        if (params?.format === 'csv') return res.blob();
+        return res.json();
+      });
+  },
+
+  // Policy
+  getPolicy: () => apiRequest<any>('/chat/policy'),
+
+  updatePolicy: (data: any) =>
+    apiRequest<any>('/chat/policy', {
       method: 'PUT',
-      credentials: 'include',
-    });
-    return res.json();
-  },
-
-  getUnreadCount: async () => {
-    const res = await fetch(`${API_BASE}/notifications/unread-count`, { credentials: 'include' });
-    return res.json();
-  },
+      body: JSON.stringify(data),
+    }),
 };

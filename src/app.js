@@ -8,12 +8,17 @@ import cors from 'cors';
 import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 import { connectDB } from './configs/db.js';
 import passport from './configs/passport.js';
 import { errorHandler, notFound } from './middleware/auth.js';
 import { registerRoutes } from './routes/index.js';
 import { registerSocketHandlers } from './services/socket.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export async function createApp() {
   // 1. Connect MongoDB
@@ -34,6 +39,9 @@ export async function createApp() {
   app.use(cookieParser());
   app.use(cors({ origin: '*', credentials: true }));
   app.use(passport.initialize());
+
+  // Serve uploaded files
+  app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
   // 5. API Routes
   registerRoutes(app, io);

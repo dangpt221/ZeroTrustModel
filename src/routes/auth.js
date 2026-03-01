@@ -11,7 +11,6 @@ import {
   recordFailedAttempt,
   securityCheck
 } from '../middleware/securityMiddleware.js';
-import passport from '../configs/passport.js';
 import { User } from '../models/User.js';
 import { sendOTP } from '../utils/emailService.js';
 
@@ -267,63 +266,4 @@ export function registerAuthRoutes(router) {
     }
   });
 
-  // ================= GOOGLE OAUTH ROUTES =================
-
-  // 1. Kick off Google Auth
-  router.get('/auth/google', passport.authenticate('google', {
-    scope: ['profile', 'email'],
-    session: false
-  }));
-
-  // 2. Google OAuth Callback
-  router.get('/auth/google/callback',
-    passport.authenticate('google', {
-      session: false,
-      failureRedirect: `${process.env.FRONTEND_URL || ''}/#/login?error=GoogleAuthFailed`
-    }),
-    async (req, res) => {
-      try {
-        // req.user will contain the authenticated user from passport.js
-        const user = req.user;
-        const clientIP = req.headers['x-forwarded-for'] || req.connection.remoteAddress || 'unknown';
-        const deviceFingerprint = req.headers['user-agent'] || 'unknown';
-
-        if (!user || user.isLocked) {
-          console.log('--- DEBUG OAUTH BLOCKED ---');
-          console.log('User object:', user);
-          console.log('IsLocked:', user?.isLocked);
-          logSecurityEvent('LOGIN_BLOCKED', { email: user?.email || 'unknown', ip: clientIP, reason: 'Account locked or missing from OAuth' });
-          return res.redirect(`${process.env.FRONTEND_URL || ''}/#/login?error=AccountLocked`);
-        }
-
-        const userDoc = await User.findById(user._id || user.id);
-        if (userDoc) await updateUserActivity(userDoc, req, true);
-
-        // Generate JWT token
-        const token = signUserToken(user);
-
-        // Set cookie
-        setAuthCookie(res, token);
-
-        // Risk assessment for OAuth
-        const { riskScore, riskFactors } = await assessLoginRisk(req, user);
-
-        logSecurityEvent('LOGIN_SUCCESS', {
-          email: user.email,
-          ip: clientIP,
-          deviceFingerprint,
-          riskScore,
-          riskFactors,
-          authMethod: 'GOOGLE_OAUTH'
-        });
-
-        // Redirect back to frontend dashboard
-        res.redirect(`${process.env.FRONTEND_URL || ''}/#/`);
-
-      } catch (err) {
-        console.error('Google OAuth Callback Error:', err);
-        res.redirect(`${process.env.FRONTEND_URL || ''}/#/login?error=InternalError`);
-      }
-    }
-  );
-}
+};
