@@ -29,8 +29,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [securityInfo, setSecurityInfo] = useState<SecurityInfo | null>(null);
 
   const checkSession = async () => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
     try {
-      const res = await fetch('/api/auth/me', { credentials: 'include' });
+      const res = await fetch('/api/auth/me', { credentials: 'include', signal: controller.signal });
+      clearTimeout(timeoutId);
       if (res.ok) {
         const userData = await res.json();
         setUser(userData);
@@ -40,7 +43,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.removeItem('nexus_user');
       }
     } catch (error) {
-      console.error("Session verification failed", error);
+      clearTimeout(timeoutId);
+      if ((error as Error).name !== 'AbortError') console.error('Session check failed', error);
       setUser(null);
       localStorage.removeItem('nexus_user');
     } finally {

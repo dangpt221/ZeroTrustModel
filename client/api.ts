@@ -365,8 +365,14 @@ export const attendanceApi = {
       body: JSON.stringify(data || {}),
       credentials: 'include',
     });
-    const result = await res.json();
-    if (!res.ok) throw new Error((result as { message?: string }).message || 'Chấm công ra thất bại');
+    const result = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const msg = (result as { message?: string }).message || 'Chấm công ra thất bại';
+      if (res.status === 404) {
+        throw new Error('API chấm công không tồn tại. Vui lòng khởi động lại server backend (npm run server, port 5000).');
+      }
+      throw new Error(msg);
+    }
     return result;
   },
 

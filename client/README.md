@@ -16,5 +16,6 @@ View your app in AI Studio: https://ai.studio/apps/aba53c0a-a47b-429c-b52d-78c4e
 1. Install dependencies:
    `npm install`
 2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+3. Chạy app:
+   - Chỉ frontend: `npm run dev`
+   - Cả frontend + backend (tránh lỗi 404): `npm run dev:all` (backend port 5000, frontend port 5173)
