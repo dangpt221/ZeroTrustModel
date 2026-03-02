@@ -232,17 +232,45 @@ export function registerAuthRoutes(router) {
   // Get current user profile
   router.get('/auth/me', requireAuth, async (req, res) => {
     try {
-      const user = await User.findById(req.user.id)
-        .populate('departmentId', 'name')
-        .lean();
+      console.log('[auth/me] req.user:', req.user);
+      if (!req.user || !req.user.id) {
+        return res.status(401).json({ message: 'Invalid token' });
+      }
+
+      let user;
+      try {
+        user = await User.findById(req.user.id)
+          .populate('departmentId', 'name');
+      } catch (popErr) {
+        console.error('[auth/me] populate error:', popErr);
+        user = await User.findById(req.user.id);
+      }
+
+      console.log('[auth/me] user found:', user ? user.email : 'null');
+
       if (!user) return res.status(404).json({ message: 'User not found' });
 
-      await updateUserActivity(user, req);
+      // Update activity
+      try {
+        const ua = req?.headers?.['user-agent'] || '';
+        const now = new Date();
+        if (!user.device) {
+          user.device = parseDeviceFromUserAgent(ua) || user.device;
+        }
+        const lastActive = user.lastActiveAt ? new Date(user.lastActiveAt).getTime() : 0;
+        if (Date.now() - lastActive > 60 * 1000) {
+          user.lastActiveAt = now;
+          await user.save();
+        }
+      } catch (saveErr) {
+        console.error('[auth/me] save error:', saveErr);
+      }
 
       console.log(`[AUTH_CHECK] User: ${user.email}, Status: ${user.status || 'N/A'}`);
 
       res.json(toClientUser(user));
     } catch (err) {
+      console.error('[auth/me] ERROR:', err);
       res.status(500).json({ message: err.message });
     }
   });
