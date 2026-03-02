@@ -144,20 +144,36 @@ export const departmentsApi = {
 
   getById: (id: string) => apiRequest<Department>(`/departments/${id}`),
 
-  create: (data: Partial<Department>) =>
+  getStats: () => apiRequest<any>('/departments-stats/stats'),
+
+  create: (data: { name: string; description?: string; managerId?: string; parentId?: string; color?: string; code?: string }) =>
     apiRequest<Department>('/departments', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
 
-  update: (id: string, data: Partial<Department>) =>
+  update: (id: string, data: { name?: string; description?: string; managerId?: string; parentId?: string; isActive?: boolean; color?: string; code?: string }) =>
     apiRequest<Department>(`/departments/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
 
-  delete: (id: string) =>
-    apiRequest<void>(`/departments/${id}`, { method: 'DELETE' }),
+  delete: (id: string, moveMembersTo?: string) =>
+    apiRequest<void>(`/departments/${id}`, {
+      method: 'DELETE',
+      body: JSON.stringify({ moveMembersTo }),
+    }),
+
+  assignMember: (deptId: string, userId: string, role?: string) =>
+    apiRequest<any>(`/departments/${deptId}/members`, {
+      method: 'POST',
+      body: JSON.stringify({ userId, role }),
+    }),
+
+  removeMember: (deptId: string, userId: string) =>
+    apiRequest<any>(`/departments/${deptId}/members/${userId}`, {
+      method: 'DELETE',
+    }),
 };
 
 // ==================== Teams API ====================

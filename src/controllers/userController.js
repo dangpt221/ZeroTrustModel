@@ -4,7 +4,9 @@ import bcrypt from "bcryptjs";
 // Get all users (admin)
 export const getAllUsers = async (req, res, next) => {
   try {
-    const users = await User.find().lean();
+    const users = await User.find()
+      .populate('departmentId', 'name')
+      .lean();
     res.json(
       users.map((u) => ({
         id: u._id.toString(),
@@ -13,7 +15,8 @@ export const getAllUsers = async (req, res, next) => {
         role: u.role,
         status: u.status,
         avatar: u.avatar || `https://picsum.photos/seed/${u._id}/200`,
-        departmentId: u.departmentId?.toString(),
+        departmentId: u.departmentId?._id?.toString() || u.departmentId?.toString(),
+        department: u.departmentId?.name || '',
         trustScore: u.trustScore || 95,
         device: u.device || "Unknown",
         mfaEnabled: u.mfaEnabled || false,
@@ -30,7 +33,9 @@ export const getAllUsers = async (req, res, next) => {
 // Get users list
 export const getUsers = async (req, res, next) => {
   try {
-    const users = await User.find().lean();
+    const users = await User.find()
+      .populate('departmentId', 'name')
+      .lean();
     res.json(
       users.map((u) => ({
         id: u._id.toString(),
@@ -39,7 +44,8 @@ export const getUsers = async (req, res, next) => {
         role: u.role,
         status: u.status,
         avatar: u.avatar || `https://picsum.photos/seed/${u._id}/200`,
-        departmentId: u.departmentId?.toString(),
+        departmentId: u.departmentId?._id?.toString() || u.departmentId?.toString(),
+        department: u.departmentId?.name || '',
       }))
     );
   } catch (err) {
@@ -51,7 +57,9 @@ export const getUsers = async (req, res, next) => {
 export const getUserById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const user = await User.findById(id).lean();
+    const user = await User.findById(id)
+      .populate('departmentId', 'name')
+      .lean();
     if (!user) return res.status(404).json({ message: "User not found" });
     res.json({
       id: user._id.toString(),
@@ -60,7 +68,8 @@ export const getUserById = async (req, res, next) => {
       role: user.role,
       status: user.status,
       avatar: user.avatar || `https://picsum.photos/seed/${user._id}/200`,
-      departmentId: user.departmentId?.toString(),
+      departmentId: user.departmentId?._id?.toString() || user.departmentId?.toString(),
+      department: user.departmentId?.name || '',
       trustScore: user.trustScore || 95,
       device: user.device || "Unknown",
       mfaEnabled: user.mfaEnabled || false,
@@ -97,14 +106,21 @@ export const createUser = async (req, res, next) => {
       trustScore: 95,
     });
 
+    // Populate department to get name
+    const populatedUser = await User.findById(user._id)
+      .populate('departmentId', 'name')
+      .lean();
+
     res.status(201).json({
-      id: user._id.toString(),
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      status: user.status,
-      avatar: user.avatar || `https://picsum.photos/seed/${user._id}/200`,
-      mfaEnabled: user.mfaEnabled,
+      id: populatedUser._id.toString(),
+      name: populatedUser.name,
+      email: populatedUser.email,
+      role: populatedUser.role,
+      status: populatedUser.status,
+      avatar: populatedUser.avatar || `https://picsum.photos/seed/${populatedUser._id}/200`,
+      departmentId: populatedUser.departmentId?._id?.toString() || populatedUser.departmentId?.toString(),
+      department: populatedUser.departmentId?.name || '',
+      mfaEnabled: populatedUser.mfaEnabled,
     });
   } catch (err) {
     next(err);
@@ -126,7 +142,8 @@ export const updateUser = async (req, res, next) => {
       updateData.passwordHash = await bcrypt.hash(password, 10);
     }
 
-    const user = await User.findByIdAndUpdate(id, updateData, { new: true });
+    const user = await User.findByIdAndUpdate(id, updateData, { new: true })
+      .populate('departmentId', 'name');
     if (!user) return res.status(404).json({ message: "User not found" });
 
     res.json({
@@ -136,6 +153,8 @@ export const updateUser = async (req, res, next) => {
       role: user.role,
       status: user.status,
       avatar: user.avatar || `https://picsum.photos/seed/${user._id}/200`,
+      departmentId: user.departmentId?._id?.toString() || user.departmentId?.toString(),
+      department: user.departmentId?.name || '',
       mfaEnabled: user.mfaEnabled,
     });
   } catch (err) {

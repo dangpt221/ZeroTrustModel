@@ -19,6 +19,8 @@ const ONLINE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 function toClientUser(user) {
   const lastActiveAt = user.lastActiveAt ? new Date(user.lastActiveAt).getTime() : null;
   const isOnline = lastActiveAt && Date.now() - lastActiveAt < ONLINE_THRESHOLD_MS;
+  // Handle both populated and non-populated department
+  const departmentName = user.departmentId?.name || (typeof user.departmentId === 'string' ? '' : user.departmentId) || '';
   return {
     id: user._id.toString(),
     name: user.name,
@@ -26,13 +28,13 @@ function toClientUser(user) {
     role: user.role === 'STAFF' ? 'MEMBER' : user.role,
     avatar: user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`,
     mfaEnabled: user.mfaEnabled || false,
-    department: user.department || 'Phòng ban chung',
+    department: departmentName || 'Phòng ban chung',
     lastLogin: user.updatedAt || new Date().toISOString(),
     trustScore: user.trustScore ?? 95,
     ipAddress: '192.168.1.105',
     device: user.device || 'Chưa xác định',
     status: user.status || (user.isLocked ? 'LOCKED' : 'ACTIVE'),
-    departmentId: user.departmentId || null,
+    departmentId: user.departmentId?._id?.toString() || user.departmentId || null,
     lastActiveAt: user.lastActiveAt ? new Date(user.lastActiveAt).toISOString() : null,
     isOnline: !!isOnline,
   };
@@ -230,7 +232,9 @@ export function registerAuthRoutes(router) {
   // Get current user profile
   router.get('/auth/me', requireAuth, async (req, res) => {
     try {
-      const user = await User.findById(req.user.id);
+      const user = await User.findById(req.user.id)
+        .populate('departmentId', 'name')
+        .lean();
       if (!user) return res.status(404).json({ message: 'User not found' });
 
       await updateUserActivity(user, req);

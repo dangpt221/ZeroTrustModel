@@ -6,13 +6,13 @@ import departmentsRouter from "./departments.js";
 import projectsRouter from "./projects.js";
 import teamsRouter from "./teams.js";
 import documentsRouter from "./documents.js";
+import chatManagementRouter from "./chatManagement.js";
 import { registerAttendanceRoutes } from "./attendance.js";
 import { registerMessageRoutes } from "./messages.js";
 import { registerZeroTrustRoutes } from "./zeroTrust.js";
 import { registerAuditLogRoutes } from "./auditLogs.js";
 import { registerNotificationRoutes } from "./notificationRoutes.js";
 import rolesRouter from "./roles.js";
-import chatManagementRouter from "./chatManagement.js";
 import passport from "../configs/passport.js";
 
 export function registerRoutes(app, io) {
@@ -54,9 +54,14 @@ export function registerRoutes(app, io) {
   });
 
   registerAuthRoutes(router);
+
+  // Chat management router with /chat prefix
+  const chatRouter = express.Router();
+  chatRouter.use(chatManagementRouter);
+  router.use('/chat', chatRouter);
+
   router.use(usersRouter);
   router.use(rolesRouter);
-  router.use(chatManagementRouter);
   router.use(departmentsRouter);
   router.use(projectsRouter);
   router.use(teamsRouter);

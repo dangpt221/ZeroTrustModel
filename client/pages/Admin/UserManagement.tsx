@@ -26,6 +26,7 @@ export const UserManagement: React.FC = () => {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filterRole, setFilterRole] = useState<string>('ALL');
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
+  const [filterDepartment, setFilterDepartment] = useState<string>('ALL');
   const [departments, setDepartments] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     name: '',
@@ -69,10 +70,12 @@ export const UserManagement: React.FC = () => {
 
   const filteredUsers = users.filter(u => {
     const matchSearch = u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.email.toLowerCase().includes(searchTerm.toLowerCase());
+      u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (u.department && u.department.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchRole = filterRole === 'ALL' || u.role === filterRole;
     const matchStatus = filterStatus === 'ALL' || u.status === filterStatus;
-    return matchSearch && matchRole && matchStatus;
+    const matchDepartment = filterDepartment === 'ALL' || u.departmentId === filterDepartment;
+    return matchSearch && matchRole && matchStatus && matchDepartment;
   });
 
   const handleCreateUser = async () => {
@@ -150,6 +153,7 @@ export const UserManagement: React.FC = () => {
   const clearFilters = () => {
     setFilterRole('ALL');
     setFilterStatus('ALL');
+    setFilterDepartment('ALL');
     setSearchTerm('');
   };
 
@@ -228,7 +232,7 @@ export const UserManagement: React.FC = () => {
           />
         </div>
         <button onClick={() => setIsFilterOpen(!isFilterOpen)} className={`bg-white border px-5 py-2 rounded-2xl font-bold text-sm flex items-center gap-2 transition-all ${isFilterOpen ? 'border-blue-500 text-blue-600' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
-          <Filter size={18} /> Bộ lọc {(filterRole !== 'ALL' || filterStatus !== 'ALL') && <span className="w-2 h-2 bg-blue-500 rounded-full"></span>}
+          <Filter size={18} /> Bộ lọc {(filterRole !== 'ALL' || filterStatus !== 'ALL' || filterDepartment !== 'ALL') && <span className="w-2 h-2 bg-blue-500 rounded-full"></span>}
         </button>
       </div>
 
@@ -262,8 +266,12 @@ export const UserManagement: React.FC = () => {
             </div>
             <div>
               <label className="text-xs font-bold text-slate-500 uppercase">Bộ phận</label>
-              <select className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-xl text-sm">
-                <option value="">Tất cả</option>
+              <select
+                value={filterDepartment}
+                onChange={(e) => setFilterDepartment(e.target.value)}
+                className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-xl text-sm"
+              >
+                <option value="ALL">Tất cả</option>
                 {departments.map(dept => (
                   <option key={dept.id} value={dept.id}>{dept.name}</option>
                 ))}
@@ -281,7 +289,7 @@ export const UserManagement: React.FC = () => {
                 <th className="px-8 py-6">Nhân sự</th>
                 <th className="px-8 py-6">Vai trò / MFA</th>
                 <th className="px-8 py-6">Trust Score</th>
-                <th className="px-8 py-6">Thiết bị cuối</th>
+                <th className="px-8 py-6">Bộ phận</th>
                 <th className="px-8 py-6">Trạng thái</th>
                 <th className="px-8 py-6 text-right">Hành động</th>
               </tr>
@@ -332,11 +340,9 @@ export const UserManagement: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-8 py-5">
-                    <div className="space-y-1">
-                      <p className="text-[11px] text-slate-600 flex items-center gap-1.5 font-medium">
-                        <Monitor size={12} className="text-slate-400" /> {user.device}
-                      </p>
-                    </div>
+                    <span className="text-[11px] font-medium text-slate-600">
+                      {user.department || 'Chưa phân công'}
+                    </span>
                   </td>
                   <td className="px-8 py-5">
                     <span className={`text-[10px] font-black px-3 py-1 rounded-full ${user.status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-rose-500/10 text-rose-600'

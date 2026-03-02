@@ -86,9 +86,22 @@ export interface Department {
   id: string;
   name: string;
   description?: string;
-  headId?: string;
-  head?: string;
+  managerId?: string;
+  manager?: {
+    id: string;
+    name: string;
+    email: string;
+    avatar: string;
+  } | null;
+  parentId?: string;
+  parentName?: string;
+  isActive?: boolean;
+  color?: string;
+  code?: string;
   memberCount?: number;
+  projectCount?: number;
+  members?: User[];
+  projects?: Project[];
   createdAt?: string;
   updatedAt?: string;
 }
