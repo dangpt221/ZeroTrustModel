@@ -36,7 +36,14 @@ export const DepartmentDocuments: React.FC = () => {
     const fetchDocs = async () => {
       try {
         const data = await documentsApi.getAll();
-        setDocs(Array.isArray(data) ? data : []);
+        // Handle both array response and { documents: [] } response
+        if (Array.isArray(data)) {
+          setDocs(data);
+        } else if (data?.documents) {
+          setDocs(data.documents);
+        } else {
+          setDocs([]);
+        }
       } catch (error) {
         console.error('Error fetching documents:', error);
         setDocs([]);

@@ -20,7 +20,14 @@ export const StaffDashboard: React.FC = () => {
           documentsApi.getAll()
         ]);
         setProjects(projectsData || []);
-        setDocuments(docsData || []);
+        // Handle both array and { documents: [] } response
+        if (Array.isArray(docsData)) {
+          setDocuments(docsData);
+        } else if (docsData?.documents) {
+          setDocuments(docsData.documents);
+        } else {
+          setDocuments([]);
+        }
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {

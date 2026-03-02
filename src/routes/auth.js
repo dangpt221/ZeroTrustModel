@@ -21,11 +21,13 @@ function toClientUser(user) {
   const isOnline = lastActiveAt && Date.now() - lastActiveAt < ONLINE_THRESHOLD_MS;
   // Handle both populated and non-populated department
   const departmentName = user.departmentId?.name || (typeof user.departmentId === 'string' ? '' : user.departmentId) || '';
+  // Normalize role to uppercase for consistency
+  const normalizedRole = user.role?.toUpperCase();
   return {
     id: user._id.toString(),
     name: user.name,
     email: user.email,
-    role: user.role === 'STAFF' ? 'MEMBER' : user.role,
+    role: normalizedRole === 'STAFF' ? 'MEMBER' : normalizedRole,
     avatar: user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`,
     mfaEnabled: user.mfaEnabled || false,
     department: departmentName || 'Phòng ban chung',

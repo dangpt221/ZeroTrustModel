@@ -16,6 +16,10 @@ export const DepartmentManagement: React.FC = () => {
   const [detailDept, setDetailDept] = useState<Department | null>(null);
   const [detailData, setDetailData] = useState<Department | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isChangingManager, setIsChangingManager] = useState(false);
+  const [selectedManagerId, setSelectedManagerId] = useState<string>('');
+  const [isAddingMember, setIsAddingMember] = useState(false);
+  const [selectedMemberId, setSelectedMemberId] = useState<string>('');
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -179,11 +183,11 @@ export const DepartmentManagement: React.FC = () => {
     (dept.description && dept.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  // Get available managers
+  // Get available managers (only show users with MANAGER role)
   const availableManagers = users.filter(u => {
-    if (!u.departmentId) return true;
-    const dept = departments.find(d => d.id === u.departmentId);
-    return dept?.managerId === u.id;
+    // Only show users with MANAGER role
+    if (u.role !== 'MANAGER') return false;
+    return true;
   });
 
   // Stats
@@ -406,7 +410,7 @@ export const DepartmentManagement: React.FC = () => {
               className="w-full mt-1 px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
             >
               <option value="">Chon quan ly</option>
-              {availableManagers.filter(u => u.id !== editingDept?.managerId || editingDept?.managerId === u.id).map(user => (
+              {users.filter(u => u.role === 'MANAGER').map(user => (
                 <option key={user.id} value={user.id}>{user.name} ({user.email})</option>
               ))}
             </select>
@@ -481,8 +485,67 @@ export const DepartmentManagement: React.FC = () => {
 
             {/* Manager */}
             <div>
-              <h5 className="text-xs font-bold text-slate-400 uppercase mb-3">Quan ly bo phan</h5>
-              {detailData.manager ? (
+              <div className="flex items-center justify-between mb-3">
+                <h5 className="text-xs font-bold text-slate-400 uppercase">Quan ly bo phan</h5>
+                <button
+                  onClick={() => {
+                    setSelectedManagerId(detailData.manager?.id || '');
+                    setIsChangingManager(true);
+                  }}
+                  className="text-xs text-blue-600 hover:underline"
+                >
+                  Thay doi
+                </button>
+              </div>
+              {isChangingManager ? (
+                <div className="space-y-2">
+                  <select
+                    value={selectedManagerId}
+                    onChange={(e) => setSelectedManagerId(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
+                  >
+                    <option value="">Chon quan ly moi</option>
+                    {users
+                      .filter(u => (u.role === 'MANAGER' || u.role === 'ADMIN'))
+                      .map(user => (
+                        <option key={user.id} value={user.id}>{user.name} ({user.email})</option>
+                      ))
+                    }
+                  </select>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={async () => {
+                        if (!selectedManagerId) {
+                          alert('Vui long chon nguoi quan ly moi');
+                          return;
+                        }
+                        try {
+                          await departmentsApi.update(detailData.id, { managerId: selectedManagerId });
+                          // Refresh detail data
+                          const updated = await departmentsApi.getById(detailData.id);
+                          setDetailData(updated);
+                          // Update departments list
+                          setDepartments(departments.map(d => d.id === detailData.id ? { ...d, managerId: selectedManagerId } : d));
+                          setIsChangingManager(false);
+                          alert('Cap nhat quan ly thanh cong!');
+                        } catch (err) {
+                          console.error('Update manager error:', err);
+                          alert('Cap nhat that bai!');
+                        }
+                      }}
+                      className="flex-1 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium"
+                    >
+                      Luu
+                    </button>
+                    <button
+                      onClick={() => setIsChangingManager(false)}
+                      className="px-4 py-2 border border-slate-200 rounded-lg text-sm"
+                    >
+                      Huy
+                    </button>
+                  </div>
+                </div>
+              ) : detailData.manager ? (
                 <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl">
                   <img src={detailData.manager.avatar} className="w-10 h-10 rounded-xl object-cover" alt="" />
                   <div>
@@ -511,9 +574,79 @@ export const DepartmentManagement: React.FC = () => {
 
             {/* Members */}
             <div>
-              <h5 className="text-xs font-bold text-slate-400 uppercase mb-3">
-                Danh sach nhan vien ({detailData.members?.length || 0})
-              </h5>
+              <div className="flex items-center justify-between mb-3">
+                <h5 className="text-xs font-bold text-slate-400 uppercase">
+                  Danh sach nhan vien ({detailData.members?.length || 0})
+                </h5>
+                <button
+                  onClick={() => setIsAddingMember(true)}
+                  className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+                >
+                  <Plus size={14} /> Them nhan vien
+                </button>
+              </div>
+
+              {isAddingMember && (
+                <div className="mb-3 p-3 bg-blue-50 rounded-xl">
+                  <select
+                    value={selectedMemberId}
+                    onChange={(e) => setSelectedMemberId(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm mb-2"
+                  >
+                    <option value="">Chon nhan vien</option>
+                    {users
+                      .filter(u => {
+                        // Lọc: không phải ADMIN/MANAGER
+                        if (u.role === 'ADMIN' || u.role === 'MANAGER') return false;
+                        // Chỉ hiển thị user chưa thuộc bộ phận nào
+                        return !u.departmentId;
+                      })
+                      .map(user => (
+                        <option key={user.id} value={user.id}>{user.name} ({user.email})</option>
+                      ))
+                    }
+                  </select>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={async () => {
+                        if (!selectedMemberId) {
+                          alert('Vui long chon nhan vien');
+                          return;
+                        }
+                        try {
+                          await departmentsApi.assignMember(detailData.id, selectedMemberId);
+                          // Refresh detail data
+                          const updated = await departmentsApi.getById(detailData.id);
+                          setDetailData(updated);
+                          // Update users list
+                          const updatedUser = users.find(u => u.id === selectedMemberId);
+                          if (updatedUser) {
+                            setUsers(users.map(u => u.id === selectedMemberId ? { ...u, departmentId: detailData.id } : u));
+                          }
+                          setIsAddingMember(false);
+                          setSelectedMemberId('');
+                          alert('Them nhan vien thanh cong!');
+                        } catch (err) {
+                          console.error('Add member error:', err);
+                          alert('Them nhan vien that bai!');
+                        }
+                      }}
+                      className="flex-1 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium"
+                    >
+                      Them
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsAddingMember(false);
+                        setSelectedMemberId('');
+                      }}
+                      className="px-4 py-2 border border-slate-200 rounded-lg text-sm"
+                    >
+                      Huy
+                    </button>
+                  </div>
+                </div>
+              )}
               {detailData.members && detailData.members.length > 0 ? (
                 <div className="space-y-2 max-h-60 overflow-y-auto">
                   {detailData.members.map(member => (

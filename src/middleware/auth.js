@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-zero-trust-secret';
-const COOKIE_NAME = 'nexus_token';
+const COOKIE_NAME = 'auth_token';
 
 export function authMiddleware(req, _res, next) {
   try {
@@ -25,14 +25,21 @@ export function authMiddleware(req, _res, next) {
 
 export function requireAuth(req, res, next) {
   if (!req.user) {
+    console.log('[requireAuth] No user found, returning 401');
     return res.status(401).json({ message: 'Unauthorized' });
   }
+  console.log('[requireAuth] User:', req.user.email, 'Role:', req.user.role);
   next();
 }
 
 export function requireRole(roles = []) {
   return (req, res, next) => {
-    if (!req.user || !roles.includes(req.user.role)) {
+    console.log('[requireRole] Checking role. User role:', req.user?.role, 'Required:', roles);
+    if (!req.user) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+    if (!roles.includes(req.user.role)) {
+      console.log('[requireRole] Role not matching. User role:', req.user.role, 'Required:', roles);
       return res.status(403).json({ message: 'Forbidden' });
     }
     next();
@@ -40,13 +47,21 @@ export function requireRole(roles = []) {
 }
 
 export function signUserToken(user) {
+  // Handle departmentId - convert to string if it's an object (populated)
+  let deptId = user.departmentId;
+  if (deptId && typeof deptId === 'object' && deptId._id) {
+    deptId = deptId._id.toString();
+  } else if (deptId && typeof deptId === 'object' && deptId.toString) {
+    deptId = deptId.toString();
+  }
+
   return jwt.sign(
     {
       id: user._id?.toString?.() || user.id,
       name: user.name,
       email: user.email,
       role: user.role,
-      departmentId: user.departmentId || null,
+      departmentId: deptId || null,
       trustScore: user.trustScore ?? 95,
     },
     JWT_SECRET,

@@ -38,7 +38,14 @@ export const ManagerApprovals: React.FC = () => {
         usersApi.getAll()
       ]);
       setRequests(Array.isArray(requestsData) ? requestsData : []);
-      setDocuments(Array.isArray(docsData) ? docsData : []);
+      // Handle both array and { documents: [] } response
+      if (Array.isArray(docsData)) {
+        setDocuments(docsData);
+      } else if (docsData?.documents) {
+        setDocuments(docsData.documents);
+      } else {
+        setDocuments([]);
+      }
       setUsers(Array.isArray(usersData) ? usersData : []);
     } catch (error) {
       console.error('Error fetching data:', error);

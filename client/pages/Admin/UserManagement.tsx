@@ -32,7 +32,7 @@ export const UserManagement: React.FC = () => {
     name: '',
     email: '',
     password: '',
-    role: 'Staff',
+    role: 'STAFF',
     department: '',
     mfaEnabled: false
   });
@@ -40,7 +40,7 @@ export const UserManagement: React.FC = () => {
     name: '',
     email: '',
     password: '',
-    role: 'Staff',
+    role: 'STAFF',
     department: '',
     mfaEnabled: false
   });
