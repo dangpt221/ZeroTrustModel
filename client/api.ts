@@ -78,7 +78,7 @@ export const projectsApi = {
 
 // ==================== Users API ====================
 export const usersApi = {
-  getAll: () => apiRequest<User[]>('/admin/users'),
+  getAll: () => apiRequest<User[]>('/users'), // Use /users instead of /admin/users for manager
 
   getList: () => apiRequest<User[]>('/users'),
 

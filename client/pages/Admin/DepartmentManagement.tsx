@@ -67,8 +67,11 @@ export const DepartmentManagement: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
+    console.log('handleDelete called with id:', id);
     const dept = departments.find(d => d.id === id);
+    console.log('Department:', dept);
     const membersInDept = users.filter(u => u.departmentId === id);
+    console.log('Members in dept:', membersInDept.length);
 
     if (membersInDept.length > 0) {
       const otherDepts = departments.filter(d => d.id !== id);
@@ -158,6 +161,7 @@ export const DepartmentManagement: React.FC = () => {
   };
 
   const openEditModal = (dept: Department) => {
+    console.log('openEditModal called with dept:', dept);
     setEditingDept(dept);
     setFormData({
       name: dept.name,
@@ -265,7 +269,7 @@ export const DepartmentManagement: React.FC = () => {
                   <Building2 size={80} />
                 </div>
 
-                <div className="flex justify-between items-start mb-4">
+                <div className="flex justify-between items-start mb-4 relative z-20">
                   <div className="flex items-center gap-3">
                     <div className="p-3 rounded-2xl" style={{ backgroundColor: `${dept.color || '#3B82F6'}20` }}>
                       <Building2 size={20} style={{ color: dept.color || '#3B82F6' }} />
@@ -275,12 +279,28 @@ export const DepartmentManagement: React.FC = () => {
                       {dept.code && <span className="text-[10px] font-bold text-slate-400 uppercase">{dept.code}</span>}
                     </div>
                   </div>
-                  <div className="flex gap-1">
-                    <button onClick={() => openEditModal(dept)} className="p-2 text-slate-300 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all">
-                      <Edit2 size={16} />
+                  <div className="flex gap-1 z-30">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        console.log('Edit button clicked for dept:', dept.id);
+                        openEditModal(dept);
+                      }}
+                      className="p-2.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all cursor-pointer border border-transparent hover:border-blue-100"
+                      title="Chỉnh sửa bộ phận"
+                    >
+                      <Edit2 size={18} />
                     </button>
-                    <button onClick={() => handleDelete(dept.id)} className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all">
-                      <Trash2 size={16} />
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        console.log('Delete button clicked for dept:', dept.id);
+                        handleDelete(dept.id);
+                      }}
+                      className="p-2.5 text-slate-500 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all cursor-pointer border border-transparent hover:border-rose-100"
+                      title="Xóa bộ phận"
+                    >
+                      <Trash2 size={18} />
                     </button>
                   </div>
                 </div>
@@ -301,14 +321,6 @@ export const DepartmentManagement: React.FC = () => {
                       <span className="text-[10px] font-black uppercase">Nhan su</span>
                     </div>
                     <span className="text-sm font-bold text-slate-800">{memberCount}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
-                    <div className="flex items-center gap-2 text-slate-500">
-                      <FolderKanban size={14} />
-                      <span className="text-[10px] font-black uppercase">Du an</span>
-                    </div>
-                    <span className="text-sm font-bold text-slate-800">{projectCount}</span>
                   </div>
 
                   <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
@@ -670,30 +682,6 @@ export const DepartmentManagement: React.FC = () => {
                 </div>
               ) : (
                 <p className="text-sm text-slate-400 text-center py-4">Chua co nhan vien</p>
-              )}
-            </div>
-
-            {/* Projects */}
-            <div>
-              <h5 className="text-xs font-bold text-slate-400 uppercase mb-3">
-                Du an dang thuc hien ({detailData.projects?.length || 0})
-              </h5>
-              {detailData.projects && detailData.projects.length > 0 ? (
-                <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {detailData.projects.map(project => (
-                    <div key={project.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
-                      <div>
-                        <p className="font-bold text-slate-800 text-sm">{project.title}</p>
-                        <p className="text-xs text-slate-400">{project.status}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-bold text-blue-600">{project.progress}%</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-slate-400 text-center py-4">Khong co du an</p>
               )}
             </div>
           </div>

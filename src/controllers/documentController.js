@@ -76,22 +76,24 @@ export const getAllDocuments = async (req, res, next) => {
     if (classification) query.classification = classification;
     if (sensitivity) query.sensitivity = sensitivity;
 
-    // Role-based filtering
+    // Role-based filtering - Manager sees all documents (like Admin)
     const userRole = req.user.role;
     const userId = req.user.id;
     const userDeptId = req.user.departmentId;
 
+    console.log('[getAllDocuments] User:', req.user.email, 'Role:', userRole, 'DeptId:', userDeptId);
+
+    // ADMIN and MANAGER see all documents
+    // STAFF/MEMBER see their own documents and department documents
     if (userRole === 'STAFF' || userRole === 'MEMBER') {
-      // Staff can only see their own documents or assigned project docs
+      // Staff can see: own documents, department documents, or project docs
       query.$or = [
         { ownerId: userId },
-        { projectId: { $exists: true } } // Could add project member check
+        { departmentId: userDeptId },
+        { projectId: { $exists: true } }
       ];
-    } else if (userRole === 'MANAGER' && userDeptId) {
-      // Manager sees department documents
-      query.departmentId = userDeptId;
     }
-    // ADMIN/AUDITOR/SUPER_ADMIN sees all
+    // ADMIN and MANAGER see all - no additional filtering needed
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
