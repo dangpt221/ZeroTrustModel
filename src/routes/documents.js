@@ -43,6 +43,10 @@ const upload = multer({
 
 const router = express.Router();
 
+// Document requests
+router.get("/documents/requests", requireAuth, requireRole(["ADMIN", "MANAGER"]), documentController.getDocumentRequests);
+router.put("/documents/requests/:id", requireAuth, requireRole(["ADMIN", "MANAGER"]), documentController.updateDocumentRequest);
+
 // All document routes require authentication
 router.get("/documents", requireAuth, documentController.getAllDocuments);
 router.get("/documents/:id", requireAuth, documentController.getDocumentById);
@@ -68,9 +72,9 @@ router.post("/documents/upload", requireAuth, upload.single('file'), async (req,
 });
 
 // Create document (with or without file)
-router.post("/documents", requireAuth, requireRole(["ADMIN", "MANAGER", "STAFF", "MEMBER"]), documentController.createDocument);
+router.post("/documents", requireAuth, requireRole(["ADMIN", "MANAGER", "STAFF"]), documentController.createDocument);
 
-// Update - ADMIN/MANAGER can update any, STAFF/MEMBER can update own draft
+// Update - ADMIN/MANAGER can update any, STAFF can update own draft
 router.put("/documents/:id", requireAuth, documentController.updateDocument);
 
 // Upload new version

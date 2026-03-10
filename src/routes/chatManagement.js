@@ -7,45 +7,45 @@ const router = express.Router();
 // All chat management routes require authentication
 router.use(requireAuth);
 
-// Routes for SUPER_ADMIN, ADMIN, MANAGER, AUDITOR
-// Get chat statistics - ADMIN/SUPER_ADMIN/AUDITOR
-router.get("/stats", requireRole(["SUPER_ADMIN", "ADMIN", "AUDITOR"]), chatController.getChatStats);
+// Routes for ADMIN, MANAGER
+// Get chat statistics - ADMIN
+router.get("/stats", requireRole(["ADMIN"]), chatController.getChatStats);
 
-// Get all rooms - ADMIN/SUPER_ADMIN/MANAGER/AUDITOR
-router.get("/rooms", requireRole(["SUPER_ADMIN", "ADMIN", "MANAGER", "AUDITOR"]), chatController.getAllRooms);
+// Get all rooms - ADMIN/MANAGER
+router.get("/rooms", requireRole(["ADMIN", "MANAGER"]), chatController.getAllRooms);
 
-// Get room by ID - ADMIN/SUPER_ADMIN/MANAGER/AUDITOR
-router.get("/rooms/:id", requireRole(["SUPER_ADMIN", "ADMIN", "MANAGER", "AUDITOR"]), chatController.getRoomById);
+// Get room by ID - ADMIN/MANAGER
+router.get("/rooms/:id", requireRole(["ADMIN", "MANAGER"]), chatController.getRoomById);
 
-// Get messages from room - ADMIN/SUPER_ADMIN/MANAGER/AUDITOR
-router.get("/rooms/:id/messages", requireRole(["SUPER_ADMIN", "ADMIN", "MANAGER", "AUDITOR"]), chatController.getRoomMessages);
+// Get messages from room - ADMIN/MANAGER
+router.get("/rooms/:id/messages", requireRole(["ADMIN", "MANAGER"]), chatController.getRoomMessages);
 
-// Search messages - ADMIN/SUPER_ADMIN/AUDITOR
-router.get("/messages/search", requireRole(["SUPER_ADMIN", "ADMIN", "AUDITOR"]), chatController.searchMessages);
+// Search messages - ADMIN
+router.get("/messages/search", requireRole(["ADMIN"]), chatController.searchMessages);
 
-// Delete message - ADMIN/SUPER_ADMIN only
-router.delete("/messages/:id", requireRole(["SUPER_ADMIN", "ADMIN"]), chatController.deleteMessage);
+// Delete message - ADMIN only
+router.delete("/messages/:id", requireRole(["ADMIN"]), chatController.deleteMessage);
 
-// Lock/Unlock room - ADMIN/SUPER_ADMIN
-router.post("/rooms/:id/lock", requireRole(["SUPER_ADMIN", "ADMIN"]), chatController.toggleRoomLock);
+// Lock/Unlock room - ADMIN
+router.post("/rooms/:id/lock", requireRole(["ADMIN"]), chatController.toggleRoomLock);
 
-// Add member - ADMIN/SUPER_ADMIN
-router.post("/rooms/:id/members", requireRole(["SUPER_ADMIN", "ADMIN"]), chatController.addRoomMember);
+// Add member - ADMIN
+router.post("/rooms/:id/members", requireRole(["ADMIN"]), chatController.addRoomMember);
 
-// Remove member - ADMIN/SUPER_ADMIN
-router.delete("/rooms/:id/members/:userId", requireRole(["SUPER_ADMIN", "ADMIN"]), chatController.removeRoomMember);
+// Remove member - ADMIN
+router.delete("/rooms/:id/members/:userId", requireRole(["ADMIN"]), chatController.removeRoomMember);
 
-// Send system message - ADMIN/SUPER_ADMIN
-router.post("/rooms/:id/system-message", requireRole(["SUPER_ADMIN", "ADMIN"]), chatController.sendSystemMessage);
+// Send system message - ADMIN
+router.post("/rooms/:id/system-message", requireRole(["ADMIN"]), chatController.sendSystemMessage);
 
-// Delete room - ADMIN/SUPER_ADMIN
-router.delete("/rooms/:id", requireRole(["SUPER_ADMIN", "ADMIN"]), chatController.deleteRoom);
+// Delete room - ADMIN
+router.delete("/rooms/:id", requireRole(["ADMIN"]), chatController.deleteRoom);
 
-// Export chat logs - ADMIN/SUPER_ADMIN/AUDITOR
-router.get("/export", requireRole(["SUPER_ADMIN", "ADMIN", "AUDITOR"]), chatController.exportChatLogs);
+// Export chat logs - ADMIN
+router.get("/export", requireRole(["ADMIN"]), chatController.exportChatLogs);
 
-// Chat policy - ADMIN/SUPER_ADMIN
-router.get("/policy", requireRole(["SUPER_ADMIN", "ADMIN", "AUDITOR"]), chatController.getChatPolicy);
-router.put("/policy", requireRole(["SUPER_ADMIN", "ADMIN"]), chatController.updateChatPolicy);
+// Chat policy - ADMIN
+router.get("/policy", requireRole(["ADMIN"]), chatController.getChatPolicy);
+router.put("/policy", requireRole(["ADMIN"]), chatController.updateChatPolicy);
 
 export default router;

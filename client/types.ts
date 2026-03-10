@@ -1,11 +1,8 @@
 // User types
 export enum UserRole {
-  SUPER_ADMIN = "SUPER_ADMIN",
   ADMIN = "ADMIN",
   MANAGER = "MANAGER",
-  STAFF = "STAFF",
-  MEMBER = "MEMBER",
-  AUDITOR = "AUDITOR"
+  STAFF = "STAFF"
 }
 
 export enum UserStatus {
@@ -32,6 +29,7 @@ export interface User {
   lastActiveAt?: string;
   createdAt?: string;
   updatedAt?: string;
+  isOnline?: boolean;
 }
 
 // Project types

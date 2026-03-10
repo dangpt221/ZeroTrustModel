@@ -2,6 +2,7 @@ import { Document } from "../models/Document.js";
 import { User } from "../models/User.js";
 import { Department } from "../models/Department.js";
 import { AuditLog } from "../models/AuditLog.js";
+import { DocumentRequest } from "../models/DocumentRequest.js";
 
 // Helper: Transform document to client format
 function toClientDoc(doc, includeAudit = false) {
@@ -84,8 +85,8 @@ export const getAllDocuments = async (req, res, next) => {
     console.log('[getAllDocuments] User:', req.user.email, 'Role:', userRole, 'DeptId:', userDeptId);
 
     // ADMIN and MANAGER see all documents
-    // STAFF/MEMBER see their own documents and department documents
-    if (userRole === 'STAFF' || userRole === 'MEMBER') {
+    // STAFF see their own documents and department documents
+    if (userRole === 'STAFF') {
       // Staff can see: own documents, department documents, or project docs
       query.$or = [
         { ownerId: userId },
@@ -146,8 +147,7 @@ export const getDocumentById = async (req, res, next) => {
     if (doc.isDeleted) return res.status(404).json({ message: "Document not found" });
 
     // Check permission based on security level
-    const userClearance = userRole === 'SUPER_ADMIN' ? 3 :
-      userRole === 'ADMIN' ? 3 :
+    const userClearance = userRole === 'ADMIN' ? 3 :
       userRole === 'MANAGER' ? 2 : 1;
 
     if (doc.securityLevel > userClearance) {
@@ -202,7 +202,7 @@ export const createDocument = async (req, res, next) => {
 
     // Staff can only create DRAFT
     let docStatus = status || 'DRAFT';
-    if (userRole === 'STAFF' || userRole === 'MEMBER') {
+    if (userRole === 'STAFF') {
       docStatus = 'DRAFT';
     }
 
@@ -277,11 +277,11 @@ export const updateDocument = async (req, res, next) => {
 
     // Check ownership or admin
     const isOwner = doc.ownerId?.toString() === userId;
-    const isAdmin = ['SUPER_ADMIN', 'ADMIN'].includes(userRole);
+    const isAdmin = userRole === 'ADMIN';
     const isManager = userRole === 'MANAGER';
 
     // Staff can only edit their own DRAFT documents
-    if (userRole === 'STAFF' || userRole === 'MEMBER') {
+    if (userRole === 'STAFF') {
       if (!isOwner || doc.status !== 'DRAFT') {
         return res.status(403).json({ message: "You can only edit your own draft documents" });
       }
@@ -345,10 +345,10 @@ export const deleteDocument = async (req, res, next) => {
 
     // Check permission
     const isOwner = doc.ownerId?.toString() === userId;
-    const isAdmin = ['SUPER_ADMIN', 'ADMIN'].includes(userRole);
+    const isAdmin = userRole === 'ADMIN';
 
     // Staff can only delete their own DRAFT
-    if (userRole === 'STAFF' || userRole === 'MEMBER') {
+    if (userRole === 'STAFF') {
       if (!isOwner || doc.status !== 'DRAFT') {
         return res.status(403).json({ message: "You can only delete your own draft documents" });
       }
@@ -393,7 +393,7 @@ export const approveDocument = async (req, res, next) => {
     const userRole = req.user.role;
 
     // Only MANAGER, ADMIN can approve
-    if (!['SUPER_ADMIN', 'ADMIN', 'MANAGER'].includes(userRole)) {
+    if (!['ADMIN', 'MANAGER'].includes(userRole)) {
       return res.status(403).json({ message: "You don't have permission to approve documents" });
     }
 
@@ -434,7 +434,7 @@ export const rejectDocument = async (req, res, next) => {
     const userId = req.user.id;
     const userRole = req.user.role;
 
-    if (!['SUPER_ADMIN', 'ADMIN', 'MANAGER'].includes(userRole)) {
+    if (!['ADMIN', 'MANAGER'].includes(userRole)) {
       return res.status(403).json({ message: "You don't have permission to reject documents" });
     }
 
@@ -537,6 +537,47 @@ export const getDocumentStats = async (req, res, next) => {
         return acc;
       }, {})
     });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Get all document requests
+export const getDocumentRequests = async (req, res, next) => {
+  try {
+    const requests = await DocumentRequest.find()
+      .populate('userId', 'name email avatar')
+      .populate('documentId', 'title name')
+      .sort({ createdAt: -1 })
+      .lean();
+    res.json(requests);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Update document request status
+export const updateDocumentRequest = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { status, reason } = req.body;
+
+    const request = await DocumentRequest.findByIdAndUpdate(
+      id,
+      {
+        status,
+        rejectionReason: reason,
+        reviewedAt: new Date(),
+        reviewedBy: req.user.id
+      },
+      { new: true }
+    );
+
+    if (!request) {
+      return res.status(404).json({ message: "Request not found" });
+    }
+
+    res.json(request);
   } catch (err) {
     next(err);
   }

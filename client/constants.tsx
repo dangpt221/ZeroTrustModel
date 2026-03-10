@@ -57,7 +57,7 @@ export const MANAGER_NAVIGATION = [
   { name: 'Chấm công', icon: <Clock size={20} />, path: '/attendance' },
 ];
 
-export const MEMBER_NAVIGATION = [
+export const STAFF_NAVIGATION = [
   { name: 'Tài liệu của tôi', icon: <FolderLock size={20} />, path: '/' },
   { name: 'Lịch sử hoạt động', icon: <History size={20} />, path: '/member/activity' },
   { name: 'Nhắn tin nội bộ', icon: <MessageSquare size={20} />, path: '/messaging' },

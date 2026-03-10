@@ -105,7 +105,7 @@ export const UserManagement: React.FC = () => {
       email: user.email,
       password: '',
       role: user.role,
-      department: user.department || '',
+      department: user.departmentId || '',
       mfaEnabled: user.mfaEnabled
     });
     setIsEditModalOpen(true);
@@ -247,11 +247,6 @@ export const UserManagement: React.FC = () => {
             <div>
               <label className="text-xs font-bold text-slate-500 uppercase">Vai trò</label>
               <select value={filterRole} onChange={(e) => setFilterRole(e.target.value)} className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-xl text-sm">
-                <option value="ALL">Tất cả</option>
-                <option value="SUPER_ADMIN">Super Admin</option>
-                <option value="ADMIN">Admin</option>
-                <option value="MANAGER">Manager</option>
-                <option value="AUDITOR">Auditor</option>
                 <option value="STAFF">Staff</option>
               </select>
             </div>
@@ -312,8 +307,8 @@ export const UserManagement: React.FC = () => {
                   <td className="px-8 py-5">
                     <div className="flex flex-col gap-1">
                       <span className={`w-fit text-[10px] font-black px-2 py-0.5 rounded uppercase border ${user.role === UserRole.ADMIN ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                          user.role === UserRole.MANAGER ? 'bg-amber-50 text-amber-600 border-amber-100' :
-                            'bg-slate-50 text-slate-500 border-slate-200'
+                        user.role === UserRole.MANAGER ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                          'bg-slate-50 text-slate-500 border-slate-200'
                         }`}>
                         {user.role}
                       </span>
@@ -438,7 +433,6 @@ export const UserManagement: React.FC = () => {
                 <option value="STAFF">Staff - Nhân viên</option>
                 <option value="MANAGER">Manager - Quản lý</option>
                 <option value="ADMIN">Admin - Quản trị</option>
-                <option value="AUDITOR">Auditor - Kiểm toán</option>
               </select>
             </div>
             <div>
@@ -522,10 +516,9 @@ export const UserManagement: React.FC = () => {
                 onChange={(e) => setEditFormData({ ...editFormData, role: e.target.value })}
                 className="w-full mt-1 px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
               >
-                <option value="STAFF">Staff - Nhan vien</option>
-                <option value="MANAGER">Manager - Quan ly</option>
-                <option value="ADMIN">Admin - Quan tri</option>
-                <option value="AUDITOR">Auditor - Kiem toan</option>
+                <option value="STAFF">Staff - Nhân viên</option>
+                <option value="MANAGER">Manager - Quản lý</option>
+                <option value="ADMIN">Admin - Quản trị</option>
               </select>
             </div>
             <div>

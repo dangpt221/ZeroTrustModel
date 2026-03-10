@@ -75,7 +75,7 @@ export const Dashboard: React.FC = () => {
 
   const COLORS = ['#94a3b8', '#3b82f6', '#f59e0b', '#22c55e'];
 
-  const userProjects = user?.role === 'MEMBER'
+  const userProjects = user?.role === 'STAFF'
     ? projects.filter(p => p.members.includes(user.id))
     : projects;
 
@@ -109,11 +109,11 @@ export const Dashboard: React.FC = () => {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
                 <Tooltip
-                  cursor={{fill: '#f8fafc'}}
-                  contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'}}
+                  cursor={{ fill: '#f8fafc' }}
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                 />
                 <Bar dataKey="progress" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={40} />
               </BarChart>
@@ -148,7 +148,7 @@ export const Dashboard: React.FC = () => {
           <div className="grid grid-cols-2 gap-4 mt-4">
             {pieData.map((d, i) => (
               <div key={d.name} className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full" style={{backgroundColor: COLORS[i]}}></div>
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[i] }}></div>
                 <span className="text-xs text-slate-500 font-medium">{d.name}</span>
               </div>
             ))}
@@ -190,17 +190,16 @@ export const Dashboard: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full ${
-                      project.status === ProjectStatus.IN_PROGRESS ? 'bg-blue-50 text-blue-600' :
-                      project.status === ProjectStatus.COMPLETED ? 'bg-green-50 text-green-600' :
-                      'bg-slate-100 text-slate-600'
-                    }`}>
+                    <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full ${project.status === ProjectStatus.IN_PROGRESS ? 'bg-blue-50 text-blue-600' :
+                        project.status === ProjectStatus.COMPLETED ? 'bg-green-50 text-green-600' :
+                          'bg-slate-100 text-slate-600'
+                      }`}>
                       {project.status.replace('_', ' ')}
                     </span>
                   </td>
                   <td className="px-6 py-4">
                     <div className="w-32 bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                      <div className="bg-blue-500 h-full" style={{width: `${project.progress}%`}}></div>
+                      <div className="bg-blue-500 h-full" style={{ width: `${project.progress}%` }}></div>
                     </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-slate-500">{project.endDate}</td>

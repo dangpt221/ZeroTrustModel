@@ -37,7 +37,7 @@ export const StaffManagement: React.FC = () => {
     name: '',
     email: '',
     password: '',
-    role: 'MEMBER',
+    role: 'STAFF',
     department: '',
     mfaEnabled: false
   });
@@ -150,7 +150,7 @@ export const StaffManagement: React.FC = () => {
       setStaff(prev => prev.map(u => (u.id === editingUser.id ? { ...u, ...updated } : u)));
       setIsEditModalOpen(false);
       setEditingUser(null);
-      setEditFormData({ name: '', email: '', password: '', role: 'MEMBER', department: '', mfaEnabled: false });
+      setEditFormData({ name: '', email: '', password: '', role: 'STAFF', department: '', mfaEnabled: false });
       alert('Cập nhật thành công!');
     } catch (err) {
       console.error('Update user error:', err);
@@ -213,9 +213,8 @@ export const StaffManagement: React.FC = () => {
         </div>
         <button
           onClick={() => setIsFilterOpen(!isFilterOpen)}
-          className={`bg-white border px-6 py-2 rounded-2xl font-bold text-sm flex items-center gap-2 transition-all ${
-            isFilterOpen ? 'border-blue-500 text-blue-600' : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-          }`}
+          className={`bg-white border px-6 py-2 rounded-2xl font-bold text-sm flex items-center gap-2 transition-all ${isFilterOpen ? 'border-blue-500 text-blue-600' : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+            }`}
         >
           <Filter size={18} /> Lọc
           {(filterRole !== 'ALL' || filterStatus !== 'ALL' || filterDepartment !== 'ALL') && (
@@ -248,7 +247,7 @@ export const StaffManagement: React.FC = () => {
               >
                 <option value="ALL">Tất cả</option>
                 <option value="MANAGER">Manager</option>
-                <option value="MEMBER">Member</option>
+                <option value="STAFF">Staff</option>
               </select>
             </div>
             <div>
@@ -330,11 +329,10 @@ export const StaffManagement: React.FC = () => {
                     </td>
                     <td className="px-8 py-5">
                       <span
-                        className={`text-[10px] font-black px-2 py-0.5 rounded uppercase border ${
-                          user.role === 'MANAGER'
+                        className={`text-[10px] font-black px-2 py-0.5 rounded uppercase border ${user.role === 'MANAGER'
                             ? 'bg-amber-50 text-amber-600 border-amber-100'
                             : 'bg-slate-50 text-slate-500 border-slate-200'
-                        }`}
+                          }`}
                       >
                         {user.role}
                       </span>
@@ -363,16 +361,14 @@ export const StaffManagement: React.FC = () => {
                     <td className="px-8 py-5">
                       {user.status === 'ACTIVE' ? (
                         <span
-                          className={`inline-flex items-center gap-1.5 text-[10px] font-black px-3 py-1 rounded-full ${
-                            user.isOnline
+                          className={`inline-flex items-center gap-1.5 text-[10px] font-black px-3 py-1 rounded-full ${user.isOnline
                               ? 'bg-emerald-500/10 text-emerald-600'
                               : 'bg-slate-100 text-slate-500'
-                          }`}
+                            }`}
                         >
                           <span
-                            className={`w-1.5 h-1.5 rounded-full ${
-                              user.isOnline ? 'bg-emerald-500' : 'bg-slate-400'
-                            }`}
+                            className={`w-1.5 h-1.5 rounded-full ${user.isOnline ? 'bg-emerald-500' : 'bg-slate-400'
+                              }`}
                           />
                           {user.isOnline ? 'Online' : 'Offline'}
                         </span>
@@ -393,11 +389,10 @@ export const StaffManagement: React.FC = () => {
                         </button>
                         <button
                           onClick={() => handleToggleMfa(user)}
-                          className={`p-2 rounded-xl transition-all ${
-                            user.mfaEnabled
+                          className={`p-2 rounded-xl transition-all ${user.mfaEnabled
                               ? 'text-emerald-500 hover:bg-emerald-50'
                               : 'text-amber-500 hover:bg-amber-50'
-                          }`}
+                            }`}
                           title={user.mfaEnabled ? 'MFA đã bật' : 'Bật MFA'}
                         >
                           <Smartphone size={18} />
@@ -411,11 +406,10 @@ export const StaffManagement: React.FC = () => {
                         </button>
                         <button
                           onClick={() => handleToggleStatus(user)}
-                          className={`p-2 rounded-xl transition-all ${
-                            user.status === 'ACTIVE'
+                          className={`p-2 rounded-xl transition-all ${user.status === 'ACTIVE'
                               ? 'text-amber-500 hover:bg-amber-50'
                               : 'text-emerald-500 hover:bg-emerald-50'
-                          }`}
+                            }`}
                           title={user.status === 'ACTIVE' ? 'Khóa' : 'Mở khóa'}
                         >
                           {user.status === 'ACTIVE' ? <Lock size={18} /> : <Unlock size={18} />}
@@ -488,7 +482,7 @@ export const StaffManagement: React.FC = () => {
                 onChange={e => setEditFormData({ ...editFormData, role: e.target.value })}
                 className="w-full mt-1 px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
               >
-                <option value="MEMBER">Member</option>
+                <option value="STAFF">Staff</option>
                 <option value="MANAGER">Manager</option>
               </select>
             </div>

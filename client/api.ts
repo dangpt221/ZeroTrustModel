@@ -287,6 +287,15 @@ export const documentsApi = {
       body: JSON.stringify({ reason }),
     }),
 
+  // Requests workflow
+  getRequests: () => apiRequest<any[]>('/documents/requests'),
+
+  updateRequest: (id: string, status: 'APPROVED' | 'REJECTED', reason?: string) =>
+    apiRequest<any>(`/documents/requests/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ status, reason }),
+    }),
+
   // Download
   download: (id: string) =>
     apiRequest<{ url: string; fileName: string }>(`/documents/${id}/download`),

@@ -1,0 +1,23 @@
+lớp 7 
+Chủ đề 1: Số hữu tỉ ($\mathbb{Q}$). Học sinh cần nắm vững các phép tính trên số hữu tỉ, quy tắc chuyển vế và thứ tự thực hiện phép tính.
+
+Chủ đề 2: Số thực ($\mathbb{R}$). Làm quen với số thập phân vô hạn tuần hoàn, số vô tỉ, căn bậc hai số học và giá trị tuyệt đối. Đây là bước ngoặt về tư duy số học.
+Chủ đề 1: Các góc ở vị trí đặc biệt. Góc kề bù, góc đối đỉnh.
+
+Chủ đề 2: Tia phân giác của một góc. Cách vẽ và tính chất.
+
+Chủ đề 3: Đường thẳng song song. Dấu hiệu nhận biết, tiên đề Euclid về đường thẳng song song.
+
+Chủ đề: Tổng các góc trong một tam giác và Các trường hợp bằng nhau của hai tam giác (Cạnh - Cạnh - Cạnh, Cạnh - Góc - Cạnh, Góc - Cạnh - Góc).
+
+Chủ đề 1: Tỉ lệ thức và Dãy tỉ số bằng nhau. Đây là nội dung cực kỳ quan trọng, thường xuất hiện trong các bài toán thực tế về chia tỉ lệ.
+
+Chủ đề 2: Đại lượng tỉ lệ thuận và tỉ lệ nghịch. Học cách thiết lập công thức và giải toán đố.
+
+Chủ đề 1: Làm quen với biểu thức đại số. Cách tính giá trị biểu thức.
+
+Chủ đề 2: Đa thức một biến. Cộng, trừ, nhân đa thức một biến.
+
+đề 1: Quan hệ giữa cạnh và góc đối diện. Bất đẳng thức tam giác.
+
+Chủ đề 2: Các đường đồng quy trong tam giác. Đường trung tuyến, đường phân giác, đường trung trực, đường cao. Học sinh cần phân biệt rõ trọng tâm, trực tâm, tâm đường tròn nội tiếp/ngoại tiếp.

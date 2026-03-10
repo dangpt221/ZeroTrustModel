@@ -1,0 +1,21 @@
+Chủ đề 1: Ôn tập các số trong phạm vi 100. Đọc, viết, so sánh và thứ tự số.
+
+Chủ đề 2: Ôn tập phép cộng, phép trừ không nhớ.
+
+Chủ đề 3: Phép cộng có nhớ trong phạm vi 100 (Ví dụ: $28 + 5, 36 + 27$). Học sinh cần nắm vững kỹ thuật "đặt tính rồi tính".
+
+Chủ đề 4: Phép trừ có nhớ trong phạm vi 100 (Ví dụ: $32 - 8, 54 - 26$).
+
+Chủ đề 5: Làm quen với các hình: Hình tứ giác, Hình điểm, Đoạn thẳng, Đường thẳng, Đường cong.
+
+Chủ đề 6: Đơn vị đo mới: Đề-xi-mét (dm), Ki-lô-gam (kg), Lít (l).
+
+Chủ đề 7: Khái niệm về phép nhân (tổng các số hạng bằng nhau) và phép chia (chia thành các phần bằng nhau).
+
+Chủ đề 8: Bảng nhân 2, bảng nhân 5 và Bảng chia 2, bảng chia 5.
+
+Chủ đề 9: Đơn vị, Chục, Trăm. Đọc và viết số có 3 chữ số.
+
+Chủ đề 10: So sánh các số có 3 chữ số.
+
+Chủ đề 11: Phép cộng, phép trừ không nhớ trong phạm vi 1000.

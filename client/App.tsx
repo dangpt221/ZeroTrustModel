@@ -33,7 +33,7 @@ const PrivateRoute: React.FC<{ children: React.ReactNode; roles?: UserRole[] }> 
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (user?.status === 'PENDING') return <Navigate to="/pending-approval" replace />;
-  if (roles && user && !roles.includes(user.role)) return <Navigate to="/" replace />;
+  if (roles && user && !roles.includes(user.role as UserRole)) return <Navigate to="/" replace />;
 
   return <>{children}</>;
 };
@@ -42,7 +42,7 @@ const DashboardSelector: React.FC = () => {
   const { user } = useAuth();
   if (user?.role === UserRole.ADMIN) return <AdminDashboard />;
   if (user?.role === UserRole.MANAGER) return <ManagerDashboard />;
-  if (user?.role === UserRole.MEMBER) return <StaffDashboard />;
+  if (user?.role === UserRole.STAFF) return <StaffDashboard />;
   return <div className="p-10 text-center text-slate-400">Giao diện đang phát triển...</div>;
 };
 
@@ -98,7 +98,7 @@ const App: React.FC = () => {
           } />
 
           <Route path="/admin/chat" element={
-            <PrivateRoute roles={[UserRole.ADMIN, UserRole.SUPER_ADMIN]}>
+            <PrivateRoute roles={[UserRole.ADMIN]}>
               <Layout><ChatManagement /></Layout>
             </PrivateRoute>
           } />
@@ -136,7 +136,7 @@ const App: React.FC = () => {
 
           {/* Member Specific Routes */}
           <Route path="/member/activity" element={
-            <PrivateRoute roles={[UserRole.MEMBER]}>
+            <PrivateRoute roles={[UserRole.STAFF]}>
               <Layout><StaffActivity /></Layout>
             </PrivateRoute>
           } />
@@ -182,7 +182,7 @@ const App: React.FC = () => {
 
 const DashboardSelectorProfileWrapper: React.FC = () => {
   const { user } = useAuth();
-  if (user?.role === UserRole.MEMBER) return <StaffProfile />;
+  if (user?.role === UserRole.STAFF) return <StaffProfile />;
 
   return (
     <div className="bg-white p-10 rounded-3xl border border-slate-100 shadow-sm max-w-4xl mx-auto">

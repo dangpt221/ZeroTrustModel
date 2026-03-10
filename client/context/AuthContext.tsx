@@ -76,7 +76,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (response.ok) {
         if (data.needsMFA) {
           setNeedsMFA(true);
-          setTempUser({ email, role: 'MEMBER' } as User);
+          setTempUser({ email, role: 'STAFF' } as User);
           if (data.riskScore !== undefined) {
             setSecurityInfo({ riskScore: data.riskScore, riskFactors: data.riskFactors || [] });
           }

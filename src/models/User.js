@@ -7,7 +7,7 @@ const UserSchema = new mongoose.Schema(
     passwordHash: { type: String, required: true },
     role: {
       type: String,
-      enum: ['ADMIN', 'MANAGER', 'STAFF', 'MEMBER', 'AUDITOR'],
+      enum: ['ADMIN', 'MANAGER', 'STAFF'],
       default: 'STAFF',
     },
     googleId: { type: String, unique: true, sparse: true },

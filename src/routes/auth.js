@@ -27,7 +27,7 @@ function toClientUser(user) {
     id: user._id.toString(),
     name: user.name,
     email: user.email,
-    role: normalizedRole === 'STAFF' ? 'MEMBER' : normalizedRole,
+    role: normalizedRole,
     avatar: user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`,
     mfaEnabled: user.mfaEnabled || false,
     department: departmentName || 'Phòng ban chung',
