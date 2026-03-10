@@ -151,7 +151,7 @@ export const TeamManagement: React.FC = () => {
 
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Thành viên ({team.members.length})</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Thành viên ({(team.memberIds || []).length})</p>
                 <button 
                   onClick={() => { setSelectedTeam(team); setIsAddMemberModalOpen(true); }}
                   className="text-[10px] font-black text-blue-600 uppercase tracking-widest hover:underline flex items-center gap-1"
@@ -160,7 +160,7 @@ export const TeamManagement: React.FC = () => {
                 </button>
               </div>
               <div className="flex -space-x-2 overflow-hidden">
-                {team.members.map(mId => {
+                {(team.memberIds || []).map(mId => {
                   const member = allUsers.find(u => u.id === mId);
                   return (
                     <div key={mId} className="relative group/avatar">
@@ -175,7 +175,7 @@ export const TeamManagement: React.FC = () => {
                     </div>
                   );
                 })}
-                {team.members.length === 0 && <p className="text-[10px] text-slate-300 italic">Chưa có thành viên</p>}
+                {(team.memberIds || []).length === 0 && <p className="text-[10px] text-slate-300 italic">Chưa có thành viên</p>}
               </div>
             </div>
 
@@ -261,7 +261,7 @@ export const TeamManagement: React.FC = () => {
                   <button
                     key={u.id}
                     onClick={() => handleAddMember(u.id)}
-                    disabled={selectedTeam?.members.includes(u.id)}
+                    disabled={(selectedTeam?.memberIds || []).includes(u.id)}
                     className="w-full flex items-center justify-between p-4 rounded-2xl border border-slate-50 hover:bg-slate-50 hover:border-slate-100 transition-all group disabled:opacity-50"
                   >
                     <div className="flex items-center gap-3">
@@ -271,7 +271,7 @@ export const TeamManagement: React.FC = () => {
                         <p className="text-[10px] text-slate-400 font-medium">{u.email}</p>
                       </div>
                     </div>
-                    {selectedTeam?.members.includes(u.id) ? (
+                    {(selectedTeam?.memberIds || []).includes(u.id) ? (
                       <CheckCircle2 size={18} className="text-emerald-500" />
                     ) : (
                       <Plus size={18} className="text-slate-300 group-hover:text-blue-600 transition-colors" />
