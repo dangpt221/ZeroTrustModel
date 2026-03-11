@@ -4,15 +4,7 @@ import { documentsApi, departmentsApi } from '../../api';
 import { Document } from '../../types';
 import { Modal } from '../../components/Admin/Modal';
 import { DocumentContent } from '../../components/Staff/DocumentContent';
-import {
-  FileText,
-  Search,
-  Upload,
-  MoreVertical,
-  Trash2,
-  X,
-  Eye
-} from 'lucide-react';
+import { FileText, Search, Upload, Eye } from 'lucide-react';
 
 export const DepartmentDocuments: React.FC = () => {
   const [docs, setDocs] = useState<Document[]>([]);
@@ -21,7 +13,6 @@ export const DepartmentDocuments: React.FC = () => {
   const [filter, setFilter] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [isUploadOpen, setIsUploadOpen] = useState(false);
-  const [openMenuDocId, setOpenMenuDocId] = useState<string | null>(null);
   const [viewingDoc, setViewingDoc] = useState<Document | null>(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -102,26 +93,12 @@ export const DepartmentDocuments: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa tài liệu này?')) return;
-    try {
-      await documentsApi.delete(id);
-      setDocs(prev => prev.filter(d => d.id !== id));
-      setOpenMenuDocId(null);
-      setViewingDoc(prev => (prev?.id === id ? null : prev));
-      alert('Xóa tài liệu thành công!');
-    } catch (err) {
-      console.error('Delete document error:', err);
-      alert(err instanceof Error ? err.message : 'Xóa tài liệu thất bại.');
-    }
-  };
-
   const getDocDisplay = (doc: Document) => ({
     name: (doc as any).name || (doc as any).title || doc.name || 'Không tên',
     type: (doc as any).type || (doc as any).fileType || doc.type || '-',
     size: (doc as any).size || (doc as any).fileSize || doc.size || '-',
     uploadedBy: (doc as any).uploadedBy || doc.uploadedBy || 'N/A',
-    uploadedAt: (doc as any).uploadedAt || doc.uploadedAt ? new Date((doc as any).uploadedAt).toLocaleDateString('vi-VN') : '-',
+    uploadedAt: (doc as any).uploadedAt || doc.createdAt ? new Date((doc as any).uploadedAt || doc.createdAt!).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-',
     sensitivity: doc.sensitivity || (doc as any).sensitivity || 'LOW',
   });
 
@@ -214,50 +191,13 @@ export const DepartmentDocuments: React.FC = () => {
                       <td className="px-6 py-4 text-sm text-slate-600">{d.uploadedBy}</td>
                       <td className="px-6 py-4 text-sm text-slate-500">{d.uploadedAt}</td>
                       <td className="px-6 py-4">
-                        <div className="flex justify-end items-center">
-                          <div className="relative">
-                            <button
-                              onClick={() => setOpenMenuDocId(openMenuDocId === doc.id ? null : doc.id)}
-                              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg"
-                            >
-                              <MoreVertical size={16} />
-                            </button>
-                            {openMenuDocId === doc.id && (
-                              <>
-                                <div
-                                  className="fixed inset-0 z-10"
-                                  onClick={() => setOpenMenuDocId(null)}
-                                  aria-hidden
-                                />
-                                <div
-                                  className="absolute right-0 top-full mt-1 z-20 min-w-[160px] bg-white rounded-xl border border-slate-200 shadow-lg py-1 overflow-hidden"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setViewingDoc(doc);
-                                      setOpenMenuDocId(null);
-                                    }}
-                                    className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-slate-700 hover:bg-slate-50 text-sm font-medium"
-                                  >
-                                    <Eye size={16} /> Xem chi tiết
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setOpenMenuDocId(null);
-                                      handleDelete(doc.id);
-                                    }}
-                                    className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-rose-600 hover:bg-rose-50 text-sm font-medium"
-                                  >
-                                    <Trash2 size={16} /> Xóa tài liệu
-                                  </button>
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        </div>
+                        <button
+                          onClick={() => setViewingDoc(doc)}
+                          className="p-2 text-sky-600 hover:bg-sky-50 rounded-lg"
+                          title="Xem chi tiết"
+                        >
+                          <Eye size={16} />
+                        </button>
                       </td>
                     </tr>
                   );
@@ -353,7 +293,7 @@ export const DepartmentDocuments: React.FC = () => {
         </div>
       </Modal>
 
-      {/* Document Content - Hiển thị trực tiếp trên trang */}
+      {/* Document Content */}
       {viewingDoc && (
         <div className="mt-6">
           <DocumentContent

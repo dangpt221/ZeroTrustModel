@@ -354,26 +354,23 @@ export const deleteDocument = async (req, res, next) => {
       }
     }
 
-    // Manager can delete department docs
+    // Manager can delete any department docs
     if (userRole === 'MANAGER') {
-      const userDeptId = req.user.departmentId?.toString();
-      const isDeptDoc = doc.departmentId?.toString() === userDeptId;
-      if (!isOwner && !isDeptDoc) {
-        return res.status(403).json({ message: "You can only delete documents in your department" });
-      }
+      // Allow Manager to delete any document
     }
 
-    // Soft delete
-    doc.isDeleted = true;
-    doc.deletedAt = new Date();
-    await doc.save();
+    // Soft delete (use updateOne to bypass validation)
+    await Document.updateOne(
+      { _id: id },
+      { isDeleted: true, deletedAt: new Date() }
+    );
 
     // Audit log
     await AuditLog.create({
       userId,
       userName: req.user.name,
       action: 'DOCUMENT_DELETE',
-      details: `Deleted document: ${doc.title}`,
+      details: `Deleted document: ${doc.title || doc.name || id}`,
       ip: req.ip,
       status: 'SUCCESS',
       riskLevel: 'MEDIUM'

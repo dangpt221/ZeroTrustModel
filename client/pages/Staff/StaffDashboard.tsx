@@ -40,7 +40,7 @@ export const StaffDashboard: React.FC = () => {
   }, []);
 
   const myProjects = useMemo(() => {
-    return projects.filter(p => p.members.includes(user?.id || ''));
+    return projects.filter(p => (p.members || []).includes(user?.id || ''));
   }, [projects, user]);
 
   return (
