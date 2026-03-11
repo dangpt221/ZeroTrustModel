@@ -5,12 +5,14 @@ import { useAuth } from '../../context/AuthContext';
 import { projectsApi, documentsApi } from '../../api';
 import { Document } from '../../types';
 import { ShieldCheck, FileText, Zap, Clock, CheckCircle2, LayoutGrid, ArrowRight } from 'lucide-react';
+import { DocumentContent } from '../../components/Staff/DocumentContent';
 
 export const StaffDashboard: React.FC = () => {
   const { user } = useAuth();
   const [projects, setProjects] = useState<any[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewingDoc, setViewingDoc] = useState<Document | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -154,7 +156,11 @@ export const StaffDashboard: React.FC = () => {
             </div>
             <div className="space-y-3">
               {documents.slice(0, 5).map(doc => (
-                <div key={doc.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+                <div
+                  key={doc.id}
+                  onClick={() => setViewingDoc(doc)}
+                  className="flex items-center justify-between p-4 bg-slate-50 rounded-xl hover:bg-slate-100 cursor-pointer transition-colors"
+                >
                   <div className="flex items-center gap-3">
                     <FileText size={18} className="text-slate-400" />
                     <div>
@@ -197,6 +203,16 @@ export const StaffDashboard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Document Content - Hiển thị trực tiếp trên trang */}
+      {viewingDoc && (
+        <div className="mt-6">
+          <DocumentContent
+            document={viewingDoc}
+            onClose={() => setViewingDoc(null)}
+          />
+        </div>
+      )}
     </div>
   );
 };

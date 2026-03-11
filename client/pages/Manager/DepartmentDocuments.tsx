@@ -3,12 +3,12 @@ import React, { useState, useEffect } from 'react';
 import { documentsApi, departmentsApi } from '../../api';
 import { Document } from '../../types';
 import { Modal } from '../../components/Admin/Modal';
+import { DocumentContent } from '../../components/Staff/DocumentContent';
 import {
   FileText,
   Search,
   Upload,
   MoreVertical,
-  Download,
   Trash2,
   X,
   Eye
@@ -116,15 +116,6 @@ export const DepartmentDocuments: React.FC = () => {
     }
   };
 
-  const handleDownload = (doc: Document) => {
-    const url = doc.url || (doc as any).url;
-    if (url && url !== '#') {
-      window.open(url, '_blank');
-    } else {
-      alert('Tài liệu chưa có đường dẫn tải.');
-    }
-  };
-
   const getDocDisplay = (doc: Document) => ({
     name: (doc as any).name || (doc as any).title || doc.name || 'Không tên',
     type: (doc as any).type || (doc as any).fileType || doc.type || '-',
@@ -223,14 +214,7 @@ export const DepartmentDocuments: React.FC = () => {
                       <td className="px-6 py-4 text-sm text-slate-600">{d.uploadedBy}</td>
                       <td className="px-6 py-4 text-sm text-slate-500">{d.uploadedAt}</td>
                       <td className="px-6 py-4">
-                        <div className="flex justify-end gap-2 items-center">
-                          <button
-                            onClick={() => handleDownload(doc)}
-                            className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
-                            title="Tải xuống"
-                          >
-                            <Download size={16} />
-                          </button>
+                        <div className="flex justify-end items-center">
                           <div className="relative">
                             <button
                               onClick={() => setOpenMenuDocId(openMenuDocId === doc.id ? null : doc.id)}
@@ -369,63 +353,13 @@ export const DepartmentDocuments: React.FC = () => {
         </div>
       </Modal>
 
-      {/* View detail modal */}
+      {/* Document Content - Hiển thị trực tiếp trên trang */}
       {viewingDoc && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden">
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-              <h3 className="text-lg font-black text-slate-800">Chi tiết tài liệu</h3>
-              <button onClick={() => setViewingDoc(null)} className="p-2 hover:bg-slate-100 rounded-xl">
-                <X size={20} />
-              </button>
-            </div>
-            <div className="p-6 space-y-4">
-              {(() => {
-                const d = getDocDisplay(viewingDoc);
-                return (
-                  <>
-                    <div>
-                      <p className="text-xs text-slate-400 uppercase font-bold">Tên</p>
-                      <p className="text-sm font-bold text-slate-800">{d.name}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-400 uppercase font-bold">Loại / Kích thước</p>
-                      <p className="text-sm text-slate-700">{d.type} - {d.size}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-400 uppercase font-bold">Độ nhạy cảm</p>
-                      <span className={`text-[10px] font-bold px-2 py-1 rounded ${d.sensitivity === 'CRITICAL' ? 'bg-rose-50 text-rose-600' : d.sensitivity === 'HIGH' ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'}`}>
-                        {d.sensitivity}
-                      </span>
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-400 uppercase font-bold">Ngày tải</p>
-                      <p className="text-sm text-slate-700">{d.uploadedAt}</p>
-                    </div>
-                    <div className="flex gap-2 pt-4">
-                      <button
-                        onClick={() => handleDownload(viewingDoc)}
-                        className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-sky-600 text-white rounded-xl font-bold text-sm"
-                      >
-                        <Download size={16} /> Tải xuống
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (confirm('Xóa tài liệu này?')) {
-                            setViewingDoc(null);
-                            handleDelete(viewingDoc.id);
-                          }
-                        }}
-                        className="flex items-center gap-2 px-4 py-2.5 bg-rose-50 text-rose-600 rounded-xl font-bold text-sm"
-                      >
-                        <Trash2 size={16} /> Xóa
-                      </button>
-                    </div>
-                  </>
-                );
-              })()}
-            </div>
-          </div>
+        <div className="mt-6">
+          <DocumentContent
+            document={viewingDoc}
+            onClose={() => setViewingDoc(null)}
+          />
         </div>
       )}
     </div>
