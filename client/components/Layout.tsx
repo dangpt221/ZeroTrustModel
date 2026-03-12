@@ -126,53 +126,63 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Header */}
-        <header className="h-20 bg-white border-b border-slate-100 flex items-center justify-between px-10 z-40">
-          <div className={`flex items-center bg-slate-100/80 rounded-2xl px-5 py-2.5 w-[450px] max-w-full focus-within:ring-2 transition-all border border-transparent ${isMember ? 'focus-within:ring-emerald-100 focus-within:border-emerald-200' : 'focus-within:ring-sky-100 focus-within:border-sky-200'}`}>
-            <Search size={18} className="text-slate-400 mr-3" />
-            <input
-              type="text"
-              placeholder="Tìm kiếm tài nguyên bảo mật..."
-              className="bg-transparent border-none outline-none text-sm w-full font-medium"
-            />
+        <header className="h-20 shrink-0 bg-white border-b border-slate-100 flex items-center justify-between px-8 z-40 lg:px-10">
+          <div className={`flex items-center bg-slate-100/80 rounded-2xl px-5 py-2.5 w-[450px] max-w-full focus-within:ring-2 transition-all border border-transparent ${isMember ? 'focus-within:ring-emerald-100 focus-within:border-emerald-200' : isManager ? 'focus-within:ring-sky-100 focus-within:border-sky-200' : 'focus-within:ring-blue-100 focus-within:border-blue-200'}`}>
+             <Search size={18} className={`mr-3 transition-colors ${isMember ? 'text-emerald-500' : isManager ? 'text-sky-500' : 'text-blue-500'}`} />
+             <input
+               type="text"
+               placeholder="Tìm kiếm tài nguyên bảo mật..."
+               className="bg-transparent border-none outline-none text-[15px] w-full font-medium placeholder:text-slate-400 text-slate-700"
+             />
+             <button className="p-1 hover:bg-slate-200 rounded-lg text-slate-400 hover:text-slate-600 transition-colors hidden sm:block">
+                <span className="text-[10px] font-bold border border-slate-300 rounded px-1.5 py-0.5">/</span>
+             </button>
           </div>
 
-          <div className="flex items-center gap-8">
-            <div className="flex items-center gap-4">
-              <NotificationDropdown />
-            </div>
+          {/* Right - Profile & Notifications */}
+          <div className="flex-1 flex items-center justify-end gap-6 min-w-0">
+            <NotificationDropdown />
 
-            <div className="h-10 w-px bg-slate-100"></div>
+            <div className="h-8 w-px bg-slate-200"></div>
 
             <div className="relative">
               <button
                 onClick={() => setProfileOpen(!isProfileOpen)}
-                className="flex items-center gap-4 group hover:bg-slate-50 p-2 rounded-2xl transition-all"
+                className="flex items-center gap-3 group hover:bg-slate-50/80 p-1.5 pr-4 rounded-[20px] transition-all border border-transparent hover:border-slate-100"
               >
-                <div className="text-right hidden sm:block">
-                  <p className="text-sm font-bold text-slate-900 leading-tight">{user.name}</p>
-                  <p className={`text-[10px] font-black uppercase tracking-widest mt-0.5 ${isMember ? 'text-emerald-600' : isManager ? 'text-sky-600' : 'text-blue-600'}`}>{user.role}</p>
-                </div>
                 <div className="relative">
                   <img
                     src={user.avatar}
                     alt="avatar"
-                    className={`w-11 h-11 rounded-2xl ring-4 object-cover ${isMember ? 'ring-emerald-50' : isManager ? 'ring-sky-50' : 'ring-slate-100'}`}
+                    className={`w-10 h-10 rounded-[16px] object-cover transition-transform group-hover:scale-105 shadow-sm`}
                   />
-                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-2 border-white rounded-full"></div>
+                  <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full"></div>
                 </div>
-                <ChevronDown size={16} className={`text-slate-400 transition-transform duration-300 ${isProfileOpen ? 'rotate-180' : ''}`} />
+                <div className="text-left hidden lg:block">
+                  <p className="text-[14px] font-bold text-slate-800 leading-tight group-hover:text-blue-600 transition-colors">{user.name}</p>
+                  <p className={`text-[11px] font-black uppercase tracking-wider mt-0.5 ${isMember ? 'text-emerald-500' : isManager ? 'text-sky-500' : 'text-blue-500'}`}>{user.role}</p>
+                </div>
+                <ChevronDown size={14} className={`text-slate-400 group-hover:text-slate-600 transition-transform duration-300 hidden lg:block ${isProfileOpen ? 'rotate-180' : ''}`} />
               </button>
 
               {isProfileOpen && (
-                <div className="absolute right-0 mt-4 w-60 bg-white border border-slate-100 rounded-3xl shadow-2xl py-3 z-50 animate-in fade-in slide-in-from-top-4 duration-300">
-                  <Link to="/profile" className="flex items-center gap-3 px-5 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
-                    <User size={18} /> Hồ sơ của tôi
+                <div className="absolute right-0 mt-3 w-64 bg-white/90 backdrop-blur-xl border border-slate-100/50 rounded-2xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] py-2 z-50 animate-in fade-in slide-in-from-top-4 duration-300">
+                  <div className="px-5 py-3 border-b border-slate-100 mb-2">
+                     <p className="text-sm font-bold text-slate-800">{user.name}</p>
+                     <p className="text-xs text-slate-500 mt-0.5">{user.email || 'user@company.com'}</p>
+                  </div>
+                  <Link to="/profile" className="flex items-center gap-3 px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition-colors group">
+                    <User size={16} className="text-slate-400 group-hover:text-blue-500 transition-colors" /> Hồ sơ của tôi
                   </Link>
+                  <Link to="/settings" className="flex items-center gap-3 px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition-colors group">
+                    <Settings size={16} className="text-slate-400 group-hover:text-blue-500 transition-colors" /> Cài đặt
+                  </Link>
+                  <div className="h-px bg-slate-100 my-2 mx-5"></div>
                   <button
                     onClick={logout}
-                    className="w-full flex items-center gap-3 px-5 py-3 text-sm font-bold text-rose-600 hover:bg-rose-50 transition-colors"
+                    className="w-full flex items-center gap-3 px-5 py-2.5 text-sm font-bold text-rose-600 hover:bg-rose-50 transition-colors group"
                   >
-                    <LogOut size={18} /> Đăng xuất
+                    <LogOut size={16} className="text-rose-400 group-hover:text-rose-600 transition-colors" /> Đăng xuất
                   </button>
                 </div>
               )}
@@ -181,13 +191,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto p-10 bg-[#fbfcfd]">
-          <div className={`mb-8 p-4 bg-gradient-to-r ${isMember ? 'from-emerald-500/10' : isManager ? 'from-sky-500/10' : 'from-blue-600/5'} to-transparent border-l-4 ${isMember ? 'border-emerald-500' : isManager ? 'border-sky-500' : 'border-blue-600'} rounded-r-2xl flex items-center justify-between`}>
-            <div className="flex items-center gap-3">
-              <Activity className={isMember ? 'text-emerald-600' : isManager ? 'text-sky-600' : 'text-blue-600'} size={18} />
-              <p className="text-sm font-bold text-slate-700">Bộ phận: {user.department} | Phiên làm việc bảo mật (Trust Score: {user.trustScore}%)</p>
-            </div>
-          </div>
+        <main className={`flex-1 overflow-y-auto bg-[#fbfcfd] flex flex-col ${location.pathname.includes('/messaging') ? '' : 'p-8 lg:p-10'}`}>
           {children}
         </main>
       </div>

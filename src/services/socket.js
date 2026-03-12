@@ -20,13 +20,17 @@ export function registerSocketHandlers(io) {
           room: payload.room || 'general',
         });
 
+        const userAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(payload.userName || 'default')}`;
+
         const data = {
           id: msg._id.toString(),
           userId: msg.userId?.toString?.() || msg.userId,
           userName: msg.userName || 'Ẩn danh',
+          userAvatar,
           text: msg.text || '',
           room: msg.room || 'general',
           timestamp: msg.createdAt ? new Date(msg.createdAt).toISOString() : new Date().toISOString(),
+          reactions: [],
         };
 
         io.to(msg.room).emit('receive_message', data);
@@ -36,4 +40,5 @@ export function registerSocketHandlers(io) {
     });
   });
 }
+
 
