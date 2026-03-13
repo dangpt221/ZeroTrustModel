@@ -46,11 +46,31 @@ export function registerMessageRoutes(router) {
     }
   });
 
-  // GET all chat rooms (all authenticated users, no role restriction)
+  // GET all chat rooms (filtered by department for managers)
   router.get('/messaging/rooms', requireAuth, async (req, res, next) => {
     try {
       await ensureDefaultRooms();
-      const rooms = await ChatRoom.find({ isDeleted: { $ne: true }, isLocked: { $ne: true } })
+
+      // Get current user to check department
+      const currentUser = req.user;
+      const isAdmin = currentUser.role === 'ADMIN';
+
+      // Build query - managers only see their department's rooms + system rooms
+      let query = { isDeleted: { $ne: true }, isLocked: { $ne: true } };
+
+      if (!isAdmin && currentUser.departmentId) {
+        // Manager/Staff sees system rooms OR rooms in their department
+        query = {
+          isDeleted: { $ne: true },
+          isLocked: { $ne: true },
+          $or: [
+            { isSystemRoom: true },
+            { departmentId: currentUser.departmentId }
+          ]
+        };
+      }
+
+      const rooms = await ChatRoom.find(query)
         .sort({ isSystemRoom: -1, name: 1 })
         .lean();
 
@@ -62,6 +82,7 @@ export function registerMessageRoutes(router) {
           type: 'channel',
           isPinned: r.isSystemRoom || false,
           unread: 0,
+          departmentId: r.departmentId?.toString() || null,
         })),
       });
     } catch (err) {

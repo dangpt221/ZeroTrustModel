@@ -96,9 +96,16 @@ export const Messaging: React.FC = () => {
   }, [activeRoom, joinRoom, setMessages]);
 
   const activeRoomData = rooms.find(r => r.id === activeRoom);
-  const filteredRooms = rooms.filter(r => 
-    r.name.toLowerCase().includes(roomSearch.toLowerCase())
-  );
+  // Filter rooms by department for manager/staff (backend already filters, but add frontend filter as backup)
+  const departmentId = user?.departmentId;
+  const filteredRooms = rooms.filter(r => {
+    const matchesSearch = r.name.toLowerCase().includes(roomSearch.toLowerCase());
+    // Manager/Staff can only see system rooms or rooms in their department
+    if (isManager && departmentId) {
+      return matchesSearch && (r.isPinned || r.departmentId === departmentId);
+    }
+    return matchesSearch;
+  });
 
   // Phòng được ghim
   const pinnedRooms = filteredRooms.filter(r => r.isPinned);

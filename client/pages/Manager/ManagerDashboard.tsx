@@ -6,20 +6,29 @@ import { StaffStatsCard } from '../../components/Manager/StaffStatsCard';
 import { DocumentActivityChart } from '../../components/Manager/DocumentActivityChart';
 import { usersApi, projectsApi } from '../../api';
 import { useAuth } from '../../context/AuthContext';
+import { usePermission } from '../../hooks/usePermission';
 
 export const ManagerDashboard: React.FC = () => {
   const { user } = useAuth();
+  const { isAdmin, isManager } = usePermission();
   const [staff, setStaff] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Manager's department ID
+  const managerDepartmentId = user?.departmentId;
+
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [usersData, projectsData] = await Promise.all([
-          usersApi.getAll(),
-          projectsApi.getAll()
-        ]);
+        let usersData;
+        // Manager gets team members, Admin gets all users
+        if (isAdmin) {
+          usersData = await usersApi.getAll();
+        } else {
+          usersData = await usersApi.getTeamMembers();
+        }
+        const projectsData = await projectsApi.getAll();
         setStaff(usersData || []);
         setProjects(projectsData || []);
       } catch (error) {
@@ -29,11 +38,18 @@ export const ManagerDashboard: React.FC = () => {
       }
     };
     fetchData();
-  }, []);
+  }, [isAdmin, isManager]);
 
-  const departmentStaff = staff.filter(u => u.role !== 'ADMIN');
+  // Filter staff by department for manager
+  const departmentStaff = staff.filter(u => {
+    if (isAdmin) return u.role !== 'ADMIN';
+    if (isManager && managerDepartmentId) {
+      return u.departmentId === managerDepartmentId;
+    }
+    return u.role !== 'ADMIN';
+  });
   const onlineStaff = departmentStaff.filter(u => u.status === 'ACTIVE');
-  const departmentProjects = projects.filter(p => p.department === 'Engineering');
+  const departmentProjects = projects.filter(p => p.departmentId === managerDepartmentId || p.department === user?.department);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">

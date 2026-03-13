@@ -20,7 +20,7 @@ import {
 
 export const StaffManagement: React.FC = () => {
   const { user: currentUser } = useAuth();
-  const { isAdmin } = usePermission();
+  const { isAdmin, isManager } = usePermission();
   const [staff, setStaff] = useState<User[]>([]);
   const [departments, setDepartments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,16 +72,32 @@ export const StaffManagement: React.FC = () => {
     fetchDepartments();
     const interval = setInterval(fetchStaff, 60000); // Refresh online status every 60s
     return () => clearInterval(interval);
-  }, [isAdmin]);
+  }, [isAdmin, isManager]);
 
+  // Manager's department ID (from current user)
+  const managerDepartmentId = currentUser?.departmentId;
+
+  // Filter staff - Manager can ONLY see staff in their department
   const filteredStaff = staff.filter(s => {
     const matchSearch =
       s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       s.email.toLowerCase().includes(searchTerm.toLowerCase());
     const matchRole = filterRole === 'ALL' || s.role === filterRole;
     const matchStatus = filterStatus === 'ALL' || s.status === filterStatus;
-    const matchDept =
-      filterDepartment === 'ALL' || (s.department || '') === filterDepartment;
+
+    // Manager can only see staff in their department (not allow ALL)
+    let matchDept = true;
+    if (isManager) {
+      // Always filter by manager's department
+      matchDept = s.departmentId === managerDepartmentId;
+    } else if (!isAdmin) {
+      // For non-admin/non-manager, apply department filter
+      matchDept = filterDepartment === 'ALL' || s.departmentId === filterDepartment;
+    } else {
+      // Admin can see all
+      matchDept = filterDepartment === 'ALL' || s.departmentId === filterDepartment;
+    }
+
     return matchSearch && matchRole && matchStatus && matchDept;
   });
 
@@ -263,6 +279,7 @@ export const StaffManagement: React.FC = () => {
                 <option value="PENDING">Chờ duyệt</option>
               </select>
             </div>
+            {!isManager && (
             <div>
               <label className="text-xs font-bold text-slate-500 uppercase">Bộ phận</label>
               <select
@@ -278,6 +295,7 @@ export const StaffManagement: React.FC = () => {
                 ))}
               </select>
             </div>
+            )}
           </div>
         </div>
       )}

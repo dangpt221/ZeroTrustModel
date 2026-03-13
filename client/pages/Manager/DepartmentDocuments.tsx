@@ -4,9 +4,13 @@ import { documentsApi, departmentsApi } from '../../api';
 import { Document } from '../../types';
 import { Modal } from '../../components/Admin/Modal';
 import { DocumentContent } from '../../components/Staff/DocumentContent';
+import { useAuth } from '../../context/AuthContext';
+import { usePermission } from '../../hooks/usePermission';
 import { FileText, Search, Upload, Eye } from 'lucide-react';
 
 export const DepartmentDocuments: React.FC = () => {
+  const { user } = useAuth();
+  const { isAdmin, isManager } = usePermission();
   const [docs, setDocs] = useState<Document[]>([]);
   const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,12 +58,20 @@ export const DepartmentDocuments: React.FC = () => {
     fetchDepts();
   }, []);
 
+  // Manager's department ID
+  const managerDepartmentId = user?.departmentId;
+
   const filteredDocs = docs.filter(doc => {
     const name = (doc as any).name || doc.name || (doc as any).title || '';
     const matchesSearch = name.toLowerCase().includes(searchTerm.toLowerCase());
     const sens = doc.sensitivity || (doc as any).sensitivity;
     const matchesFilter = filter === 'ALL' || sens === filter;
-    return matchesSearch && matchesFilter;
+
+    // Manager can only see documents in their department
+    const docDepartmentId = doc.departmentId || (doc as any).departmentId;
+    const matchesDept = isAdmin || !isManager || docDepartmentId === managerDepartmentId;
+
+    return matchesSearch && matchesFilter && matchesDept;
   });
 
   const handleCreateDoc = async () => {

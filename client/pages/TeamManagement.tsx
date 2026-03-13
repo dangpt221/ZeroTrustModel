@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { usePermission } from '../hooks/usePermission';
 import { teamsApi, usersApi } from '../api';
 import {
   Users,
@@ -18,6 +19,7 @@ import { Team, User } from '../types';
 
 export const TeamManagement: React.FC = () => {
   const { user } = useAuth();
+  const { isAdmin, isManager } = usePermission();
   const [teams, setTeams] = useState<Team[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -26,6 +28,9 @@ export const TeamManagement: React.FC = () => {
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [openMenuTeamId, setOpenMenuTeamId] = useState<string | null>(null);
+
+  // Manager's department ID
+  const managerDepartmentId = user?.departmentId;
 
   useEffect(() => {
     fetchTeams();
@@ -41,6 +46,15 @@ export const TeamManagement: React.FC = () => {
     const data = await usersApi.getList();
     setAllUsers(data || []);
   };
+
+  // Filter teams by department for manager
+  const filteredTeams = teams.filter(team => {
+    if (isAdmin) return true;
+    if (isManager && managerDepartmentId) {
+      return team.departmentId === managerDepartmentId;
+    }
+    return true;
+  });
 
   const handleCreateTeam = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,7 +106,7 @@ export const TeamManagement: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {teams.map(team => (
+        {filteredTeams.map(team => (
           <div key={team.id} className="bg-white rounded-[40px] border border-slate-100 shadow-sm hover:shadow-xl transition-all p-8 flex flex-col h-full group relative overflow-visible">
             <div className="flex justify-between items-start mb-6">
               <div className="p-4 bg-blue-50 text-blue-600 rounded-2xl group-hover:bg-blue-600 group-hover:text-white transition-colors">
