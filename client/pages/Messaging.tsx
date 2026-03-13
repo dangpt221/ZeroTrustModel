@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Shield, Lock, Search, Hash, Pin, MoreVertical, Wifi, WifiOff } from 'lucide-react';
+import { Send, Shield, Lock, Search, Hash, Pin, MoreVertical, Wifi, WifiOff, MessageSquare, ChevronRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 import { useChat, ChatMessage, ChatRoom } from '../hooks/useChat';
@@ -21,6 +21,7 @@ export const Messaging: React.FC = () => {
   const { messages, setMessages, activeRoom, joinRoom, sendMessage, isConnected } = useChat();
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
   const [loadingRooms, setLoadingRooms] = useState(true);
+  const [loadingMessages, setLoadingMessages] = useState(false);
   
   const isManager = user?.role === 'MANAGER';
   const isMember = user?.role === 'STAFF';
@@ -74,15 +75,19 @@ export const Messaging: React.FC = () => {
   // Fetch Messages when Active Room changes
   useEffect(() => {
     if (!activeRoom) return;
+    setLoadingMessages(true);
     const fetchMessages = async () => {
       try {
         const res = await fetch(`/api/messages?room=${activeRoom}`, { credentials: 'include' });
         if (res.ok) {
           const data = await res.json();
-          setMessages(data);
+          setMessages(Array.isArray(data) ? data : []);
         }
       } catch (err) {
         console.error('Failed to fetch messages', err);
+        setMessages([]);
+      } finally {
+        setLoadingMessages(false);
       }
     };
     fetchMessages();
@@ -230,8 +235,8 @@ export const Messaging: React.FC = () => {
               })()}
             </div>
             <div>
-              <h3 className="font-semibold text-slate-800 text-sm">{activeRoomData?.name || 'Tin nhắn'}</h3>
-              <p className="text-xs text-slate-500">{activeRoomData?.description}</p>
+              <h3 className="font-semibold text-slate-800 text-sm">{activeRoomData?.name || 'Chọn kênh'}</h3>
+              <p className="text-xs text-slate-500">{activeRoomData?.description || 'Chọn một kênh bên trái để xem hội thoại'}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -246,52 +251,83 @@ export const Messaging: React.FC = () => {
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-3 bg-slate-50/50">
-          {roomMessages.map((msg, idx) => {
-            const isMe = msg.userId === (user?.id || 'user1');
-            const showAvatar = idx === 0 || roomMessages[idx - 1].userId !== msg.userId;
-            
-            return (
-              <div key={msg.id} className={`flex gap-3 ${isMe ? 'flex-row-reverse' : ''}`}>
-                {!isMe && (
-                  <div className="shrink-0">
-                    {showAvatar ? (
-                      <img src={msg.userAvatar} alt={msg.userName} className="w-8 h-8 rounded-lg bg-slate-200" />
-                    ) : (
-                      <div className="w-8" />
-                    )}
-                  </div>
-                )}
-                <div className={`max-w-[70%] space-y-1 ${isMe ? 'items-end' : 'items-start'}`}>
-                  {showAvatar && !isMe && (
-                    <div className="flex items-center gap-2 ml-1">
-                      <p className="text-xs font-semibold text-slate-600">{msg.userName}</p>
-                      <p className="text-[10px] text-slate-400">{formatTime(msg.timestamp)}</p>
+        <div className="flex-1 overflow-y-auto p-5 space-y-3 bg-slate-50/50 flex flex-col">
+          {!activeRoom ? (
+            <div className="flex-1 flex flex-col items-center justify-center text-slate-400 min-h-[200px]">
+              <MessageSquare className="w-14 h-14 mb-4 opacity-40" />
+              <p className="text-sm font-medium text-slate-500">Chọn một kênh để bắt đầu trò chuyện</p>
+              <p className="text-xs mt-1">Nhấn vào kênh bên trái để xem và gửi tin nhắn</p>
+            </div>
+          ) : loadingMessages ? (
+            <div className="flex-1 flex flex-col items-center justify-center min-h-[200px]">
+              <div className="flex flex-col gap-3 w-full max-w-sm">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-slate-200 animate-pulse shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-3 w-24 bg-slate-200 rounded animate-pulse" />
+                      <div className="h-10 bg-slate-100 rounded-2xl animate-pulse" />
                     </div>
-                  )}
-                  <div
-                    className={`px-4 py-2.5 rounded-2xl text-sm ${
-                      isMe 
-                        ? `${themeBg} text-white rounded-br-sm` 
-                        : 'bg-white text-slate-700 rounded-bl-sm shadow-sm border border-slate-100'
-                    }`}
-                  >
-                    {msg.text}
                   </div>
-                  {msg.reactions && msg.reactions.length > 0 && (
-                    <div className={`flex gap-1 ${isMe ? 'justify-end' : 'justify-start'} ml-1`}>
-                      {msg.reactions.map((reaction, i) => (
-                        <span key={i} className="px-1.5 py-0.5 bg-slate-100 rounded-full text-xs">
-                          {reaction.emoji}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                ))}
               </div>
-            );
-          })}
-          <div ref={scrollRef} />
+            </div>
+          ) : roomMessages.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center text-slate-400 min-h-[200px]">
+              <MessageSquare className="w-14 h-14 mb-4 opacity-40" />
+              <p className="text-sm font-medium text-slate-500">Chưa có tin nhắn nào</p>
+              <p className="text-xs mt-1">Hãy gửi tin nhắn đầu tiên trong kênh này</p>
+              <ChevronRight className="w-5 h-5 mt-3 text-slate-300" />
+            </div>
+          ) : (
+            <>
+              {roomMessages.map((msg, idx) => {
+                const isMe = msg.userId === (user?.id || 'user1');
+                const showAvatar = idx === 0 || roomMessages[idx - 1].userId !== msg.userId;
+                const avatarUrl = msg.userAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(msg.userName || msg.userId)}`;
+                return (
+                  <div key={msg.id} className={`flex gap-3 ${isMe ? 'flex-row-reverse' : ''}`}>
+                    {!isMe && (
+                      <div className="shrink-0">
+                        {showAvatar ? (
+                          <img src={avatarUrl} alt={msg.userName} className="w-8 h-8 rounded-lg bg-slate-200 object-cover" />
+                        ) : (
+                          <div className="w-8" />
+                        )}
+                      </div>
+                    )}
+                    <div className={`max-w-[70%] space-y-1 ${isMe ? 'items-end' : 'items-start'}`}>
+                      {showAvatar && !isMe && (
+                        <div className="flex items-center gap-2 ml-1">
+                          <p className="text-xs font-semibold text-slate-600">{msg.userName}</p>
+                          <p className="text-[10px] text-slate-400">{formatTime(msg.timestamp)}</p>
+                        </div>
+                      )}
+                      <div
+                        className={`px-4 py-2.5 rounded-2xl text-sm ${
+                          isMe 
+                            ? `${themeBg} text-white rounded-br-sm` 
+                            : 'bg-white text-slate-700 rounded-bl-sm shadow-sm border border-slate-100'
+                        }`}
+                      >
+                        {msg.text}
+                      </div>
+                      {msg.reactions && msg.reactions.length > 0 && (
+                        <div className={`flex gap-1 ${isMe ? 'justify-end' : 'justify-start'} ml-1`}>
+                          {msg.reactions.map((reaction, i) => (
+                            <span key={i} className="px-1.5 py-0.5 bg-slate-100 rounded-full text-xs">
+                              {reaction.emoji}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+              <div ref={scrollRef} />
+            </>
+          )}
         </div>
 
         {/* Input */}
@@ -301,12 +337,13 @@ export const Messaging: React.FC = () => {
               type="text"
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
-              placeholder="Nhập tin nhắn..."
-              className={`flex-1 bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 text-sm text-slate-700 placeholder-slate-400 outline-none focus:ring-2 ${themeRing} transition-all`}
+              placeholder={activeRoom ? 'Nhập tin nhắn...' : 'Chọn một kênh để nhắn tin'}
+              disabled={!activeRoom}
+              className={`flex-1 bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 text-sm text-slate-700 placeholder-slate-400 outline-none focus:ring-2 ${themeRing} transition-all disabled:opacity-60 disabled:cursor-not-allowed`}
             />
             <button
               type="submit"
-              disabled={!inputText.trim()}
+              disabled={!activeRoom || !inputText.trim()}
               className={`${themeBg} text-white p-2.5 rounded-xl ${themeHover} disabled:opacity-50 disabled:cursor-not-allowed transition-all`}
             >
               <Send size={18} />

@@ -71,6 +71,7 @@ export const ManagerDashboard: React.FC = () => {
           title="Dự án đang triển khai"
           value={loading ? '...' : departmentProjects.length.toString()}
           trend="+2"
+          subtitle="dự án mới"
           isPositive={true}
           icon={<LayoutGrid size={24} />}
           color="bg-violet-500"
@@ -94,25 +95,33 @@ export const ManagerDashboard: React.FC = () => {
               Xem tất cả <ArrowRight size={16} />
             </Link>
           </div>
-          <div className="space-y-4">
-            {departmentProjects.slice(0, 5).map(project => (
-              <div key={project.id} className="p-4 bg-slate-50 rounded-xl">
-                <div className="flex justify-between items-start mb-2">
-                  <h4 className="font-bold text-slate-700">{project.title}</h4>
-                  <span className={`text-[10px] font-bold px-2 py-1 rounded ${
-                    project.status === 'IN_PROGRESS' ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-600'
-                  }`}>
-                    {project.status}
-                  </span>
-                </div>
-                <div className="flex items-center gap-4 text-xs text-slate-500">
-                  <span>{project.progress}% complete</span>
-                  <div className="flex-1 h-1 bg-slate-200 rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-500" style={{ width: `${project.progress}%` }}></div>
+          <div className="space-y-4 min-h-[120px]">
+            {departmentProjects.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-10 text-slate-400">
+                <LayoutGrid className="w-12 h-12 mb-3 opacity-50" />
+                <p className="text-sm font-medium">Chưa có dự án nào</p>
+                <p className="text-xs mt-1">Dự án của bộ phận sẽ hiển thị tại đây</p>
+              </div>
+            ) : (
+              departmentProjects.slice(0, 5).map(project => (
+                <div key={project.id} className="p-4 bg-slate-50 rounded-xl">
+                  <div className="flex justify-between items-start mb-2">
+                    <h4 className="font-bold text-slate-700">{project.title}</h4>
+                    <span className={`text-[10px] font-bold px-2 py-1 rounded ${
+                      project.status === 'IN_PROGRESS' ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      {project.status}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-4 text-xs text-slate-500">
+                    <span>{project.progress}% complete</span>
+                    <div className="flex-1 h-1 bg-slate-200 rounded-full overflow-hidden">
+                      <div className="h-full bg-blue-500" style={{ width: `${project.progress}%` }}></div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
@@ -128,7 +137,11 @@ export const ManagerDashboard: React.FC = () => {
             {departmentStaff.slice(0, 6).map(member => (
               <div key={member.id} className="flex items-center justify-between p-3 hover:bg-slate-50 rounded-xl transition-colors">
                 <div className="flex items-center gap-3">
-                  <img src={member.avatar} className="w-10 h-10 rounded-full object-cover" />
+                  <img
+                    src={member.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${member.id}`}
+                    alt=""
+                    className="w-10 h-10 rounded-full object-cover bg-slate-200"
+                  />
                   <div>
                     <p className="text-sm font-bold text-slate-700">{member.name}</p>
                     <p className="text-xs text-slate-400">{member.role}</p>
