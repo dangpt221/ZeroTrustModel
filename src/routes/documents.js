@@ -109,4 +109,11 @@ router.get("/documents/:id/download", requireAuth, documentController.downloadDo
 // Statistics - ADMIN/MANAGER
 router.get("/documents-stats/stats", requireAuth, requireRole(["ADMIN", "MANAGER"]), documentController.getDocumentStats);
 
+// Password protection - ADMIN only
+router.post("/documents/:id/password", requireAuth, requireRole(["ADMIN"]), documentController.setDocumentPassword);
+router.post("/documents/:id/lock", requireAuth, requireRole(["ADMIN"]), documentController.toggleDocumentLock);
+
+// Verify password for document access
+router.post("/documents/:id/verify", requireAuth, documentController.verifyDocumentPassword);
+
 export default router;

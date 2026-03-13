@@ -4,8 +4,9 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { projectsApi, documentsApi } from '../../api';
 import { Document } from '../../types';
-import { ShieldCheck, FileText, Zap, Clock, CheckCircle2, LayoutGrid, ArrowRight } from 'lucide-react';
+import { ShieldCheck, FileText, Zap, Clock, CheckCircle2, LayoutGrid, ArrowRight, Lock, Key } from 'lucide-react';
 import { DocumentContent } from '../../components/Staff/DocumentContent';
+import { Modal } from '../../components/Admin/Modal';
 
 export const StaffDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -13,6 +14,10 @@ export const StaffDashboard: React.FC = () => {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewingDoc, setViewingDoc] = useState<Document | null>(null);
+  const [passwordModalDoc, setPasswordModalDoc] = useState<Document | null>(null);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [verifyingPassword, setVerifyingPassword] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -42,6 +47,38 @@ export const StaffDashboard: React.FC = () => {
   const myProjects = useMemo(() => {
     return projects.filter(p => (p.members || []).includes(user?.id || ''));
   }, [projects, user]);
+
+  const handleViewDoc = async (doc: Document) => {
+    // Check if document requires password or is locked
+    if ((doc as any).isPasswordProtected || (doc as any).isLocked) {
+      if ((doc as any).isLocked) {
+        alert('Tài liệu này đã bị khóa bởi Admin. Vui lòng liên hệ Admin để được truy cập.');
+        return;
+      }
+      setPasswordModalDoc(doc);
+      setPasswordInput('');
+      setPasswordError('');
+      return;
+    }
+    setViewingDoc(doc);
+  };
+
+  const handleVerifyPassword = async () => {
+    if (!passwordModalDoc) return;
+    try {
+      setVerifyingPassword(true);
+      setPasswordError('');
+      const result = await documentsApi.verifyPassword(passwordModalDoc.id, passwordInput);
+      if (result.verified) {
+        setPasswordModalDoc(null);
+        setViewingDoc(passwordModalDoc);
+      }
+    } catch (err: any) {
+      setPasswordError(err.message || 'Mật khẩu không đúng');
+    } finally {
+      setVerifyingPassword(false);
+    }
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -158,7 +195,7 @@ export const StaffDashboard: React.FC = () => {
               {documents.slice(0, 5).map(doc => (
                 <div
                   key={doc.id}
-                  onClick={() => setViewingDoc(doc)}
+                  onClick={() => handleViewDoc(doc)}
                   className="flex items-center justify-between p-4 bg-slate-50 rounded-xl hover:bg-slate-100 cursor-pointer transition-colors"
                 >
                   <div className="flex items-center gap-3">
@@ -213,6 +250,59 @@ export const StaffDashboard: React.FC = () => {
           />
         </div>
       )}
+
+      {/* Password Modal */}
+      <Modal isOpen={!!passwordModalDoc} onClose={() => setPasswordModalDoc(null)} title="Xac thuc mat khau">
+        {passwordModalDoc && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-4 p-4 bg-amber-50 rounded-xl border border-amber-100">
+              <div className="p-3 bg-amber-100 text-amber-600 rounded-xl">
+                <Lock size={24} />
+              </div>
+              <div>
+                <h4 className="font-bold text-slate-800">{passwordModalDoc.title || passwordModalDoc.name}</h4>
+                <p className="text-sm text-amber-600">Tai lieu yeu cau nhap mat khau de xem</p>
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-slate-500 uppercase">Mat khau</label>
+              <input
+                type="password"
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleVerifyPassword()}
+                placeholder="Nhap mat khau..."
+                className="w-full mt-1 px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none"
+                autoFocus
+              />
+              {passwordError && (
+                <p className="text-xs text-rose-500 mt-1">{passwordError}</p>
+              )}
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => setPasswordModalDoc(null)}
+                className="flex-1 py-3 border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-50 transition-all"
+              >
+                Huy
+              </button>
+              <button
+                onClick={handleVerifyPassword}
+                disabled={!passwordInput || verifyingPassword}
+                className="flex-1 py-3 bg-amber-500 text-white rounded-xl font-bold hover:bg-amber-600 disabled:bg-slate-300 transition-all flex items-center justify-center gap-2"
+              >
+                {verifyingPassword ? 'Dang xac thuc...' : (
+                  <>
+                    <Key size={18} /> Xac nhan
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };

@@ -6,7 +6,7 @@ import { Modal } from '../../components/Admin/Modal';
 import { DocumentContent } from '../../components/Staff/DocumentContent';
 import { useAuth } from '../../context/AuthContext';
 import { usePermission } from '../../hooks/usePermission';
-import { FileText, Search, Upload, Eye } from 'lucide-react';
+import { FileText, Search, Upload, Eye, Lock, Key } from 'lucide-react';
 
 export const DepartmentDocuments: React.FC = () => {
   const { user } = useAuth();
@@ -18,6 +18,10 @@ export const DepartmentDocuments: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [viewingDoc, setViewingDoc] = useState<Document | null>(null);
+  const [passwordModalDoc, setPasswordModalDoc] = useState<Document | null>(null);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [verifyingPassword, setVerifyingPassword] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     type: 'PDF',
@@ -27,58 +31,35 @@ export const DepartmentDocuments: React.FC = () => {
     description: '',
   });
 
-  useEffect(() => {
-    const fetchDocs = async () => {
-      try {
-        const data = await documentsApi.getAll();
-        // Handle both array response and { documents: [] } response
-        if (Array.isArray(data)) {
-          setDocs(data);
-        } else if (data?.documents) {
-          setDocs(data.documents);
-        } else {
-          setDocs([]);
-        }
-      } catch (error) {
-        console.error('Error fetching documents:', error);
+  // Load docs on mount
+  React.useEffect(() => {
+    documentsApi.getAll().then(data => {
+      if (data && data.documents) {
+        setDocs(data.documents);
+      } else if (Array.isArray(data)) {
+        setDocs(data);
+      } else {
         setDocs([]);
-      } finally {
-        setLoading(false);
       }
-    };
-    const fetchDepts = async () => {
-      try {
-        const data = await departmentsApi.getAll();
-        setDepartments(Array.isArray(data) ? data : []);
-      } catch {
-        setDepartments([]);
-      }
-    };
-    fetchDocs();
-    fetchDepts();
+      setLoading(false);
+    }).catch(() => {
+      setLoading(false);
+    });
+
+    departmentsApi.getAll().then(data => {
+      setDepartments(Array.isArray(data) ? data : []);
+    }).catch(() => {});
   }, []);
 
-  // Manager's department ID
-  const managerDepartmentId = user?.departmentId;
-
-  const filteredDocs = docs.filter(doc => {
-    const name = (doc as any).name || doc.name || (doc as any).title || '';
-    const matchesSearch = name.toLowerCase().includes(searchTerm.toLowerCase());
-    const sens = doc.sensitivity || (doc as any).sensitivity;
-    const matchesFilter = filter === 'ALL' || sens === filter;
-
-    // Manager can only see documents in their department
-    const docDepartmentId = doc.departmentId || (doc as any).departmentId;
-    const matchesDept = isAdmin || !isManager || docDepartmentId === managerDepartmentId;
-
-    return matchesSearch && matchesFilter && matchesDept;
-  });
+  const displayDocs = docs;
 
   const handleCreateDoc = async () => {
     if (!formData.name.trim()) {
       alert('Vui lòng nhập tên tài liệu.');
       return;
     }
+    // Manager automatically gets their department ID
+    const docDepartmentId = user?.departmentId;
     try {
       await documentsApi.create({
         name: formData.name,
@@ -87,21 +68,52 @@ export const DepartmentDocuments: React.FC = () => {
         fileType: formData.type,
         size: formData.size,
         fileSize: formData.size,
-        department: formData.department,
-        departmentId: formData.department || undefined,
+        departmentId: docDepartmentId,
         sensitivity: formData.sensitivity,
         description: formData.description,
         url: '#',
         uploadedAt: new Date().toISOString(),
       });
       const data = await documentsApi.getAll();
-      setDocs(Array.isArray(data) ? data : []);
+      setDocs(Array.isArray(data) ? data : (data?.documents || []));
       setIsUploadOpen(false);
       setFormData({ name: '', type: 'PDF', size: '1MB', department: '', sensitivity: 'LOW', description: '' });
       alert('Tải lên tài liệu thành công!');
     } catch (err) {
       console.error('Create document error:', err);
       alert('Tải lên thất bại. Vui lòng thử lại.');
+    }
+  };
+
+  const handleViewDoc = async (doc: Document) => {
+    // Check if document requires password or is locked
+    if ((doc as any).isPasswordProtected || (doc as any).isLocked) {
+      if ((doc as any).isLocked) {
+        alert('Tài liệu này đã bị khóa bởi Admin. Vui lòng liên hệ Admin để được truy cập.');
+        return;
+      }
+      setPasswordModalDoc(doc);
+      setPasswordInput('');
+      setPasswordError('');
+      return;
+    }
+    setViewingDoc(doc);
+  };
+
+  const handleVerifyPassword = async () => {
+    if (!passwordModalDoc) return;
+    try {
+      setVerifyingPassword(true);
+      setPasswordError('');
+      const result = await documentsApi.verifyPassword(passwordModalDoc.id, passwordInput);
+      if (result.verified) {
+        setPasswordModalDoc(null);
+        setViewingDoc(passwordModalDoc);
+      }
+    } catch (err: any) {
+      setPasswordError(err.message || 'Mật khẩu không đúng');
+    } finally {
+      setVerifyingPassword(false);
     }
   };
 
@@ -170,12 +182,12 @@ export const DepartmentDocuments: React.FC = () => {
                 <tr>
                   <td colSpan={5} className="px-6 py-12 text-center text-slate-400">Đang tải...</td>
                 </tr>
-              ) : filteredDocs.length === 0 ? (
+              ) : displayDocs.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-12 text-center text-slate-400">Không tìm thấy tài liệu</td>
                 </tr>
               ) : (
-                filteredDocs.map(doc => {
+                displayDocs.map(doc => {
                   const d = getDocDisplay(doc);
                   return (
                     <tr key={doc.id} className="hover:bg-slate-50/50 transition-colors group">
@@ -204,7 +216,7 @@ export const DepartmentDocuments: React.FC = () => {
                       <td className="px-6 py-4 text-sm text-slate-500">{d.uploadedAt}</td>
                       <td className="px-6 py-4">
                         <button
-                          onClick={() => setViewingDoc(doc)}
+                          onClick={() => handleViewDoc(doc)}
                           className="p-2 text-sky-600 hover:bg-sky-50 rounded-lg"
                           title="Xem chi tiết"
                         >
@@ -314,6 +326,59 @@ export const DepartmentDocuments: React.FC = () => {
           />
         </div>
       )}
+
+      {/* Password Modal */}
+      <Modal isOpen={!!passwordModalDoc} onClose={() => setPasswordModalDoc(null)} title="Xac thuc mat khau">
+        {passwordModalDoc && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-4 p-4 bg-amber-50 rounded-xl border border-amber-100">
+              <div className="p-3 bg-amber-100 text-amber-600 rounded-xl">
+                <Lock size={24} />
+              </div>
+              <div>
+                <h4 className="font-bold text-slate-800">{passwordModalDoc.title || passwordModalDoc.name}</h4>
+                <p className="text-sm text-amber-600">Tai lieu yeu cau nhap mat khau de xem</p>
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-slate-500 uppercase">Mat khau</label>
+              <input
+                type="password"
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleVerifyPassword()}
+                placeholder="Nhap mat khau..."
+                className="w-full mt-1 px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none"
+                autoFocus
+              />
+              {passwordError && (
+                <p className="text-xs text-rose-500 mt-1">{passwordError}</p>
+              )}
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => setPasswordModalDoc(null)}
+                className="flex-1 py-3 border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-50 transition-all"
+              >
+                Huy
+              </button>
+              <button
+                onClick={handleVerifyPassword}
+                disabled={!passwordInput || verifyingPassword}
+                className="flex-1 py-3 bg-amber-500 text-white rounded-xl font-bold hover:bg-amber-600 disabled:bg-slate-300 transition-all flex items-center justify-center gap-2"
+              >
+                {verifyingPassword ? 'Dang xac thuc...' : (
+                  <>
+                    <Key size={18} /> Xac nhan
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };

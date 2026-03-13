@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { documentsApi, departmentsApi } from '../../api';
 import { Document } from '../../types';
-import { Search, Filter, ShieldAlert, Eye, MoreVertical, FileText, Plus, Download, Upload, X, File } from 'lucide-react';
+import { Search, Filter, ShieldAlert, Eye, MoreVertical, FileText, Plus, Download, Upload, X, File, Lock, Unlock, Key, Shield } from 'lucide-react';
 import { Modal } from '../../components/Admin/Modal';
 
 export const DocumentManagement: React.FC = () => {
@@ -14,6 +14,9 @@ export const DocumentManagement: React.FC = () => {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filterSensitivity, setFilterSensitivity] = useState<string>('ALL');
   const [viewingDoc, setViewingDoc] = useState<Document | null>(null);
+  const [securityModalDoc, setSecurityModalDoc] = useState<Document | null>(null);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [savingSecurity, setSavingSecurity] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -65,6 +68,43 @@ export const DocumentManagement: React.FC = () => {
         console.error('Delete document error:', err);
         alert('Xóa tài liệu thất bại!');
       }
+    }
+  };
+
+  const handleSetPassword = async () => {
+    if (!securityModalDoc) return;
+    if (securityModalDoc.securityLevel < 2 && passwordInput === '') {
+      alert('Mật khẩu chỉ dành cho tài liệu mức bảo mật Medium (2) hoặc High (3)');
+      return;
+    }
+
+    try {
+      setSavingSecurity(true);
+      await documentsApi.setPassword(securityModalDoc.id, passwordInput);
+      alert('Đặt mật khẩu thành công!');
+      setSecurityModalDoc(null);
+      setPasswordInput('');
+      // Refresh documents
+      const docsResponse = await documentsApi.getAll();
+      setDocs(docsResponse?.documents || []);
+    } catch (err) {
+      console.error('Set password error:', err);
+      alert('Đặt mật khẩu thất bại!');
+    } finally {
+      setSavingSecurity(false);
+    }
+  };
+
+  const handleToggleLock = async (doc: Document, isLocked: boolean) => {
+    try {
+      await documentsApi.toggleLock(doc.id, isLocked);
+      alert(isLocked ? 'Khóa tài liệu thành công!' : 'Mở khóa tài liệu thành công!');
+      // Refresh documents
+      const docsResponse = await documentsApi.getAll();
+      setDocs(docsResponse?.documents || []);
+    } catch (err) {
+      console.error('Toggle lock error:', err);
+      alert('Thao tác thất bại!');
     }
   };
 
@@ -201,6 +241,7 @@ export const DocumentManagement: React.FC = () => {
               <th className="px-8 py-6">Tài liệu / Định dạng</th>
               <th className="px-8 py-6">Bộ phận</th>
               <th className="px-8 py-6">Phân loại bảo mật</th>
+              <th className="px-8 py-6">Bảo mật</th>
               <th className="px-8 py-6">Người sở hữu</th>
               <th className="px-8 py-6 text-right">Quyền hạn</th>
             </tr>
@@ -236,6 +277,34 @@ export const DocumentManagement: React.FC = () => {
                     }`}>
                       {doc.sensitivity}
                     </span>
+                  </div>
+                </td>
+                <td className="px-8 py-5">
+                  <div className="flex items-center gap-1">
+                    {/* Security Level Badge */}
+                    <span className={`text-[10px] font-black px-2 py-1 rounded uppercase ${
+                      doc.securityLevel === 3 ? 'bg-rose-100 text-rose-600' :
+                      doc.securityLevel === 2 ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      L{doc.securityLevel}
+                    </span>
+                    {/* Password & Lock Status */}
+                    <div className="flex gap-1 ml-1">
+                      {(doc as any).isPasswordProtected && (
+                        <Key size={14} className="text-amber-500" title="Có mật khẩu bảo vệ" />
+                      )}
+                      {(doc as any).isLocked && (
+                        <Lock size={14} className="text-rose-500" title="Bị khóa" />
+                      )}
+                    </div>
+                    {/* Settings Button */}
+                    <button
+                      onClick={() => setSecurityModalDoc(doc)}
+                      className="ml-1 p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                      title="Cài đặt bảo mật"
+                    >
+                      <Shield size={14} />
+                    </button>
                   </div>
                 </td>
                 <td className="px-8 py-5 text-xs font-bold text-slate-600">
@@ -465,6 +534,107 @@ export const DocumentManagement: React.FC = () => {
                 <MoreVertical size={18} />
               </button>
             </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Security Settings Modal */}
+      <Modal isOpen={!!securityModalDoc} onClose={() => { setSecurityModalDoc(null); setPasswordInput(''); }} title="Cai dat bao mat tai lieu">
+        {securityModalDoc && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl">
+              <div className="p-4 bg-blue-100 text-blue-600 rounded-xl">
+                <Shield size={32} />
+              </div>
+              <div>
+                <h4 className="font-bold text-slate-800">{securityModalDoc.title}</h4>
+                <p className="text-sm text-slate-500">
+                  Muc do bao mat: Level {securityModalDoc.securityLevel}
+                  {securityModalDoc.securityLevel >= 2 && ' (Co the dat mat khau)'}
+                </p>
+              </div>
+            </div>
+
+            {/* Current Status */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-3 bg-slate-50 rounded-xl">
+                <p className="text-xs font-bold text-slate-400 uppercase">Trang thai mat khau</p>
+                <p className="font-bold text-slate-700 flex items-center gap-2">
+                  {(securityModalDoc as any).isPasswordProtected ? (
+                    <>
+                      <Key size={16} className="text-amber-500" /> Da dat mat khau
+                    </>
+                  ) : (
+                    <>
+                      <X size={16} className="text-slate-400" /> Chua dat
+                    </>
+                  )}
+                </p>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-xl">
+                <p className="text-xs font-bold text-slate-400 uppercase">Trang thai khoa</p>
+                <p className="font-bold text-slate-700 flex items-center gap-2">
+                  {(securityModalDoc as any).isLocked ? (
+                    <>
+                      <Lock size={16} className="text-rose-500" /> Bi khoa
+                    </>
+                  ) : (
+                    <>
+                      <Unlock size={16} className="text-emerald-500" /> Mo khoa
+                    </>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            {/* Password Input */}
+            {securityModalDoc.securityLevel >= 2 && (
+              <div>
+                <label className="text-xs font-bold text-slate-500 uppercase">Mat khau bao mat</label>
+                <div className="flex gap-2 mt-1">
+                  <input
+                    type="password"
+                    value={passwordInput}
+                    onChange={(e) => setPasswordInput(e.target.value)}
+                    placeholder="Nhap mat khau (de trong de xoa mat khau)"
+                    className="flex-1 px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                  <button
+                    onClick={handleSetPassword}
+                    disabled={savingSecurity}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 disabled:bg-slate-300 transition-all"
+                  >
+                    {savingSecurity ? '...' : 'Luu'}
+                  </button>
+                </div>
+                <p className="text-xs text-slate-400 mt-1">
+                  Chi ap dung cho tai lieu muc do bao mat Medium (2) hoac High (3)
+                </p>
+              </div>
+            )}
+
+            {/* Lock/Unlock Buttons */}
+            <div className="flex gap-2 pt-2">
+              {(securityModalDoc as any).isLocked ? (
+                <button
+                  onClick={() => { handleToggleLock(securityModalDoc, false); setSecurityModalDoc(null); }}
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2"
+                >
+                  <Unlock size={18} /> Mo khoa tai lieu
+                </button>
+              ) : (
+                <button
+                  onClick={() => { handleToggleLock(securityModalDoc, true); setSecurityModalDoc(null); }}
+                  className="flex-1 bg-rose-600 hover:bg-rose-700 text-white py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2"
+                >
+                  <Lock size={18} /> Khoa tai lieu
+                </button>
+              )}
+            </div>
+
+            <p className="text-xs text-slate-400 text-center">
+              Tai lieu bi khoa se khong the xem hoac tai xuong duoc cho den khi duoc mo khoa
+            </p>
           </div>
         )}
       </Modal>

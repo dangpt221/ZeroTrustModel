@@ -35,6 +35,13 @@ const DocumentSchema = new mongoose.Schema(
       default: 'LOW',
     },
 
+    // Password protection for sensitive documents
+    password: { type: String, default: null },
+    isPasswordProtected: { type: Boolean, default: false },
+    isLocked: { type: Boolean, default: false }, // Admin can lock document
+    lockedAt: { type: Date },
+    lockedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+
     // File info
     currentVersion: { type: Number, default: 1 },
     versions: [DocumentVersionSchema],

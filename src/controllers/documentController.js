@@ -3,6 +3,7 @@ import { User } from "../models/User.js";
 import { Department } from "../models/Department.js";
 import { AuditLog } from "../models/AuditLog.js";
 import { DocumentRequest } from "../models/DocumentRequest.js";
+import bcrypt from "bcryptjs";
 
 // Helper: Transform document to client format
 function toClientDoc(doc, includeAudit = false) {
@@ -26,6 +27,9 @@ function toClientDoc(doc, includeAudit = false) {
     rejectionReason: doc.rejectionReason || '',
     tags: doc.tags || [],
     isDeleted: doc.isDeleted || false,
+    isPasswordProtected: doc.isPasswordProtected || false,
+    isLocked: doc.isLocked || false,
+    lockedAt: doc.lockedAt,
     viewedBy: doc.viewedBy?.map(id => id.toString()) || [],
     downloadedBy: doc.downloadedBy?.map(id => id.toString()) || [],
     lastViewedAt: doc.lastViewedAt,
@@ -52,6 +56,8 @@ function toClientDoc(doc, includeAudit = false) {
 // Get all documents with filters
 export const getAllDocuments = async (req, res, next) => {
   try {
+    console.log('[getAllDocuments] Called - User:', req.user?.email, 'Role:', req.user?.role);
+
     const {
       search,
       department,
@@ -65,10 +71,10 @@ export const getAllDocuments = async (req, res, next) => {
 
     const query = { isDeleted: { $ne: true } };
 
-    // Search
-    if (search) {
-      query.$text = { $search: search };
-    }
+    // Search - remove text search if no index
+    // if (search) {
+    //   query.$text = { $search: search };
+    // }
 
     // Filters
     if (department) query.departmentId = department;
@@ -77,26 +83,33 @@ export const getAllDocuments = async (req, res, next) => {
     if (classification) query.classification = classification;
     if (sensitivity) query.sensitivity = sensitivity;
 
-    // Role-based filtering - Manager sees all documents (like Admin)
+    // Role-based filtering
+    // ADMIN: sees all documents
+    // MANAGER: sees only their department's documents
+    // STAFF: sees own documents + department documents + project documents
     const userRole = req.user.role;
     const userId = req.user.id;
     const userDeptId = req.user.departmentId;
 
-    console.log('[getAllDocuments] User:', req.user.email, 'Role:', userRole, 'DeptId:', userDeptId);
-
-    // ADMIN and MANAGER see all documents
-    // STAFF see their own documents and department documents
-    if (userRole === 'STAFF') {
-      // Staff can see: own documents, department documents, or project docs
+    if (userRole === 'MANAGER' && userDeptId) {
+      // Manager sees only documents from their department
+      const mongoose = await import('mongoose');
+      query.departmentId = new mongoose.Types.ObjectId(userDeptId);
+      console.log('[getAllDocuments] Manager filtering by department:', userDeptId);
+    } else if (userRole === 'STAFF' && userDeptId) {
+      // Staff sees: own docs + department docs + project docs
+      delete query.departmentId;
       query.$or = [
         { ownerId: userId },
         { departmentId: userDeptId },
         { projectId: { $exists: true } }
       ];
     }
-    // ADMIN and MANAGER see all - no additional filtering needed
+    // ADMIN sees all documents - no additional filtering
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    console.log('[getAllDocuments] Query:', JSON.stringify(query));
 
     const [documents, total] = await Promise.all([
       Document.find(query)
@@ -109,6 +122,8 @@ export const getAllDocuments = async (req, res, next) => {
         .lean(),
       Document.countDocuments(query)
     ]);
+
+    console.log('[getAllDocuments] Found:', documents.length, 'Total:', total);
 
     res.json({
       documents: documents.map(d => ({
@@ -152,6 +167,39 @@ export const getDocumentById = async (req, res, next) => {
 
     if (doc.securityLevel > userClearance) {
       return res.status(403).json({ message: "Insufficient clearance level" });
+    }
+
+    // Check if document is locked by admin (non-admin users can't access)
+    if (doc.isLocked && userRole !== 'ADMIN') {
+      return res.status(403).json({
+        message: "Document is locked by admin",
+        isLocked: true,
+        lockedAt: doc.lockedAt,
+        lockedBy: doc.lockedBy
+      });
+    }
+
+    // Check if password protected and user is not admin
+    if (doc.isPasswordProtected && userRole !== 'ADMIN') {
+      // Return limited info without the actual document content
+      return res.json({
+        id: doc._id.toString(),
+        title: doc.title,
+        description: doc.description,
+        departmentId: doc.departmentId?.toString(),
+        projectId: doc.projectId?.toString(),
+        ownerId: doc.ownerId?.toString(),
+        classification: doc.classification,
+        securityLevel: doc.securityLevel,
+        sensitivity: doc.sensitivity,
+        status: doc.status,
+        tags: doc.tags,
+        createdAt: doc.createdAt,
+        updatedAt: doc.updatedAt,
+        isPasswordProtected: true,
+        requiresPassword: true,
+        isLocked: false
+      });
     }
 
     // Track view
@@ -464,10 +512,21 @@ export const downloadDocument = async (req, res, next) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;
+    const userRole = req.user.role;
 
     const doc = await Document.findById(id);
     if (!doc || doc.isDeleted) {
       return res.status(404).json({ message: "Document not found" });
+    }
+
+    // Check if document is locked by admin
+    if (doc.isLocked && userRole !== 'ADMIN') {
+      return res.status(403).json({ message: "Document is locked by admin" });
+    }
+
+    // Check if password protected and user is not admin
+    if (doc.isPasswordProtected && userRole !== 'ADMIN') {
+      return res.status(403).json({ message: "Document requires password", requiresPassword: true });
     }
 
     // Track download
@@ -575,6 +634,106 @@ export const updateDocumentRequest = async (req, res, next) => {
     }
 
     res.json(request);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Admin: Set password for document (for MEDIUM/HIGH security)
+export const setDocumentPassword = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { password } = req.body;
+
+    const document = await Document.findById(id);
+    if (!document) {
+      return res.status(404).json({ message: "Document not found" });
+    }
+
+    // Only admin can set password
+    if (req.user.role !== 'ADMIN') {
+      return res.status(403).json({ message: "Only admin can set document password" });
+    }
+
+    // Security level must be 2 or 3 to require password
+    if (document.securityLevel < 2) {
+      return res.status(400).json({ message: "Password protection only for MEDIUM (2) or HIGH (3) security level" });
+    }
+
+    if (password) {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      document.password = hashedPassword;
+      document.isPasswordProtected = true;
+    } else {
+      // Remove password protection
+      document.password = null;
+      document.isPasswordProtected = false;
+    }
+
+    await document.save();
+
+    res.json({ message: "Password updated successfully", isPasswordProtected: document.isPasswordProtected });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Admin: Lock/unlock document (completely block access)
+export const toggleDocumentLock = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { isLocked } = req.body;
+
+    const document = await Document.findById(id);
+    if (!document) {
+      return res.status(404).json({ message: "Document not found" });
+    }
+
+    // Only admin can lock/unlock
+    if (req.user.role !== 'ADMIN') {
+      return res.status(403).json({ message: "Only admin can lock/unlock document" });
+    }
+
+    document.isLocked = isLocked;
+    document.lockedAt = isLocked ? new Date() : null;
+    document.lockedBy = isLocked ? req.user.id : null;
+
+    await document.save();
+
+    res.json({ message: isLocked ? "Document locked successfully" : "Document unlocked successfully", isLocked: document.isLocked });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Verify document password (for MEDIUM/HIGH security documents)
+export const verifyDocumentPassword = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { password } = req.body;
+
+    const document = await Document.findById(id);
+    if (!document) {
+      return res.status(404).json({ message: "Document not found" });
+    }
+
+    // Check if document is locked by admin
+    if (document.isLocked && req.user.role !== 'ADMIN') {
+      return res.status(403).json({ message: "Document is locked by admin. Contact admin for access." });
+    }
+
+    // If not password protected, allow access
+    if (!document.isPasswordProtected) {
+      return res.json({ verified: true });
+    }
+
+    // Verify password
+    const isValid = await bcrypt.compare(password, document.password);
+    if (!isValid) {
+      return res.status(401).json({ verified: false, message: "Incorrect password" });
+    }
+
+    res.json({ verified: true });
   } catch (err) {
     next(err);
   }

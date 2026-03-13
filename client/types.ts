@@ -155,6 +155,12 @@ export interface Document {
   approvedAt?: string;
   rejectionReason?: string;
   tags?: string[];
+  // Security fields
+  isPasswordProtected?: boolean;
+  isLocked?: boolean;
+  lockedAt?: string;
+  lockedBy?: string;
+  requiresPassword?: boolean;
   viewedBy?: string[];
   downloadedBy?: string[];
   lastViewedAt?: string;

@@ -303,6 +303,27 @@ export const documentsApi = {
   // Statistics
   getStats: () =>
     apiRequest<{ total: number; byStatus: Record<string, number>; byClassification: Record<string, number> }>('/documents-stats/stats'),
+
+  // Password protection (Admin only)
+  setPassword: (id: string, password: string) =>
+    apiRequest<{ message: string; isPasswordProtected: boolean }>(`/documents/${id}/password`, {
+      method: 'POST',
+      body: JSON.stringify({ password }),
+    }),
+
+  // Lock/Unlock document (Admin only)
+  toggleLock: (id: string, isLocked: boolean) =>
+    apiRequest<{ message: string; isLocked: boolean }>(`/documents/${id}/lock`, {
+      method: 'POST',
+      body: JSON.stringify({ isLocked }),
+    }),
+
+  // Verify document password
+  verifyPassword: (id: string, password: string) =>
+    apiRequest<{ verified: boolean; message?: string }>(`/documents/${id}/verify`, {
+      method: 'POST',
+      body: JSON.stringify({ password }),
+    }),
 };
 
 // ==================== Attendance API ====================
