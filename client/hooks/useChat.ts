@@ -22,7 +22,7 @@ export interface ChatRoom {
   unread: number;
 }
 
-const SOCKET_URL = 'http://localhost:5000';
+const SOCKET_URL = ''; // Use relative URL to allow Vite proxy or same-host connection
 
 export function useChat() {
   const { user } = useAuth();

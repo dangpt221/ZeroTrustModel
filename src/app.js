@@ -49,6 +49,18 @@ export async function createApp() {
   // 6. WebSocket handlers
   registerSocketHandlers(io);
 
+  // Serve Production Frontend
+  const clientDistPath = path.join(__dirname, '../client/dist');
+  app.use(express.static(clientDistPath));
+
+  app.use((req, res, next) => {
+    if (req.method !== 'GET') return next();
+    if (req.originalUrl.startsWith('/api') || req.originalUrl.startsWith('/socket.io')) {
+      return next(); // Let API and Socket 404 handlers take over
+    }
+    res.sendFile(path.join(clientDistPath, 'index.html'));
+  });
+
   // 7. 404 + Error handlers (sau routes)
   app.use(notFound);
   app.use(errorHandler);

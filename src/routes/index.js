@@ -31,17 +31,17 @@ export function registerRoutes(app, io) {
         const { signUserToken, setAuthCookie } = await import('../middleware/auth.js');
 
         if (!user || user.isLocked) {
-          return res.redirect(`${process.env.FRONTEND_URL || "http://localhost:5173"}/#/login?error=AccountLocked`);
+          return res.redirect("/#/login?error=AccountLocked");
         }
 
         // Generate JWT token
         const token = signUserToken(user);
         setAuthCookie(res, token);
 
-        res.redirect(`${process.env.FRONTEND_URL || "http://localhost:5173"}/#/`);
+        res.redirect("/#/");
       } catch (err) {
         console.error('OAuth callback error:', err);
-        res.redirect(`${process.env.FRONTEND_URL || "http://localhost:5173"}/#/login?error=InternalError`);
+        res.redirect("/#/login?error=InternalError");
       }
     }
   );

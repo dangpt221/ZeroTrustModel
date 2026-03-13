@@ -16,6 +16,7 @@ import {
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
+import { motion } from 'framer-motion';
 import { AdminStatsCard } from '../components/Admin/AdminStatsCard';
 import { AdminAlertCard } from '../components/Admin/AdminAlertCard';
 import { auditLogsApi, usersApi } from '../api';
@@ -122,8 +123,33 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+        delayChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.5 }
+    }
+  };
+
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700">
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="space-y-8"
+    >
       {/* Header Info */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -143,43 +169,51 @@ export const AdminDashboard: React.FC = () => {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <AdminStatsCard
-          title="Người dùng trực tuyến"
-          value={loading ? '...' : onlineUsers.toString()}
-          trend="12.5%"
-          isPositive={true}
-          icon={<Users size={24} />}
-          color="bg-blue-600"
-        />
-        <AdminStatsCard
-          title="User mới (24h)"
-          value={loading ? '...' : '48'}
-          trend="5.2%"
-          isPositive={true}
-          icon={<UserPlus size={24} />}
-          color="bg-emerald-500"
-        />
-        <AdminStatsCard
-          title="Cảnh báo bảo mật"
-          value={loading ? '...' : securityAlerts.toString()}
-          trend="2.4%"
-          isPositive={false}
-          icon={<ShieldCheck size={24} />}
-          color="bg-rose-500"
-        />
-        <AdminStatsCard
-          title="Tốc độ phản hồi"
-          value="14ms"
-          trend="8.1%"
-          isPositive={true}
-          icon={<Activity size={24} />}
-          color="bg-violet-500"
-        />
+        <motion.div variants={itemVariants}>
+          <AdminStatsCard
+            title="Người dùng trực tuyến"
+            value={loading ? '...' : onlineUsers.toString()}
+            trend="12.5%"
+            isPositive={true}
+            icon={<Users size={24} />}
+            color="bg-blue-600"
+          />
+        </motion.div>
+        <motion.div variants={itemVariants}>
+          <AdminStatsCard
+            title="User mới (24h)"
+            value={loading ? '...' : '48'}
+            trend="5.2%"
+            isPositive={true}
+            icon={<UserPlus size={24} />}
+            color="bg-emerald-500"
+          />
+        </motion.div>
+        <motion.div variants={itemVariants}>
+          <AdminStatsCard
+            title="Cảnh báo bảo mật"
+            value={loading ? '...' : securityAlerts.toString()}
+            trend="2.4%"
+            isPositive={false}
+            icon={<ShieldCheck size={24} />}
+            color="bg-rose-500"
+          />
+        </motion.div>
+        <motion.div variants={itemVariants}>
+          <AdminStatsCard
+            title="Tốc độ phản hồi"
+            value="14ms"
+            trend="8.1%"
+            isPositive={true}
+            icon={<Activity size={24} />}
+            color="bg-violet-500"
+          />
+        </motion.div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main Chart */}
-        <div className="lg:col-span-2 bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
+        <motion.div variants={itemVariants} className="lg:col-span-2 bg-white p-8 rounded-3xl border border-slate-100 shadow-sm premium-card">
           <div className="flex items-center justify-between mb-8">
             <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
               <TrendingUp size={20} className="text-blue-500" />
@@ -214,10 +248,10 @@ export const AdminDashboard: React.FC = () => {
               </AreaChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </motion.div>
 
         {/* Security Alerts List */}
-        <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm flex flex-col">
+        <motion.div variants={itemVariants} className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm flex flex-col premium-card">
           <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
             <ShieldCheck size={20} className="text-rose-500" />
             Cảnh báo gần đây
@@ -238,7 +272,7 @@ export const AdminDashboard: React.FC = () => {
           <button onClick={() => navigate('/audit-logs')} className="w-full mt-6 py-3 text-blue-600 font-bold text-sm bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors">
             Xem tất cả cảnh báo
           </button>
-        </div>
+        </motion.div>
       </div>
 
       {/* Pending Approvals Section */}
@@ -287,7 +321,7 @@ export const AdminDashboard: React.FC = () => {
       )}
 
       {/* Recent Logs Table */}
-      <div className="bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-slate-800">
+      <motion.div variants={itemVariants} className="bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-slate-800">
         <div className="p-8 border-b border-slate-800 flex items-center justify-between">
           <div>
             <h3 className="text-xl font-bold text-white flex items-center gap-2">
@@ -345,7 +379,7 @@ export const AdminDashboard: React.FC = () => {
             </tbody>
           </table>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };

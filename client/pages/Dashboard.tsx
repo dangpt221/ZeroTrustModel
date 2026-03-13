@@ -12,6 +12,7 @@ import {
   Pie,
   Cell
 } from 'recharts';
+import { motion } from 'framer-motion';
 import { projectsApi } from '../api';
 import { Project, ProjectStatus, TaskStatus } from '../types';
 import { Link } from 'react-router-dom';
@@ -79,12 +80,40 @@ export const Dashboard: React.FC = () => {
     ? projects.filter(p => p.members.includes(user.id))
     : projects;
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.5 }
+    }
+  };
+
   return (
-    <div className="px-10 pb-10 space-y-8 animate-in fade-in duration-500">
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="px-10 pb-10 space-y-8"
+    >
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {projectStats.map((stat) => (
-          <div key={stat.name} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-5">
+          <motion.div
+            key={stat.name}
+            variants={itemVariants}
+            className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-5 premium-card"
+          >
             <div className={`w-12 h-12 ${stat.color} text-white rounded-xl flex items-center justify-center shadow-lg shadow-opacity-20`}>
               {stat.icon}
             </div>
@@ -92,13 +121,13 @@ export const Dashboard: React.FC = () => {
               <p className="text-slate-500 text-sm font-medium">{stat.name}</p>
               <p className="text-2xl font-bold text-slate-800">{loading ? '...' : stat.value}</p>
             </div>
-          </div>
+          </motion.div>
         ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Progress Bar Chart */}
-        <div className="lg:col-span-2 bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
+        <motion.div variants={itemVariants} className="lg:col-span-2 bg-white p-8 rounded-2xl shadow-sm border border-slate-100 premium-card">
           <div className="flex items-center justify-between mb-8">
             <h3 className="font-bold text-slate-800 flex items-center gap-2">
               <TrendingUp size={20} className="text-blue-500" />
@@ -119,10 +148,10 @@ export const Dashboard: React.FC = () => {
               </BarChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </motion.div>
 
         {/* Task Distribution Pie Chart */}
-        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
+        <motion.div variants={itemVariants} className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 premium-card">
           <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-8">
             <Target size={20} className="text-blue-500" />
             Active Task Distribution
@@ -153,11 +182,11 @@ export const Dashboard: React.FC = () => {
               </div>
             ))}
           </div>
-        </div>
+        </motion.div>
       </div>
 
       {/* Recent Projects List */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+      <motion.div variants={itemVariants} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden premium-card">
         <div className="p-6 border-b border-slate-100 flex items-center justify-between">
           <h3 className="font-bold text-slate-800">My Active Projects</h3>
           <Link to="/projects" className="text-blue-600 text-sm font-semibold hover:underline flex items-center">
@@ -193,7 +222,7 @@ export const Dashboard: React.FC = () => {
                     <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full ${project.status === ProjectStatus.IN_PROGRESS ? 'bg-blue-50 text-blue-600' :
                         project.status === ProjectStatus.COMPLETED ? 'bg-green-50 text-green-600' :
                           'bg-slate-100 text-slate-600'
-                      }`}>
+                       }`}>
                       {project.status.replace('_', ' ')}
                     </span>
                   </td>
@@ -213,7 +242,7 @@ export const Dashboard: React.FC = () => {
             </tbody>
           </table>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };

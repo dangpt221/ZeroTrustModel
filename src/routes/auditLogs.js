@@ -37,11 +37,14 @@ export function registerAuditLogRoutes(router) {
       res.json(
         logs.map((l) => ({
           id: l._id.toString(),
+          userId: l.userId,
+          userName: l.userName || req.user.name,
           action: l.action,
           details: l.details,
           ipAddress: l.ip,
           timestamp: l.createdAt,
           status: l.status,
+          riskLevel: l.riskLevel || 'LOW',
         })),
       );
     } catch (err) {

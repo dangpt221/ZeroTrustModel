@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, Shield, Lock, Search, Hash, Pin, MoreVertical, Wifi, WifiOff, MessageSquare, ChevronRight } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 
 import { useChat, ChatMessage, ChatRoom } from '../hooks/useChat';
@@ -161,12 +162,19 @@ export const Messaging: React.FC = () => {
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-2 mt-1 flex items-center gap-1">
                     <Pin size={10} /> Đã ghim
                   </p>
-                  <div className="space-y-1 mb-3">
-                    {pinnedRooms.map(room => {
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="space-y-1 mb-3"
+                  >
+                    {pinnedRooms.map((room, idx) => {
                       const Icon = room.type === 'channel' ? Hash : Shield;
                       return (
-                        <button
+                        <motion.button
                           key={room.id}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: idx * 0.05 }}
                           onClick={() => joinRoom(room.id)}
                           className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all ${
                             activeRoom === room.id
@@ -181,10 +189,10 @@ export const Messaging: React.FC = () => {
                               {room.unread}
                             </span>
                           )}
-                        </button>
+                        </motion.button>
                       );
                     })}
-                  </div>
+                  </motion.div>
                 </>
               )}
 
@@ -281,50 +289,59 @@ export const Messaging: React.FC = () => {
             </div>
           ) : (
             <>
-              {roomMessages.map((msg, idx) => {
-                const isMe = msg.userId === (user?.id || 'user1');
-                const showAvatar = idx === 0 || roomMessages[idx - 1].userId !== msg.userId;
-                const avatarUrl = msg.userAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(msg.userName || msg.userId)}`;
-                return (
-                  <div key={msg.id} className={`flex gap-3 ${isMe ? 'flex-row-reverse' : ''}`}>
-                    {!isMe && (
-                      <div className="shrink-0">
-                        {showAvatar ? (
-                          <img src={avatarUrl} alt={msg.userName} className="w-8 h-8 rounded-lg bg-slate-200 object-cover" />
-                        ) : (
-                          <div className="w-8" />
+              <AnimatePresence mode="popLayout">
+                {roomMessages.map((msg, idx) => {
+                  const isMe = msg.userId === (user?.id || 'user1');
+                  const showAvatar = idx === 0 || roomMessages[idx - 1].userId !== msg.userId;
+                  const avatarUrl = msg.userAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(msg.userName || msg.userId)}`;
+                  return (
+                    <motion.div
+                      key={msg.id}
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      transition={{ duration: 0.2 }}
+                      className={`flex gap-3 ${isMe ? 'flex-row-reverse' : ''}`}
+                    >
+                      {!isMe && (
+                        <div className="shrink-0">
+                          {showAvatar ? (
+                            <img src={avatarUrl} alt={msg.userName} className="w-8 h-8 rounded-lg bg-slate-200 object-cover" />
+                          ) : (
+                            <div className="w-8" />
+                          )}
+                        </div>
+                      )}
+                      <div className={`max-w-[70%] space-y-1 ${isMe ? 'items-end' : 'items-start'}`}>
+                        {showAvatar && !isMe && (
+                          <div className="flex items-center gap-2 ml-1">
+                            <p className="text-xs font-semibold text-slate-600">{msg.userName}</p>
+                            <p className="text-[10px] text-slate-400">{formatTime(msg.timestamp)}</p>
+                          </div>
+                        )}
+                        <motion.div
+                          whileHover={{ scale: 1.01 }}
+                          className={`px-4 py-2.5 rounded-2xl text-sm ${
+                            isMe 
+                              ? `${themeBg} text-white rounded-br-sm` 
+                              : 'bg-white text-slate-700 rounded-bl-sm shadow-sm border border-slate-100'
+                          }`}
+                        >
+                          {msg.text}
+                        </motion.div>
+                        {msg.reactions && msg.reactions.length > 0 && (
+                          <div className={`flex gap-1 ${isMe ? 'justify-end' : 'justify-start'} ml-1`}>
+                            {msg.reactions.map((reaction, i) => (
+                              <span key={i} className="px-1.5 py-0.5 bg-slate-100 rounded-full text-xs">
+                                {reaction.emoji}
+                              </span>
+                            ))}
+                          </div>
                         )}
                       </div>
-                    )}
-                    <div className={`max-w-[70%] space-y-1 ${isMe ? 'items-end' : 'items-start'}`}>
-                      {showAvatar && !isMe && (
-                        <div className="flex items-center gap-2 ml-1">
-                          <p className="text-xs font-semibold text-slate-600">{msg.userName}</p>
-                          <p className="text-[10px] text-slate-400">{formatTime(msg.timestamp)}</p>
-                        </div>
-                      )}
-                      <div
-                        className={`px-4 py-2.5 rounded-2xl text-sm ${
-                          isMe 
-                            ? `${themeBg} text-white rounded-br-sm` 
-                            : 'bg-white text-slate-700 rounded-bl-sm shadow-sm border border-slate-100'
-                        }`}
-                      >
-                        {msg.text}
-                      </div>
-                      {msg.reactions && msg.reactions.length > 0 && (
-                        <div className={`flex gap-1 ${isMe ? 'justify-end' : 'justify-start'} ml-1`}>
-                          {msg.reactions.map((reaction, i) => (
-                            <span key={i} className="px-1.5 py-0.5 bg-slate-100 rounded-full text-xs">
-                              {reaction.emoji}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
               <div ref={scrollRef} />
             </>
           )}

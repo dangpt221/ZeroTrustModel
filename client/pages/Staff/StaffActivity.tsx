@@ -13,11 +13,8 @@ export const StaffActivity: React.FC = () => {
   useEffect(() => {
     const fetchLogs = async () => {
       try {
-        const data = await auditLogsApi.getAll();
-        const userLogs = (data || []).filter((log: AuditLog) =>
-          log.userName === user?.name || log.userId === user?.id
-        );
-        setLogs(userLogs);
+        const userLogs = await auditLogsApi.getMine();
+        setLogs(userLogs || []);
       } catch (error) {
         console.error('Error fetching logs:', error);
       } finally {
