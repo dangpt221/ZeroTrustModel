@@ -296,6 +296,12 @@ export const documentsApi = {
       body: JSON.stringify({ status, reason }),
     }),
 
+  // Revoke document access (Admin only)
+  revokeAccess: (id: string) =>
+    apiRequest<any>(`/documents/requests/${id}/revoke`, {
+      method: 'POST',
+    }),
+
   // Download
   download: (id: string) =>
     apiRequest<{ url: string; fileName: string }>(`/documents/${id}/download`),
@@ -318,9 +324,28 @@ export const documentsApi = {
       body: JSON.stringify({ isLocked }),
     }),
 
+  // Request access to document
+  requestAccess: (id: string, reason: string) =>
+    apiRequest<{ message: string; request?: any }>(`/documents/${id}/request`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
+
+  // Get my requests
+  getMyRequests: () =>
+    apiRequest<any[]>('/documents/requests/my', {
+      method: 'GET',
+    }),
+
+  // Reset document access (Admin only - unlocks after failed attempts)
+  resetAccess: (id: string) =>
+    apiRequest<{ message: string; failedAttempts: number }>(`/documents/${id}/reset-access`, {
+      method: 'POST',
+    }),
+
   // Verify document password
   verifyPassword: (id: string, password: string) =>
-    apiRequest<{ verified: boolean; message?: string }>(`/documents/${id}/verify`, {
+    apiRequest<{ verified: boolean; message?: string; locked?: boolean; failedAttempts?: number }>(`/documents/${id}/verify`, {
       method: 'POST',
       body: JSON.stringify({ password }),
     }),

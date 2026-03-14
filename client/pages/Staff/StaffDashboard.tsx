@@ -14,10 +14,10 @@ export const StaffDashboard: React.FC = () => {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewingDoc, setViewingDoc] = useState<Document | null>(null);
-  const [passwordModalDoc, setPasswordModalDoc] = useState<Document | null>(null);
-  const [passwordInput, setPasswordInput] = useState('');
-  const [passwordError, setPasswordError] = useState('');
-  const [verifyingPassword, setVerifyingPassword] = useState(false);
+  const [requestModalDoc, setRequestModalDoc] = useState<Document | null>(null);
+  const [requestReason, setRequestReason] = useState('');
+  const [requestingAccess, setRequestingAccess] = useState(false);
+  const [myRequests, setMyRequests] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -49,36 +49,51 @@ export const StaffDashboard: React.FC = () => {
   }, [projects, user]);
 
   const handleViewDoc = async (doc: Document) => {
-    // Check if document requires password or is locked
-    if ((doc as any).isPasswordProtected || (doc as any).isLocked) {
-      if ((doc as any).isLocked) {
-        alert('Tài liệu này đã bị khóa bởi Admin. Vui lòng liên hệ Admin để được truy cập.');
+    // Only require request if document is locked by Admin
+    const isLocked = (doc as any).isLocked;
+
+    if (isLocked) {
+      // Check if user already has an approved request
+      const approvedRequest = myRequests.find(
+        (r: any) => {
+          const reqDocId = typeof r.documentId === 'object' ? r.documentId._id : r.documentId;
+          return reqDocId === doc.id && r.status === 'APPROVED';
+        }
+      );
+      if (approvedRequest) {
+        setViewingDoc(doc);
         return;
       }
-      setPasswordModalDoc(doc);
-      setPasswordInput('');
-      setPasswordError('');
+      // Show request modal
+      setRequestModalDoc(doc);
+      setRequestReason('');
       return;
     }
+    // Document is not locked, allow viewing
     setViewingDoc(doc);
   };
 
-  const handleVerifyPassword = async () => {
-    if (!passwordModalDoc) return;
+  const handleSendRequest = async () => {
+    if (!requestModalDoc) return;
     try {
-      setVerifyingPassword(true);
-      setPasswordError('');
-      const result = await documentsApi.verifyPassword(passwordModalDoc.id, passwordInput);
-      if (result.verified) {
-        setPasswordModalDoc(null);
-        setViewingDoc(passwordModalDoc);
-      }
+      setRequestingAccess(true);
+      const result = await documentsApi.requestAccess(requestModalDoc.id, requestReason);
+      alert(result.message || 'Yêu cầu đã được gửi!');
+      setRequestModalDoc(null);
+      // Refresh my requests
+      const requests = await documentsApi.getMyRequests();
+      setMyRequests(requests);
     } catch (err: any) {
-      setPasswordError(err.message || 'Mật khẩu không đúng');
+      alert(err.message || 'Gửi yêu cầu thất bại!');
     } finally {
-      setVerifyingPassword(false);
+      setRequestingAccess(false);
     }
   };
+
+  // Load my requests on mount
+  useEffect(() => {
+    documentsApi.getMyRequests().then(setMyRequests).catch(() => {});
+  }, []);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -192,28 +207,54 @@ export const StaffDashboard: React.FC = () => {
               <h3 className="font-bold text-slate-800">Tài liệu</h3>
             </div>
             <div className="space-y-3">
-              {documents.slice(0, 5).map(doc => (
+              {documents.slice(0, 5).map(doc => {
+                const docName = doc.name || (doc as any).title || 'Không có tiêu đề';
+                const docDate = doc.createdAt ? new Date(doc.createdAt).toLocaleDateString('vi-VN') : '';
+                const docSize = doc.size || (doc as any).fileSize || '';
+                const isLocked = (doc as any).isLocked;
+                const sensitivity = doc.sensitivity || 'LOW';
+
+                const getSensitivityColor = (level: string) => {
+                  switch (level) {
+                    case 'CRITICAL': return 'bg-rose-100 text-rose-700 border-rose-200';
+                    case 'HIGH': return 'bg-amber-100 text-amber-700 border-amber-200';
+                    case 'MEDIUM': return 'bg-sky-100 text-sky-700 border-sky-200';
+                    default: return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+                  }
+                };
+
+                return (
                 <div
                   key={doc.id}
                   onClick={() => handleViewDoc(doc)}
-                  className="flex items-center justify-between p-4 bg-slate-50 rounded-xl hover:bg-slate-100 cursor-pointer transition-colors"
+                  className="flex items-center justify-between p-4 bg-slate-50 rounded-xl hover:bg-slate-100 cursor-pointer transition-all hover:shadow-md group"
                 >
-                  <div className="flex items-center gap-3">
-                    <FileText size={18} className="text-slate-400" />
+                  <div className="flex items-center gap-4">
+                    <div className={`p-3 rounded-xl ${isLocked ? 'bg-red-100' : 'bg-blue-100'}`}>
+                      <FileText size={20} className={isLocked ? 'text-red-500' : 'text-blue-500'} />
+                    </div>
                     <div>
-                      <p className="font-medium text-slate-700">{doc.name}</p>
-                      <p className="text-xs text-slate-400">{doc.type} - {doc.size}</p>
+                      <p className="font-semibold text-slate-700 group-hover:text-blue-600 transition-colors">{docName}</p>
+                      <p className="text-xs text-slate-400">{docDate} {docSize && `• ${docSize}`}</p>
                     </div>
                   </div>
-                  <span className={`text-xs font-bold px-2 py-1 rounded ${
-                    doc.sensitivity === 'HIGH' || doc.sensitivity === 'CRITICAL' ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'
-                  }`}>
-                    {doc.sensitivity}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    {isLocked && (
+                      <span className="flex items-center gap-1 text-xs bg-red-50 text-red-600 px-3 py-1.5 rounded-lg font-medium border border-red-100">
+                        <Lock size={12} /> Bị khóa
+                      </span>
+                    )}
+                    <span className={`text-xs font-bold px-3 py-1.5 rounded-lg border ${getSensitivityColor(sensitivity)}`}>
+                      {sensitivity}
+                    </span>
+                  </div>
                 </div>
-              ))}
+              )})}
               {documents.length === 0 && !loading && (
-                <p className="text-slate-400 text-sm">Chưa có tài liệu nào</p>
+                <div className="text-center py-8">
+                  <FileText size={40} className="mx-auto text-slate-300 mb-2" />
+                  <p className="text-slate-400 text-sm">Chưa có tài liệu nào</p>
+                </div>
               )}
             </div>
           </div>
@@ -251,51 +292,47 @@ export const StaffDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Password Modal */}
-      <Modal isOpen={!!passwordModalDoc} onClose={() => setPasswordModalDoc(null)} title="Xac thuc mat khau">
-        {passwordModalDoc && (
+      {/* Request Access Modal */}
+      <Modal isOpen={!!requestModalDoc} onClose={() => setRequestModalDoc(null)} title="Yêu cầu xem tài liệu">
+        {requestModalDoc && (
           <div className="space-y-4">
-            <div className="flex items-center gap-4 p-4 bg-amber-50 rounded-xl border border-amber-100">
-              <div className="p-3 bg-amber-100 text-amber-600 rounded-xl">
+            <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-xl border border-blue-100">
+              <div className="p-3 bg-blue-100 text-blue-600 rounded-xl">
                 <Lock size={24} />
               </div>
               <div>
-                <h4 className="font-bold text-slate-800">{passwordModalDoc.title || passwordModalDoc.name}</h4>
-                <p className="text-sm text-amber-600">Tai lieu yeu cau nhap mat khau de xem</p>
+                <h4 className="font-bold text-slate-800">{requestModalDoc.title || requestModalDoc.name}</h4>
+                <p className="text-sm text-blue-600">Tài liệu bảo mật cao. Vui lòng gửi yêu cầu để Admin duyệt.</p>
               </div>
             </div>
 
             <div>
-              <label className="text-xs font-bold text-slate-500 uppercase">Mat khau</label>
-              <input
-                type="password"
-                value={passwordInput}
-                onChange={(e) => setPasswordInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleVerifyPassword()}
-                placeholder="Nhap mat khau..."
-                className="w-full mt-1 px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none"
+              <label className="text-xs font-bold text-slate-500 uppercase">Lý do</label>
+              <textarea
+                value={requestReason}
+                onChange={(e) => setRequestReason(e.target.value)}
+                placeholder="Nhập lý do bạn cần xem tài liệu này..."
+                className="w-full mt-1 px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                rows={3}
                 autoFocus
               />
-              {passwordError && (
-                <p className="text-xs text-rose-500 mt-1">{passwordError}</p>
-              )}
             </div>
 
             <div className="flex gap-2">
               <button
-                onClick={() => setPasswordModalDoc(null)}
+                onClick={() => setRequestModalDoc(null)}
                 className="flex-1 py-3 border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-50 transition-all"
               >
-                Huy
+                Hủy
               </button>
               <button
-                onClick={handleVerifyPassword}
-                disabled={!passwordInput || verifyingPassword}
-                className="flex-1 py-3 bg-amber-500 text-white rounded-xl font-bold hover:bg-amber-600 disabled:bg-slate-300 transition-all flex items-center justify-center gap-2"
+                onClick={handleSendRequest}
+                disabled={requestingAccess}
+                className="flex-1 py-3 bg-blue-500 text-white rounded-xl font-bold hover:bg-blue-600 disabled:bg-slate-300 transition-all flex items-center justify-center gap-2"
               >
-                {verifyingPassword ? 'Dang xac thuc...' : (
+                {requestingAccess ? 'Đang gửi...' : (
                   <>
-                    <Key size={18} /> Xac nhan
+                    <Key size={18} /> Gửi yêu cầu
                   </>
                 )}
               </button>

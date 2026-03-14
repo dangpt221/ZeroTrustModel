@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Read(//d/Web/ZeroTrustModel/**)",
+      "Bash(npm run:*)",
+      "Bash(cmd //c \"taskkill /F /PID 20524\")"
     ]
   }
 }

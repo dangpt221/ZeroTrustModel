@@ -612,6 +612,55 @@ export const getDocumentRequests = async (req, res, next) => {
   }
 };
 
+// Staff/Manager: Create request to access document
+export const createDocumentRequest = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+
+    const document = await Document.findById(id);
+    if (!document) {
+      return res.status(404).json({ message: "Document not found" });
+    }
+
+    // Check if user already has a pending request
+    const existingRequest = await DocumentRequest.findOne({
+      documentId: id,
+      userId: req.user.id,
+      status: 'PENDING'
+    });
+
+    if (existingRequest) {
+      return res.status(400).json({ message: "Bạn đã có yêu cầu đang chờ duyệt" });
+    }
+
+    const request = new DocumentRequest({
+      documentId: id,
+      userId: req.user.id,
+      reason: reason || 'Yêu cầu xem tài liệu'
+    });
+
+    await request.save();
+
+    res.status(201).json({ message: "Yêu cầu đã được gửi", request });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Staff/Manager: Get my requests
+export const getMyRequests = async (req, res, next) => {
+  try {
+    const requests = await DocumentRequest.find({ userId: req.user.id })
+      .populate('documentId', 'title name')
+      .sort({ createdAt: -1 })
+      .lean();
+    res.json(requests);
+  } catch (err) {
+    next(err);
+  }
+};
+
 // Update document request status
 export const updateDocumentRequest = async (req, res, next) => {
   try {
@@ -634,6 +683,32 @@ export const updateDocumentRequest = async (req, res, next) => {
     }
 
     res.json(request);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Admin: Revoke document access (set status back to PENDING)
+export const revokeDocumentRequest = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const request = await DocumentRequest.findByIdAndUpdate(
+      id,
+      {
+        status: 'PENDING',
+        rejectionReason: 'Quyền truy cập đã bị thu hồi',
+        reviewedAt: new Date(),
+        reviewedBy: req.user.id
+      },
+      { new: true }
+    ).populate('userId', 'name email').populate('documentId', 'title name');
+
+    if (!request) {
+      return res.status(404).json({ message: "Yêu cầu không tồn tại" });
+    }
+
+    res.json({ message: "Đã thu hồi quyền truy cập", request });
   } catch (err) {
     next(err);
   }
@@ -706,6 +781,32 @@ export const toggleDocumentLock = async (req, res, next) => {
   }
 };
 
+// Admin: Reset failed attempts and unlock document
+export const resetDocumentAccess = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const document = await Document.findById(id);
+    if (!document) {
+      return res.status(404).json({ message: "Document not found" });
+    }
+
+    // Only admin can reset
+    if (req.user.role !== 'ADMIN') {
+      return res.status(403).json({ message: "Only admin can reset document access" });
+    }
+
+    // Reset failed attempts and unlock
+    document.failedAttempts = 0;
+    document.lockedUntil = null;
+    await document.save();
+
+    res.json({ message: "Document access reset successfully", failedAttempts: document.failedAttempts });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // Verify document password (for MEDIUM/HIGH security documents)
 export const verifyDocumentPassword = async (req, res, next) => {
   try {
@@ -717,20 +818,64 @@ export const verifyDocumentPassword = async (req, res, next) => {
       return res.status(404).json({ message: "Document not found" });
     }
 
-    // Check if document is locked by admin
-    if (document.isLocked && req.user.role !== 'ADMIN') {
-      return res.status(403).json({ message: "Document is locked by admin. Contact admin for access." });
+    // Check if document is permanently locked due to too many failed attempts
+    if (document.lockedUntil && new Date(document.lockedUntil) > new Date()) {
+      return res.status(423).json({
+        verified: false,
+        locked: true,
+        message: "Tài liệu đã bị khóa do nhập sai mật khẩu quá 3 lần. Vui lòng liên hệ Admin để mở khóa.",
+        failedAttempts: document.failedAttempts
+      });
     }
 
-    // If not password protected, allow access
-    if (!document.isPasswordProtected) {
+    // If not password protected and not locked, allow access
+    if (!document.isPasswordProtected && !document.isLocked) {
       return res.json({ verified: true });
     }
 
-    // Verify password
-    const isValid = await bcrypt.compare(password, document.password);
-    if (!isValid) {
-      return res.status(401).json({ verified: false, message: "Incorrect password" });
+    // If document requires password verification
+    if (document.isPasswordProtected) {
+      const isValid = await bcrypt.compare(password, document.password);
+      if (!isValid) {
+        // Increment failed attempts
+        document.failedAttempts = (document.failedAttempts || 0) + 1;
+
+        // Lock permanently after 3 failed attempts
+        if (document.failedAttempts >= 3) {
+          document.lockedUntil = new Date('2099-12-31'); // Permanent lock
+          await document.save();
+          return res.status(423).json({
+            verified: false,
+            locked: true,
+            message: "Bạn đã nhập sai quá 3 lần. Tài liệu đã bị khóa vĩnh viễn. Liên hệ Admin để mở khóa.",
+            failedAttempts: document.failedAttempts
+          });
+        }
+
+        await document.save();
+        return res.status(401).json({
+          verified: false,
+          message: "Incorrect password",
+          failedAttempts: document.failedAttempts
+        });
+      }
+
+      // Password correct, reset failed attempts and allow access
+      document.failedAttempts = 0;
+      document.lockedUntil = null;
+      await document.save();
+
+      return res.json({ verified: true, failedAttempts: 0 });
+    }
+
+    // If document is locked but not password protected - allow with password
+    // This is for documents locked by admin that need password to unlock
+    if (document.isLocked && !document.isPasswordProtected) {
+      // For locked documents without password, only ADMIN can unlock
+      if (req.user.role !== 'ADMIN') {
+        return res.status(403).json({ message: "Document is locked by admin. Contact admin for access." });
+      }
+      return res.json({ verified: true });
     }
 
     res.json({ verified: true });

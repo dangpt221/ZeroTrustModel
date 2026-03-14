@@ -42,6 +42,10 @@ const DocumentSchema = new mongoose.Schema(
     lockedAt: { type: Date },
     lockedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 
+    // Track failed password attempts
+    failedAttempts: { type: Number, default: 0 },
+    lockedUntil: { type: Date, default: null }, // Locked permanently after 3 failed attempts
+
     // File info
     currentVersion: { type: Number, default: 1 },
     versions: [DocumentVersionSchema],

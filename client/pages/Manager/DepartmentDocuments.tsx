@@ -1,12 +1,12 @@
 
-import React, { useState, useEffect } from 'react';
-import { documentsApi, departmentsApi } from '../../api';
-import { Document } from '../../types';
+import { Eye, FileText, Key, Lock, Search, Upload } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { departmentsApi, documentsApi } from '../../api';
 import { Modal } from '../../components/Admin/Modal';
 import { DocumentContent } from '../../components/Staff/DocumentContent';
 import { useAuth } from '../../context/AuthContext';
 import { usePermission } from '../../hooks/usePermission';
-import { FileText, Search, Upload, Eye, Lock, Key } from 'lucide-react';
+import { Document } from '../../types';
 
 export const DepartmentDocuments: React.FC = () => {
   const { user } = useAuth();
@@ -18,10 +18,10 @@ export const DepartmentDocuments: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [viewingDoc, setViewingDoc] = useState<Document | null>(null);
-  const [passwordModalDoc, setPasswordModalDoc] = useState<Document | null>(null);
-  const [passwordInput, setPasswordInput] = useState('');
-  const [passwordError, setPasswordError] = useState('');
-  const [verifyingPassword, setVerifyingPassword] = useState(false);
+  const [requestModalDoc, setRequestModalDoc] = useState<Document | null>(null);
+  const [requestReason, setRequestReason] = useState('');
+  const [requestingAccess, setRequestingAccess] = useState(false);
+  const [myRequests, setMyRequests] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     name: '',
     type: 'PDF',
@@ -86,36 +86,51 @@ export const DepartmentDocuments: React.FC = () => {
   };
 
   const handleViewDoc = async (doc: Document) => {
-    // Check if document requires password or is locked
-    if ((doc as any).isPasswordProtected || (doc as any).isLocked) {
-      if ((doc as any).isLocked) {
-        alert('Tài liệu này đã bị khóa bởi Admin. Vui lòng liên hệ Admin để được truy cập.');
+    // Only require request if document is locked by Admin
+    const isLocked = (doc as any).isLocked;
+
+    if (isLocked) {
+      // Check if user already has an approved request
+      const approvedRequest = myRequests.find(
+        (r: any) => {
+          const reqDocId = typeof r.documentId === 'object' ? r.documentId._id : r.documentId;
+          return reqDocId === doc.id && r.status === 'APPROVED';
+        }
+      );
+      if (approvedRequest) {
+        setViewingDoc(doc);
         return;
       }
-      setPasswordModalDoc(doc);
-      setPasswordInput('');
-      setPasswordError('');
+      // Show request modal
+      setRequestModalDoc(doc);
+      setRequestReason('');
       return;
     }
+    // Document is not locked, allow viewing
     setViewingDoc(doc);
   };
 
-  const handleVerifyPassword = async () => {
-    if (!passwordModalDoc) return;
+  const handleSendRequest = async () => {
+    if (!requestModalDoc) return;
     try {
-      setVerifyingPassword(true);
-      setPasswordError('');
-      const result = await documentsApi.verifyPassword(passwordModalDoc.id, passwordInput);
-      if (result.verified) {
-        setPasswordModalDoc(null);
-        setViewingDoc(passwordModalDoc);
-      }
+      setRequestingAccess(true);
+      const result = await documentsApi.requestAccess(requestModalDoc.id, requestReason);
+      alert(result.message || 'Yêu cầu đã được gửi!');
+      setRequestModalDoc(null);
+      // Refresh my requests
+      const requests = await documentsApi.getMyRequests();
+      setMyRequests(requests);
     } catch (err: any) {
-      setPasswordError(err.message || 'Mật khẩu không đúng');
+      alert(err.message || 'Gửi yêu cầu thất bại!');
     } finally {
-      setVerifyingPassword(false);
+      setRequestingAccess(false);
     }
   };
+
+  // Load my requests on mount
+  useEffect(() => {
+    documentsApi.getMyRequests().then(setMyRequests).catch(() => {});
+  }, []);
 
   const getDocDisplay = (doc: Document) => ({
     name: (doc as any).name || (doc as any).title || doc.name || 'Không tên',
@@ -215,13 +230,24 @@ export const DepartmentDocuments: React.FC = () => {
                       <td className="px-6 py-4 text-sm text-slate-600">{d.uploadedBy}</td>
                       <td className="px-6 py-4 text-sm text-slate-500">{d.uploadedAt}</td>
                       <td className="px-6 py-4">
-                        <button
-                          onClick={() => handleViewDoc(doc)}
-                          className="p-2 text-sky-600 hover:bg-sky-50 rounded-lg"
-                          title="Xem chi tiết"
-                        >
-                          <Eye size={16} />
-                        </button>
+                        <div className="flex items-center gap-2">
+                          {((doc as any).isLocked || (doc as any).isPasswordProtected) && (
+                            <button
+                              onClick={() => handleViewDoc(doc)}
+                              className="px-2 py-1 text-xs bg-red-100 text-red-600 rounded font-medium hover:bg-red-200"
+                              title="Nhập mã để xem"
+                            >
+                              🔒
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleViewDoc(doc)}
+                            className="p-2 text-sky-600 hover:bg-sky-50 rounded-lg"
+                            title="Xem chi tiết"
+                          >
+                            <Eye size={16} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -327,51 +353,47 @@ export const DepartmentDocuments: React.FC = () => {
         </div>
       )}
 
-      {/* Password Modal */}
-      <Modal isOpen={!!passwordModalDoc} onClose={() => setPasswordModalDoc(null)} title="Xac thuc mat khau">
-        {passwordModalDoc && (
+      {/* Request Access Modal */}
+      <Modal isOpen={!!requestModalDoc} onClose={() => setRequestModalDoc(null)} title="Yêu cầu xem tài liệu">
+        {requestModalDoc && (
           <div className="space-y-4">
-            <div className="flex items-center gap-4 p-4 bg-amber-50 rounded-xl border border-amber-100">
-              <div className="p-3 bg-amber-100 text-amber-600 rounded-xl">
+            <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-xl border border-blue-100">
+              <div className="p-3 bg-blue-100 text-blue-600 rounded-xl">
                 <Lock size={24} />
               </div>
               <div>
-                <h4 className="font-bold text-slate-800">{passwordModalDoc.title || passwordModalDoc.name}</h4>
-                <p className="text-sm text-amber-600">Tai lieu yeu cau nhap mat khau de xem</p>
+                <h4 className="font-bold text-slate-800">{requestModalDoc.title || requestModalDoc.name}</h4>
+                <p className="text-sm text-blue-600">Tài liệu bảo mật cao. Vui lòng gửi yêu cầu để Admin duyệt.</p>
               </div>
             </div>
 
             <div>
-              <label className="text-xs font-bold text-slate-500 uppercase">Mat khau</label>
-              <input
-                type="password"
-                value={passwordInput}
-                onChange={(e) => setPasswordInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleVerifyPassword()}
-                placeholder="Nhap mat khau..."
-                className="w-full mt-1 px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none"
+              <label className="text-xs font-bold text-slate-500 uppercase">Lý do</label>
+              <textarea
+                value={requestReason}
+                onChange={(e) => setRequestReason(e.target.value)}
+                placeholder="Nhập lý do bạn cần xem tài liệu này..."
+                className="w-full mt-1 px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                rows={3}
                 autoFocus
               />
-              {passwordError && (
-                <p className="text-xs text-rose-500 mt-1">{passwordError}</p>
-              )}
             </div>
 
             <div className="flex gap-2">
               <button
-                onClick={() => setPasswordModalDoc(null)}
+                onClick={() => setRequestModalDoc(null)}
                 className="flex-1 py-3 border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-50 transition-all"
               >
-                Huy
+                Hủy
               </button>
               <button
-                onClick={handleVerifyPassword}
-                disabled={!passwordInput || verifyingPassword}
-                className="flex-1 py-3 bg-amber-500 text-white rounded-xl font-bold hover:bg-amber-600 disabled:bg-slate-300 transition-all flex items-center justify-center gap-2"
+                onClick={handleSendRequest}
+                disabled={requestingAccess}
+                className="flex-1 py-3 bg-blue-500 text-white rounded-xl font-bold hover:bg-blue-600 disabled:bg-slate-300 transition-all flex items-center justify-center gap-2"
               >
-                {verifyingPassword ? 'Dang xac thuc...' : (
+                {requestingAccess ? 'Đang gửi...' : (
                   <>
-                    <Key size={18} /> Xac nhan
+                    <Key size={18} /> Gửi yêu cầu
                   </>
                 )}
               </button>

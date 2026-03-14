@@ -1,68 +1,53 @@
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { User } from '../models/User.js';
+import dotenv from 'dotenv';
 
-// No serialize/deserialize needed because we will use JWT instead of sessions
-// but passport-google-oauth20 might require it if not configured to be stateless.
-// We'll configure auth route to { session: false }
+dotenv.config();
 
-passport.use(
-    new GoogleStrategy(
-        {
-            clientID: process.env.GOOGLE_CLIENT_ID || 'PLACEHOLDER_ID',
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET || 'PLACEHOLDER_SECRET',
-            callbackURL: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:5000/api/auth/google/callback',
-            proxy: true // Trust proxy if we are behind a reverse proxy/load balancer
-        },
-        async (accessToken, refreshToken, profile, done) => {
-            try {
-                const email = profile.emails && profile.emails[0] ? profile.emails[0].value : null;
+passport.serializeUser((user, done) => {
+  done(null, user.id);
+});
 
-                if (!email) {
-                    return done(new Error('Email is required from Google profile'), null);
-                }
+passport.deserializeUser(async (id, done) => {
+  try {
+    const user = await User.findById(id);
+    done(null, user);
+  } catch (err) {
+    done(err, null);
+  }
+});
 
-                // 1. Try to find user by Google ID
-                let user = await User.findOne({ googleId: profile.id });
+// Google OAuth Strategy
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  passport.use(new GoogleStrategy({
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackURL: process.env.GOOGLE_CALLBACK_URL || "/api/auth/google/callback"
+  },
+  async (accessToken, refreshToken, profile, done) => {
+    try {
+      // Check if user already exists
+      let user = await User.findOne({ googleId: profile.id });
 
-                if (user) {
-                    return done(null, user);
-                }
+      if (!user) {
+        // Create new user
+        user = await User.create({
+          googleId: profile.id,
+          email: profile.emails[0].value,
+          name: profile.displayName,
+          avatar: profile.photos[0]?.value,
+          role: 'STAFF',
+          isApproved: true, // Auto-approve Google auth users
+          mfaEnabled: false
+        });
+      }
 
-                // 2. Try to find user by email (in case they already exist but haven't linked Google)
-                user = await User.findOne({ email });
-
-                if (user) {
-                    // Link Google account to existing user
-                    user.googleId = profile.id;
-                    if (profile.photos && profile.photos[0] && !user.avatar) {
-                        user.avatar = profile.photos[0].value;
-                    }
-                    if (!user.status) user.status = 'ACTIVE';
-                    await user.save();
-                    return done(null, user);
-                }
-
-                // 3. Create a new user if they don't exist
-                user = await User.create({
-                    googleId: profile.id,
-                    name: profile.displayName,
-                    email: email,
-                    passwordHash: 'GOOGLE_AUTH_NO_PASSWORD', // Required field, dummy value
-                    avatar: profile.photos && profile.photos[0] ? profile.photos[0].value : null,
-                    role: 'STAFF', // Default role
-                    status: 'PENDING',
-                    trustScore: 90,
-                    isLocked: false,
-                    mfaEnabled: false
-                });
-
-                return done(null, user);
-            } catch (err) {
-                return done(err, null);
-            }
-        }
-    )
-);
+      return done(null, user);
+    } catch (err) {
+      return done(err, null);
+    }
+  }));
+}
 
 export default passport;

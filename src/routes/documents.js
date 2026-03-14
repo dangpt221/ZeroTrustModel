@@ -46,6 +46,9 @@ const router = express.Router();
 // Document requests
 router.get("/documents/requests", requireAuth, requireRole(["ADMIN", "MANAGER"]), documentController.getDocumentRequests);
 router.put("/documents/requests/:id", requireAuth, requireRole(["ADMIN", "MANAGER"]), documentController.updateDocumentRequest);
+router.post("/documents/requests/:id/revoke", requireAuth, requireRole(["ADMIN"]), documentController.revokeDocumentRequest);
+router.post("/documents/:id/request", requireAuth, documentController.createDocumentRequest);
+router.get("/documents/requests/my", requireAuth, documentController.getMyRequests);
 
 // All document routes require authentication
 router.get("/documents", requireAuth, documentController.getAllDocuments);
@@ -112,6 +115,7 @@ router.get("/documents-stats/stats", requireAuth, requireRole(["ADMIN", "MANAGER
 // Password protection - ADMIN only
 router.post("/documents/:id/password", requireAuth, requireRole(["ADMIN"]), documentController.setDocumentPassword);
 router.post("/documents/:id/lock", requireAuth, requireRole(["ADMIN"]), documentController.toggleDocumentLock);
+router.post("/documents/:id/reset-access", requireAuth, requireRole(["ADMIN"]), documentController.resetDocumentAccess);
 
 // Verify password for document access
 router.post("/documents/:id/verify", requireAuth, documentController.verifyDocumentPassword);
