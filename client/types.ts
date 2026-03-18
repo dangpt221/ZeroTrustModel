@@ -225,8 +225,10 @@ export interface Notification {
   title: string;
   message: string;
   type: NotificationType | string;
-  read: boolean;
-  userId?: string;
+  priority?: 'LOW' | 'NORMAL' | 'HIGH';
+  read?: boolean;
+  isRead?: boolean;
+  userId?: string | { _id: string; name: string; email: string };
   createdAt: string;
 }
 
