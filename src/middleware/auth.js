@@ -1,7 +1,12 @@
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-zero-trust-secret';
 const COOKIE_NAME = 'auth_token';
+
+export async function hashPassword(password) {
+  return bcrypt.hash(password, 10);
+}
 
 export function authMiddleware(req, _res, next) {
   try {

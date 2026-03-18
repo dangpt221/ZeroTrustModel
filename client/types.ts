@@ -248,9 +248,11 @@ export interface AuditLog {
   id: string;
   userId: string;
   userName: string;
+  userEmail?: string;
   action: string;
   details?: string;
   ipAddress: string;
+  device?: string;
   timestamp: string;
   status: AuditLogStatus | string;
   riskLevel: RiskLevel | string;

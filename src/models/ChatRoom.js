@@ -30,6 +30,14 @@ const ChatRoomSchema = new mongoose.Schema({
   }],
   memberCount: { type: Number, default: 0 },
 
+  // For 1-on-1 chats - store participant IDs directly for quick lookup
+  participants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  participantNames: [{ type: String }], // Cache for display
+  
+  // 1-on-1 chat metadata
+  isDirectMessage: { type: Boolean, default: false },
+  relatedUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // The other user in DM
+
   // Room status
   isLocked: { type: Boolean, default: false },
   lockedAt: { type: Date },
@@ -63,4 +71,8 @@ ChatRoomSchema.index({ 'members.userId': 1 });
 ChatRoomSchema.index({ departmentId: 1 });
 ChatRoomSchema.index({ createdBy: 1 });
 
+// New indexes for 1-on-1 chat and conversations
+ChatRoomSchema.index({ isDirectMessage: 1, participants: 1 });
+ChatRoomSchema.index({ relatedUserId: 1 });
+ChatRoomSchema.index({ lastMessageAt: -1 });
 export const ChatRoom = mongoose.model('ChatRoom', ChatRoomSchema);

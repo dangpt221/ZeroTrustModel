@@ -148,13 +148,14 @@ export const AuditLogs: React.FC = () => {
                 <option value="ALL">Tất cả</option>
                 <option value="SUCCESS">Thành công</option>
                 <option value="WARNING">Cảnh báo</option>
-                <option value="FAILURE">Thất bại</option>
+                <option value="FAILED">Thất bại</option>
               </select>
             </div>
             <div>
               <label className="text-xs font-bold text-slate-500 uppercase">Mức độ rủi ro</label>
               <select value={filterRisk} onChange={(e) => setFilterRisk(e.target.value)} className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-xl text-sm">
                 <option value="ALL">Tất cả</option>
+                <option value="CRITICAL">Nghiêm trọng</option>
                 <option value="HIGH">Cao</option>
                 <option value="MEDIUM">Trung bình</option>
                 <option value="LOW">Thấp</option>
@@ -193,10 +194,15 @@ export const AuditLogs: React.FC = () => {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-600">
-                        {log.userName.charAt(0)}
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-[10px] font-bold text-white">
+                        {(log.userName || 'U').charAt(0).toUpperCase()}
                       </div>
-                      <span className="text-xs font-bold text-slate-700">{log.userName}</span>
+                      <div>
+                        <p className="text-xs font-bold text-slate-700">{log.userName}</p>
+                        {log.userEmail && (
+                          <p className="text-[10px] text-slate-400">{log.userEmail}</p>
+                        )}
+                      </div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
@@ -208,28 +214,29 @@ export const AuditLogs: React.FC = () => {
                   <td className="px-6 py-4">
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-medium">
-                        <MapPin size={10} /> {log.ipAddress}
+                        <MapPin size={10} /> {log.ipAddress || 'Unknown'}
                       </div>
                       <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-medium">
-                        <Monitor size={10} /> Verified HW
+                        <Monitor size={10} /> {log.device || 'Unknown Device'}
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${
-                        log.riskLevel === 'HIGH' ? 'bg-rose-100 text-rose-600' :
+                        log.riskLevel === 'HIGH' || log.riskLevel === 'CRITICAL' ? 'bg-rose-100 text-rose-600' :
                         log.riskLevel === 'MEDIUM' ? 'bg-amber-100 text-amber-600' :
                         'bg-emerald-100 text-emerald-600'
                       }`}>
-                        {log.riskLevel}
+                        {log.riskLevel || 'LOW'}
                       </span>
                       <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${
                         log.status === 'SUCCESS' ? 'bg-emerald-50 text-emerald-600' :
                         log.status === 'WARNING' ? 'bg-amber-50 text-amber-600' :
-                        'bg-red-50 text-red-600'
+                        log.status === 'FAILED' ? 'bg-red-50 text-red-600' :
+                        'bg-slate-50 text-slate-600'
                       }`}>
-                        {log.status}
+                        {log.status || 'SUCCESS'}
                       </span>
                     </div>
                   </td>
