@@ -527,16 +527,50 @@ export function registerMessageRoutes(router) {
             '<mark>$1</mark>'
           ) || '',
           reactions: m.reactions || [],
-          attachments: m.attachments || []
-        }))
+        })),
+      );
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // POST message
+  router.post('/messages', requireAuth, async (req, res, next) => {
+    try {
+      const user = req.user;
+      const { text, room } = req.body || {};
+
+      if (!text || !text.trim()) {
+        return res.status(400).json({ message: 'Text is required' });
+      }
+
+      const msg = await Message.create({
+        userId: user.id,
+        userName: user.name || 'Ẩn danh',
+        text: text.trim(),
+        room: room || 'general',
+      });
+
+      res.json({
+        success: true,
+        message: {
+          id: msg._id.toString(),
+          userId: msg.userId?.toString?.() || msg.userId,
+          userName: msg.userName || 'Ẩn danh',
+          userAvatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.name || 'default')}`,
+          text: msg.text || '',
+          room: msg.room || 'general',
+          timestamp: msg.createdAt ? new Date(msg.createdAt).toISOString() : new Date().toISOString(),
+          reactions: [],
+          attachments: [],
+        },
       });
     } catch (err) {
       next(err);
     }
   });
 
-  // ===== 8. MESSAGE RECALL =====
-
+  // DELETE / recall message (only by owner)
   router.delete('/messages/:id', requireAuth, async (req, res, next) => {
     try {
       const user = req.user;
@@ -546,22 +580,18 @@ export function registerMessageRoutes(router) {
         return res.status(404).json({ success: false, message: 'Tin nhắn không tồn tại' });
       }
 
+      // Chỉ người gửi mới được thu hồi
       if (msg.userId.toString() !== user.id) {
         return res.status(403).json({ success: false, message: 'Bạn không có quyền thu hồi tin nhắn này' });
       }
 
+      // Kiểm tra thời gian: chỉ được thu hồi trong 24h
       const hoursSinceCreated = (Date.now() - msg.createdAt.getTime()) / (1000 * 60 * 60);
       if (hoursSinceCreated > 24) {
         return res.status(400).json({ success: false, message: 'Chỉ có thể thu hồi tin nhắn trong vòng 24 giờ' });
       }
 
       await Message.deleteOne({ _id: msg._id });
-
-      // Emit deletion to room
-      const io = req.app.get('io');
-      if (io) {
-        io.to(msg.room).emit('message_deleted', { messageId: msg._id.toString() });
-      }
 
       res.json({ success: true, message: 'Tin nhắn đã được thu hồi' });
     } catch (err) {
@@ -577,9 +607,11 @@ export function registerMessageRoutes(router) {
       const currentUser = req.user;
       const isManager = currentUser.role === 'MANAGER';
 
+      // Build query - managers only see their department's rooms + system rooms
       let query = { isDeleted: { $ne: true }, isLocked: { $ne: true } };
 
-      if (isManager && currentUser.departmentId) {
+      if (!isAdmin && currentUser.departmentId) {
+        // Manager/Staff sees system rooms OR rooms in their department
         query = {
           isDeleted: { $ne: true },
           isLocked: { $ne: true },
@@ -594,11 +626,8 @@ export function registerMessageRoutes(router) {
         .sort({ isSystemRoom: -1, name: 1 })
         .lean();
 
-      const roomsWithMembership = rooms.map((r) => {
-        const isMember = r.members?.some(
-          (m) => m.userId?.toString() === currentUser.id && !m.leftAt
-        );
-        return {
+      res.json({
+        rooms: rooms.map((r) => ({
           id: r._id.toString(),
           name: r.name,
           description: r.description || '',

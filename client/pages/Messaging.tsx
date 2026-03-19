@@ -1,14 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
-import {
-  Send, Lock, Search, Hash, Pin, MoreVertical,
-  Wifi, WifiOff, MessageSquare, ChevronRight,
-  Smile, MessageCircle, Users, X, Check, CheckCheck,
-  Plus, Key, Trash2
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
+import { ChevronRight, Hash, Lock, MessageSquare, MoreVertical, Pin, Search, Send, Shield, Wifi, WifiOff } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useChat, ChatMessage, ChatRoom } from '../hooks/useChat';
-import { chatManagementApi } from '../api';
+import { ChatMessage, ChatRoom, useChat } from '../hooks/useChat';
 
 const formatTime = (timestamp: string) => {
   const date = new Date(timestamp);
@@ -75,37 +69,6 @@ export const Messaging: React.FC = () => {
   const [inputText, setInputText] = useState('');
   const [roomSearch, setRoomSearch] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Modal states
-  const [showCreateRoomModal, setShowCreateRoomModal] = useState(false);
-  const [showJoinRoomModal, setShowJoinRoomModal] = useState(false);
-  const [showJoinCodeModal, setShowJoinCodeModal] = useState(false);
-  const [showDeleteRoomModal, setShowDeleteRoomModal] = useState(false);
-  const [pendingRoomId, setPendingRoomId] = useState<string | null>(null);
-  const [pendingRoomName, setPendingRoomName] = useState<string>('');
-  const [newRoomName, setNewRoomName] = useState('');
-  const [newRoomDescription, setNewRoomDescription] = useState('');
-  const [joinCode, setJoinCode] = useState('');
-  const [createdRoomCode, setCreatedRoomCode] = useState<string | null>(null);
-  const [copiedCode, setCopiedCode] = useState(false);
-  const [loadingCreate, setLoadingCreate] = useState(false);
-  const [loadingJoin, setLoadingJoin] = useState(false);
-  const [loadingDelete, setLoadingDelete] = useState(false);
-  const [showStickerPanel, setShowStickerPanel] = useState(false);
-
-  // Stickers list
-  const stickerCategories = [
-    { name: 'Cảm xúc', stickers: ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '😮‍💨', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '🥸', '😎', '🤓', '🧐', '😕', '😟', '🙁', '😮', '😯', '😲', '😳', '🥺', '😦', '😧', '😨', '😰', '😥', '😢', '😭', '😱', '😖', '😣', '😞', '😓', '😩', '😫', '🥱', '😤', '😡', '😠', '🤬', '😈', '👿', '💀', '☠️', '💩', '🤡', '👹', '👺', '👻', '👽', '👾', '🤖'] },
-    { name: 'Tay & Người', stickers: ['👍', '👎', '👊', '✊', '🤛', '🤜', '🤝', '👏', '🙌', '👐', '🤲', '🙏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '👇', '☝️', '✋', '🤚', '🖐️', '🖖', '👋', '🤏', '✍️', '💪', '🦾', '🦿', '🦵', '🦶', '👂', '🦻', '👃', '🧠', '🫀', '🫁', '🦷', '🦴', '👀', '👁️', '👅', '👄'] },
-    { name: 'Hoạt động', stickers: ['👋', '🤚', '🖐️', '✋', '🖖', '👌', '🤌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '👇', '☝️', '🫵', '🙏', '💪', '🦾', '🦿', '🦵', '🦶', '👣', '🧳', '🌂', '☂️', '🧵', '🪡', '🧶', '🪢'] },
-    { name: 'Động vật', stickers: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐻‍❄️', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🙈', '🙉', '🙊', '🐒', '🐔', '🐧', '🐦', '🐤', '🐣', '🐥', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗', '🐴', '🦄', '🐝', '🪱', '🐛', '🦋', '🐌', '🐞', '🐜', '🪰', '🪲', '🪳', '🦟', '🦗', '🕷️', '🕸️', '🦂', '🐢', '🐍', '🦎', '🦖', '🦕', '🐙', '🦑', '🦐', '🦞', '🦀', '🐡', '🐠', '🐟', '🐬', '🐳', '🐋', '🦈', '🐊', '🐅', '🐆', '🦓', '🦍', '🦧', '🦣', '🐘', '🦛', '🦏', '🐪', '🐫', '🦒', '🦘', '🦬', '🦕', '🐇', '🦔', '🐿️', '🐉', '🐲'] },
-    { name: 'Đồ ăn', stickers: ['🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🫐', '🍈', '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅', '🥑', '🥦', '🥬', '🥒', '🌶️', '🫑', '🌽', '🥕', '🧄', '🧅', '🥔', '🍠', '🥐', '🥯', '🍞', '🥖', '🥨', '🧀', '🥚', '🍳', '🧈', '🥞', '🧇', '🥓', '🥩', '🍗', '🍖', '🦴', '🌭', '🍔', '🍟', '🍕', '🫓', '🥪', '🥙', '🧆', '🌮', '🌯', '🫔', '🥗', '🥘', '🫕', '🍝', '🍜', '🍲', '🍛', '🍣', '🍱', '🥟', '🦪', '🍤', '🍙', '🍚', '🍘', '🍥', '🥠', '🥮', '🍢', '🍡', '🍧', '🍨', '🍦', '🥧', '🧁', '🍰', '🎂', '🍮', '🍭', '🍬', '🍫', '🍿', '🍩', '🍪', '☕', '🍵', '🧃', '🥤', '🧋', '🍶', '🍺', '🍻', '🥂', '🍷', '🥃', '🍸', '🍹', '🧉', '🍾', '🧊'] },
-    { name: 'Cờ vui', stickers: ['⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎱', '🪀', '🏓', '🏸', '🏒', '🏑', '🥍', '🏏', '🪃', '🥅', '⛳', '🪁', '🏹', '🎣', '🤿', '🥊', '🥋', '🎽', '🛹', '🛼', '🛷', '⛸️', '🥌', '🎿', '⛷️', '🏂', '🪂', '🏋️', '🤼', '🤸', '🤺', '⛹️', '🤾', '🏌️', '🏇', '🧘', '🏄', '🏊', '🤽', '🚣', '🧗', '🚵', '🚴', '🏆', '🥇', '🥈', '🥉', '🏅', '🎖️', '🏵️', '🎗️', '🎫', '🎟️', '🎪', '🤹', '🎭', '🩰', '🎨', '🎬', '🎤', '🎧', '🎼', '🎹', '🥁', '🪘', '🎷', '🎺', '🎸', '🪕', '🎻', '🎲', '♟️', '🎯', '🎳', '🎮', '🕹️', '🎰'] },
-    { name: 'Trái tim', stickers: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❤️‍🔥', '❤️‍🩹', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '♥️'] },
-    { name: 'Ký hiệu', stickers: ['✨', '💫', '⭐', '🌟', '💥', '🔥', '💢', '💬', '💭', '💤', '🫶', '🤝', '👌', '✔️', '❌', '❓', '❗', '⁉️', '‼️', '🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '⚫', '⚪', '🟤', '🔶', '🔷', '🔸', '🔹'] },
-  ];
 
   // Fetch Rooms on Mount
   useEffect(() => {
@@ -193,7 +156,7 @@ export const Messaging: React.FC = () => {
     }
   };
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputText.trim() || !user || !activeRoom) return;
 
@@ -367,6 +330,26 @@ export const Messaging: React.FC = () => {
           )}
         </div>
 
+        {/* Action Buttons */}
+        <div className="p-3 border-b border-slate-200 bg-white space-y-2">
+          {isManager && (
+            <button
+              onClick={() => setShowCreateRoomModal(true)}
+              className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold ${themeBg} text-white hover:${themeHover} transition-colors`}
+            >
+              <Plus size={14} /> Tạo phòng
+            </button>
+          )}
+          {isMember && (
+            <button
+              onClick={() => setShowJoinRoomModal(true)}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+            >
+              <Key size={14} /> Vào phòng
+            </button>
+          )}
+        </div>
+
         {/* Room List */}
         <div className="flex-1 overflow-y-auto p-3">
           {loadingRooms ? (
@@ -382,77 +365,65 @@ export const Messaging: React.FC = () => {
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-2 mt-1 flex items-center gap-1">
                     <Pin size={10} /> Đã ghim
                   </p>
-                  <div className="space-y-1 mb-3">
-                    {pinnedRooms.map((room, idx) => (
-                      <motion.button
-                        key={room.id}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: idx * 0.05 }}
-                        onClick={() => {
-                          if (isMember && room.isPrivate && !room.isMember) {
-                            setPendingRoomId(room.id);
-                            setPendingRoomName(room.name);
-                            setShowJoinCodeModal(true);
-                          } else {
-                            joinRoom(room.id);
-                          }
-                        }}
-                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all ${
-                          activeRoom === room.id
-                            ? `${themeBg} text-white shadow-md`
-                            : 'text-slate-600 hover:bg-white hover:shadow-sm'
-                        }`}
-                      >
-                        {room.isPrivate ? <Lock size={15} /> : <Hash size={15} />}
-                        <span className="text-sm font-medium truncate flex-1 text-left">{room.name}</span>
-                        {room.isPrivate && !room.isMember && isMember && (
-                          <Key size={12} className="text-amber-500" />
-                        )}
-                        {room.unread > 0 && (
-                          <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                            {room.unread}
-                          </span>
-                        )}
-                      </motion.button>
-                    ))}
-                  </div>
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="space-y-1 mb-3"
+                  >
+                    {pinnedRooms.map((room, idx) => {
+                      const Icon = room.type === 'channel' ? Hash : Shield;
+                      return (
+                        <motion.button
+                          key={room.id}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: idx * 0.05 }}
+                          onClick={() => joinRoom(room.id)}
+                          className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all ${
+                            activeRoom === room.id
+                              ? `${themeBg} text-white shadow-md`
+                              : 'text-slate-600 hover:bg-white hover:shadow-sm'
+                          }`}
+                        >
+                          <Icon size={15} />
+                          <span className="text-sm font-medium truncate flex-1 text-left">{room.name}</span>
+                          {room.unread > 0 && (
+                            <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                              {room.unread}
+                            </span>
+                          )}
+                        </motion.button>
+                      );
+                    })}
+                  </motion.div>
                 </>
               )}
               {normalRooms.length > 0 && (
                 <>
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-2">Kênh</p>
                   <div className="space-y-1">
-                    {normalRooms.map(room => (
-                      <button
-                        key={room.id}
-                        onClick={() => {
-                          if (isMember && room.isPrivate && !room.isMember) {
-                            setPendingRoomId(room.id);
-                            setPendingRoomName(room.name);
-                            setShowJoinCodeModal(true);
-                          } else {
-                            joinRoom(room.id);
-                          }
-                        }}
-                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all ${
-                          activeRoom === room.id
-                            ? `${themeBg} text-white shadow-md`
-                            : 'text-slate-600 hover:bg-white hover:shadow-sm'
-                        }`}
-                      >
-                        {room.isPrivate ? <Lock size={15} /> : <Hash size={15} />}
-                        <span className="text-sm font-medium truncate flex-1 text-left">{room.name}</span>
-                        {room.isPrivate && !room.isMember && isMember && (
-                          <Key size={12} className="text-amber-500" />
-                        )}
-                        {room.unread > 0 && (
-                          <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                            {room.unread}
-                          </span>
-                        )}
-                      </button>
-                    ))}
+                    {normalRooms.map(room => {
+                      const Icon = room.type === 'channel' ? Hash : Shield;
+                      return (
+                        <button
+                          key={room.id}
+                          onClick={() => joinRoom(room.id)}
+                          className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all ${
+                            activeRoom === room.id
+                              ? `${themeBg} text-white shadow-md`
+                              : 'text-slate-600 hover:bg-white hover:shadow-sm'
+                          }`}
+                        >
+                          <Icon size={15} />
+                          <span className="text-sm font-medium truncate flex-1 text-left">{room.name}</span>
+                          {room.unread > 0 && (
+                            <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                              {room.unread}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 </>
               )}
@@ -599,87 +570,16 @@ export const Messaging: React.FC = () => {
                             <p className="text-[10px] text-slate-400">{formatTime(msg.timestamp)}</p>
                           </div>
                         )}
-
-                        {/* Reply indicator */}
-                        {msg.parentMessageId && (
-                          <div className={`text-xs text-slate-500 px-3 py-1 ${isMe ? 'bg-blue-700/30' : 'bg-slate-100'} rounded-t-lg`}>
-                            ↩ Đang trả lời tin nhắn
-                          </div>
-                        )}
-
                         <motion.div
                           whileHover={{ scale: 1.01 }}
                           className={`px-4 py-2.5 rounded-2xl text-sm ${
-                            isMe
-                              ? `${themeBg} text-white rounded-br-sm`
+                            isMe 
+                              ? `${themeBg} text-white rounded-br-sm` 
                               : 'bg-white text-slate-700 rounded-bl-sm shadow-sm border border-slate-100'
                           }`}
                         >
-                          {/* Message text */}
-                          <p className="whitespace-pre-wrap">{msg.text}</p>
-
-                          {/* Read receipt */}
-                          {isMe && (
-                            <div className="absolute -bottom-5 right-0 flex items-center gap-1">
-                              {msg.isRead ? (
-                                <CheckCheck size={12} className="text-blue-400" />
-                              ) : (
-                                <Check size={12} className="text-slate-400" />
-                              )}
-                            </div>
-                          )}
-
-                          {/* Message actions */}
-                          <div className={`absolute top-1/2 -translate-y-1/2 ${isMe ? '-left-20' : '-right-20'} flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity`}>
-                            <button
-                              onClick={() => setReplyingTo(msg)}
-                              className="p-1.5 bg-white rounded-full shadow border border-slate-200 hover:bg-slate-50"
-                            >
-                              <MessageCircle size={14} className="text-slate-600" />
-                            </button>
-                            <div className="relative">
-                              <button
-                                onClick={() => setShowEmojiPicker(showEmojiPicker === msg.id ? null : msg.id)}
-                                className="p-1.5 bg-white rounded-full shadow border border-slate-200 hover:bg-slate-50"
-                              >
-                                <Smile size={14} className="text-slate-600" />
-                              </button>
-                              {showEmojiPicker === msg.id && (
-                                <div className={`absolute top-full mt-1 ${isMe ? 'right-0' : 'left-0'} bg-white rounded-lg shadow-lg border border-slate-200 p-1 flex gap-1 z-10`}>
-                                  {COMMON_EMOJIS.map(emoji => (
-                                    <button
-                                      key={emoji}
-                                      onClick={() => handleReaction(msg.id, emoji)}
-                                      className="p-1 hover:bg-slate-100 rounded"
-                                    >
-                                      {emoji}
-                                    </button>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                            {msg.replyCount && msg.replyCount > 0 && (
-                              <button
-                                onClick={() => handleViewThread(msg)}
-                                className="p-1.5 bg-white rounded-full shadow border border-slate-200 hover:bg-slate-50"
-                              >
-                                <ChevronRight size={14} className="text-slate-600" />
-                              </button>
-                            )}
-                            {/* Recall button - only for own messages */}
-                            {isMe && (
-                              <button
-                                onClick={() => handleRecall(msg.id)}
-                                className="px-1.5 py-1.5 bg-white rounded-full shadow border border-slate-200 hover:bg-rose-50 hover:border-rose-200 hover:text-rose-600"
-                                title="Thu hồi tin nhắn"
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            )}
-                          </div>
+                          {msg.text}
                         </motion.div>
-
-                        {/* Reactions */}
                         {msg.reactions && msg.reactions.length > 0 && (
                           <div className={`flex gap-1 flex-wrap ${isMe ? 'justify-end' : 'justify-start'} ml-1`}>
                             {msg.reactions.map((reaction, i) => (
@@ -809,494 +709,6 @@ export const Messaging: React.FC = () => {
           )}
         </div>
       </div>
-
-      {/* Search Modal */}
-      <AnimatePresence>
-        {showSearch && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-            onClick={() => setShowSearch(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 overflow-hidden"
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="p-4 border-b border-slate-200">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                  <input
-                    type="text"
-                    placeholder="Tìm tin nhắn..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                    className="w-full bg-slate-100 border-none rounded-lg py-2.5 pl-10 pr-4 text-sm outline-none focus:ring-2 focus:ring-blue-500/20"
-                    autoFocus
-                  />
-                </div>
-              </div>
-              <div className="max-h-96 overflow-y-auto">
-                {searchResults.length === 0 && searchQuery && (
-                  <div className="p-8 text-center text-slate-400">
-                    Không tìm thấy kết quả nào
-                  </div>
-                )}
-                {searchResults.map(msg => (
-                  <div
-                    key={msg.id}
-                    className="p-3 hover:bg-slate-50 border-b border-slate-100 cursor-pointer"
-                    onClick={() => { setShowSearch(false); }}
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-medium text-slate-600">{msg.userName}</span>
-                      <span className="text-[10px] text-slate-400">{formatTime(msg.timestamp)}</span>
-                    </div>
-                    <p className="text-sm text-slate-700" dangerouslySetInnerHTML={{ __html: msg.highlightedText || msg.text }} />
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* New Chat Modal */}
-      <AnimatePresence>
-        {showNewChat && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-            onClick={() => setShowNewChat(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 overflow-hidden"
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="p-4 border-b border-slate-200 flex items-center justify-between">
-                <h3 className="font-semibold text-slate-800">Tin nhắn mới</h3>
-                <button onClick={() => setShowNewChat(false)} className="p-1 hover:bg-slate-100 rounded">
-                  <X size={18} className="text-slate-500" />
-                </button>
-              </div>
-              <div className="p-4">
-                <div className="relative mb-4">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                  <input
-                    type="text"
-                    placeholder="Tìm người dùng..."
-                    value={userSearch}
-                    onChange={(e) => setUserSearch(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSearchUsers()}
-                    className="w-full bg-slate-100 border-none rounded-lg py-2.5 pl-10 pr-4 text-sm outline-none focus:ring-2 focus:ring-blue-500/20"
-                  />
-                </div>
-                <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {userSearchResults.map(u => (
-                    <button
-                      key={u.id}
-                      onClick={() => handleNewChat(u.id)}
-                      className="w-full flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg transition-colors"
-                    >
-                      <img src={u.avatar} alt={u.name} className="w-10 h-10 rounded-full bg-slate-200" />
-                      <div className="text-left">
-                        <p className="text-sm font-medium text-slate-700">{u.name}</p>
-                        <p className="text-xs text-slate-500">{u.email}</p>
-                      </div>
-                    </button>
-                  ))}
-                  {userSearch && userSearchResults.length === 0 && (
-                    <p className="text-center text-sm text-slate-400 py-4">Không tìm thấy người dùng</p>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Create Room Modal (Manager) */}
-      <AnimatePresence>
-        {showCreateRoomModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-            onClick={() => setShowCreateRoomModal(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl"
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-slate-800">Tạo phòng chat mới</h3>
-                <button onClick={() => setShowCreateRoomModal(false)} className="text-slate-400 hover:text-slate-600">
-                  <X size={20} />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-1">Tên phòng</label>
-                  <input
-                    type="text"
-                    value={newRoomName}
-                    onChange={e => setNewRoomName(e.target.value)}
-                    placeholder="Nhập tên phòng..."
-                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-transparent outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-1">Mô tả (tùy chọn)</label>
-                  <textarea
-                    value={newRoomDescription}
-                    onChange={e => setNewRoomDescription(e.target.value)}
-                    placeholder="Nhập mô tả..."
-                    rows={2}
-                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-transparent outline-none resize-none"
-                  />
-                </div>
-
-                {createdRoomCode ? (
-                  <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
-                    <p className="text-xs font-semibold text-emerald-700 mb-2">Phòng đã được tạo! Mã tham gia:</p>
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl font-black text-emerald-600 tracking-wider">{createdRoomCode}</span>
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(createdRoomCode);
-                          setCopiedCode(true);
-                          setTimeout(() => setCopiedCode(false), 2000);
-                        }}
-                        className="p-2 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-colors"
-                      >
-                        {copiedCode ? <Check size={18} /> : <X size={18} />}
-                      </button>
-                    </div>
-                    <p className="text-[10px] text-emerald-600 mt-2">Chia mã này cho nhân viên để họ tham gia phòng</p>
-                  </div>
-                ) : (
-                  <button
-                    onClick={async () => {
-                      if (!newRoomName.trim()) return;
-                      setLoadingCreate(true);
-                      try {
-                        const res = await chatManagementApi.createRoomWithCode({
-                          name: newRoomName.trim(),
-                          description: newRoomDescription.trim()
-                        });
-                        if (res.success) {
-                          setCreatedRoomCode(res.joinCode);
-                          const roomsRes = await fetch('/api/messaging/rooms', { credentials: 'include' });
-                          if (roomsRes.ok) {
-                            const data = await roomsRes.json();
-                            setRooms(data.rooms || []);
-                          }
-                        }
-                      } catch (err) {
-                        console.error('Failed to create room:', err);
-                        alert('Tạo phòng thất bại');
-                      } finally {
-                        setLoadingCreate(false);
-                      }
-                    }}
-                    disabled={!newRoomName.trim() || loadingCreate}
-                    className={`w-full py-2.5 rounded-xl font-semibold text-white ${loadingCreate ? 'bg-slate-400' : `${themeBg} ${themeHover}`} transition-colors disabled:opacity-50`}
-                  >
-                    {loadingCreate ? 'Đang tạo...' : 'Tạo phòng'}
-                  </button>
-                )}
-
-                {createdRoomCode && (
-                  <button
-                    onClick={() => {
-                      setShowCreateRoomModal(false);
-                      setNewRoomName('');
-                      setNewRoomDescription('');
-                      setCreatedRoomCode(null);
-                    }}
-                    className="w-full py-2.5 rounded-xl font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
-                  >
-                    Đóng
-                  </button>
-                )}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Join Room Modal (Staff - từ button) */}
-      <AnimatePresence>
-        {showJoinRoomModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-            onClick={() => setShowJoinRoomModal(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl"
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-slate-800">Vào phòng chat</h3>
-                <button onClick={() => setShowJoinRoomModal(false)} className="text-slate-400 hover:text-slate-600">
-                  <X size={20} />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-1">Mã tham gia</label>
-                  <input
-                    type="text"
-                    value={joinCode}
-                    onChange={e => setJoinCode(e.target.value.toUpperCase())}
-                    placeholder="Nhập mã..."
-                    maxLength={6}
-                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none text-center text-lg tracking-widest font-bold"
-                  />
-                </div>
-
-                <button
-                  onClick={async () => {
-                    if (!joinCode.trim()) return;
-                    setLoadingJoin(true);
-                    try {
-                      const res = await chatManagementApi.joinRoomByCode(joinCode.trim());
-                      if (res.success) {
-                        alert('Tham gia phòng thành công!');
-                        setShowJoinRoomModal(false);
-                        setJoinCode('');
-                        const roomsRes = await fetch('/api/messaging/rooms', { credentials: 'include' });
-                        if (roomsRes.ok) {
-                          const data = await roomsRes.json();
-                          setRooms(data.rooms || []);
-                        }
-                      }
-                    } catch (err: any) {
-                      alert(err?.message || 'Mã không hợp lệ');
-                    } finally {
-                      setLoadingJoin(false);
-                    }
-                  }}
-                  disabled={joinCode.length < 6 || loadingJoin}
-                  className="w-full py-2.5 rounded-xl font-semibold text-white bg-emerald-500 hover:bg-emerald-600 transition-colors disabled:opacity-50"
-                >
-                  {loadingJoin ? 'Đang tham gia...' : 'Tham gia phòng'}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Join Code Modal (Staff - khi click vào phòng private) */}
-      <AnimatePresence>
-        {showJoinCodeModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-            onClick={() => setShowJoinCodeModal(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl"
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-slate-800">Nhập mã tham gia</h3>
-                <button onClick={() => setShowJoinCodeModal(false)} className="text-slate-400 hover:text-slate-600">
-                  <X size={20} />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <p className="text-sm text-slate-600">
-                  Phòng <span className="font-semibold text-slate-800">"{pendingRoomName}"</span> yêu cầu mã tham gia. Vui lòng nhập mã được cấp bởi quản lý.
-                </p>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-1">Mã tham gia</label>
-                  <input
-                    type="text"
-                    value={joinCode}
-                    onChange={e => setJoinCode(e.target.value.toUpperCase())}
-                    placeholder="Nhập mã..."
-                    maxLength={6}
-                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none text-center text-lg tracking-widest font-bold"
-                  />
-                </div>
-
-                <button
-                  onClick={async () => {
-                    if (!joinCode.trim()) return;
-                    setLoadingJoin(true);
-                    try {
-                      const res = await chatManagementApi.joinRoomByCode(joinCode.trim());
-                      if (res.success) {
-                        setShowJoinCodeModal(false);
-                        setJoinCode('');
-                        const roomsRes = await fetch('/api/messaging/rooms', { credentials: 'include' });
-                        if (roomsRes.ok) {
-                          const data = await roomsRes.json();
-                          setRooms(data.rooms || []);
-                          if (pendingRoomId) {
-                            joinRoom(pendingRoomId);
-                          }
-                        }
-                        setPendingRoomId(null);
-                        setPendingRoomName('');
-                      }
-                    } catch (err: any) {
-                      alert(err?.message || 'Mã không hợp lệ');
-                    } finally {
-                      setLoadingJoin(false);
-                    }
-                  }}
-                  disabled={joinCode.length < 6 || loadingJoin}
-                  className="w-full py-2.5 rounded-xl font-semibold text-white bg-emerald-500 hover:bg-emerald-600 transition-colors disabled:opacity-50"
-                >
-                  {loadingJoin ? 'Đang tham gia...' : 'Tham gia phòng'}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Delete Room Modal */}
-      <AnimatePresence>
-        {showDeleteRoomModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-            onClick={() => setShowDeleteRoomModal(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl"
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-slate-800">Xóa kênh</h3>
-                <button onClick={() => setShowDeleteRoomModal(false)} className="text-slate-400 hover:text-slate-600">
-                  <X size={20} />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <p className="text-sm text-slate-600">
-                  Bạn có chắc chắn muốn xóa kênh <span className="font-semibold text-slate-800">"{pendingRoomName}"</span>? Hành động này không thể hoàn tác.
-                </p>
-
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => setShowDeleteRoomModal(false)}
-                    className="flex-1 py-2.5 rounded-xl font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
-                  >
-                    Hủy
-                  </button>
-                  <button
-                    onClick={async () => {
-                      if (!pendingRoomId) return;
-                      setLoadingDelete(true);
-                      try {
-                        const res = await chatManagementApi.deleteRoom(pendingRoomId);
-                        if (res.success) {
-                          setShowDeleteRoomModal(false);
-                          setPendingRoomId(null);
-                          setPendingRoomName('');
-                          const roomsRes = await fetch('/api/messaging/rooms', { credentials: 'include' });
-                          if (roomsRes.ok) {
-                            const data = await roomsRes.json();
-                            setRooms(data.rooms || []);
-                          }
-                        }
-                      } catch (err) {
-                        console.error('Failed to delete room:', err);
-                        alert('Xóa kênh thất bại');
-                      } finally {
-                        setLoadingDelete(false);
-                      }
-                    }}
-                    disabled={loadingDelete}
-                    className="flex-1 py-2.5 rounded-xl font-semibold text-white bg-rose-500 hover:bg-rose-600 transition-colors disabled:opacity-50"
-                  >
-                    {loadingDelete ? 'Đang xóa...' : 'Xóa kênh'}
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Thread Panel */}
-      <AnimatePresence>
-        {showThread && replyingTo && (
-          <motion.div
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            className="w-80 border-l border-slate-200 bg-white flex flex-col shrink-0"
-          >
-            <div className="p-4 border-b border-slate-200 flex items-center justify-between">
-              <h3 className="font-semibold text-slate-800">Trả lời</h3>
-              <button onClick={() => { setShowThread(false); setReplyingTo(null); }} className="p-1 hover:bg-slate-100 rounded">
-                <X size={18} className="text-slate-500" />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              <div className="p-3 bg-slate-50 rounded-lg">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-medium text-slate-600">{replyingTo.userName}</span>
-                </div>
-                <p className="text-sm text-slate-700">{replyingTo.text}</p>
-              </div>
-              {threadMessages.map(msg => (
-                <div key={msg.id} className="flex gap-2">
-                  <img src={msg.userAvatar} alt={msg.userName} className="w-6 h-6 rounded-full bg-slate-200 shrink-0" />
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium text-slate-600">{msg.userName}</span>
-                      <span className="text-[10px] text-slate-400">{formatTime(msg.timestamp)}</span>
-                    </div>
-                    <p className="text-sm text-slate-700">{msg.text}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 };
