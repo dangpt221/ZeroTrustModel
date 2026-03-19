@@ -606,7 +606,16 @@ export const getDocumentRequests = async (req, res, next) => {
       .populate('documentId', 'title name')
       .sort({ createdAt: -1 })
       .lean();
-    res.json(requests);
+    res.json(requests.map(req => ({
+      id: req._id.toString(),
+      userId: req.userId?._id?.toString() || req.userId?.toString() || '',
+      documentId: req.documentId?._id?.toString() || req.documentId?.toString() || '',
+      reason: req.reason,
+      status: req.status,
+      createdAt: req.createdAt,
+      reviewedAt: req.reviewedAt,
+      reviewedBy: req.reviewedBy,
+    })));
   } catch (err) {
     next(err);
   }

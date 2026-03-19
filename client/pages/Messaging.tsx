@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Shield, Lock, Search, Hash, Pin, MoreVertical, Wifi, WifiOff, MessageSquare, ChevronRight } from 'lucide-react';
+import { Send, Shield, Lock, Search, Hash, Pin, MoreVertical, Wifi, WifiOff, MessageSquare, ChevronRight, Plus, Key, X, Copy, Check, Trash2, Smile, Paperclip, File, Image, XCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 
 import { useChat, ChatMessage, ChatRoom } from '../hooks/useChat';
+import { chatManagementApi } from '../api';
 
 const formatTime = (timestamp: string) => {
   const date = new Date(timestamp);
@@ -50,6 +51,40 @@ export const Messaging: React.FC = () => {
   const [inputText, setInputText] = useState('');
   const [roomSearch, setRoomSearch] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Modal states
+  const [showCreateRoomModal, setShowCreateRoomModal] = useState(false);
+  const [showJoinRoomModal, setShowJoinRoomModal] = useState(false);
+  const [showJoinCodeModal, setShowJoinCodeModal] = useState(false);
+  const [showDeleteRoomModal, setShowDeleteRoomModal] = useState(false);
+  const [pendingRoomId, setPendingRoomId] = useState<string | null>(null);
+  const [pendingRoomName, setPendingRoomName] = useState<string>('');
+  const [newRoomName, setNewRoomName] = useState('');
+  const [newRoomDescription, setNewRoomDescription] = useState('');
+  const [joinCode, setJoinCode] = useState('');
+  const [createdRoomCode, setCreatedRoomCode] = useState<string | null>(null);
+  const [copiedCode, setCopiedCode] = useState(false);
+  const [loadingCreate, setLoadingCreate] = useState(false);
+  const [loadingJoin, setLoadingJoin] = useState(false);
+  const [loadingDelete, setLoadingDelete] = useState(false);
+  const [showStickerPanel, setShowStickerPanel] = useState(false);
+  const [showFileInput, setShowFileInput] = useState(false);
+  const [attachedFile, setAttachedFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Stickers list (using free emoji/sticker URLs)
+  const stickerCategories = [
+    { name: 'Cảm xúc', stickers: ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '😮‍💨', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '🥸', '😎', '🤓', '🧐', '😕', '😟', '🙁', '😮', '😯', '😲', '😳', '🥺', '😦', '😧', '😨', '😰', '😥', '😢', '😭', '😱', '😖', '😣', '😞', '😓', '😩', '😫', '🥱', '😤', '😡', '😠', '🤬', '😈', '👿', '💀', '☠️', '💩', '🤡', '👹', '👺', '👻', '👽', '👾', '🤖'] },
+    { name: 'Tay & Người', stickers: ['👍', '👎', '👊', '✊', '🤛', '🤜', '🤝', '👏', '🙌', '👐', '🤲', '🙏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '👇', '☝️', '✋', '🤚', '🖐️', '🖖', '👋', '🤏', '✍️', '🙏', '💪', '🦾', '🦿', '🦵', '🦶', '👂', '🦻', '👃', '🧠', '🫀', '🫁', '🦷', '🦴', '👀', '👁️', '👅', '👄'] },
+    { name: 'Hoạt động', stickers: ['👋', '🤚', '🖐️', '✋', '🖖', '👌', '🤌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '👇', '☝️', '🫵', '🙏', '💪', '🦾', '🦿', '🦵', '🦶', '👣', '🧳', '🌂', '☂️', '🧵', '🪡', '🧶', '🪢'] },
+    { name: 'Động vật', stickers: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐻‍❄️', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🙈', '🙉', '🙊', '🐒', '🐔', '🐧', '🐦', '🐤', '🐣', '🐥', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗', '🐴', '🦄', '🐝', '🪱', '🐛', '🦋', '🐌', '🐞', '🐜', '🪰', '🪲', '🪳', '🦟', '🦗', '🕷️', '🕸️', '🦂', '🐢', '🐍', '🦎', '🦖', '🦕', '🐙', '🦑', '🦐', '🦞', '🦀', '🐡', '🐠', '🐟', '🐬', '🐳', '🐋', '🦈', '🐊', '🐅', '🐆', '🦓', '🦍', '🦧', '🦣', '🐘', '🦛', '🦏', '🐪', '🐫', '🦒', '🦘', '🦬', '🦕', '🐇', '🦔', '🐿️', '🦇', '🐉', '🐲'] },
+    { name: 'Đồ ăn', stickers: ['🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🫐', '🍈', '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅', '🥑', '🥦', '🥬', '🥒', '🌶️', '🫑', '🌽', '🥕', '🧄', '🧅', '🥔', '🍠', '🥐', '🥯', '🍞', '🥖', '🥨', '🧀', '🥚', '🍳', '🧈', '🥞', '🧇', '🥓', '🥩', '🍗', '🍖', '🦴', '🌭', '🍔', '🍟', '🍕', '🫓', '🥪', '🥙', '🧆', '🌮', '🌯', '🫔', '🥗', '🥘', '🫕', '🍝', '🍜', '🍲', '🍛', '🍣', '🍱', '🥟', '🦪', '🍤', '🍙', '🍚', '🍘', '🍥', '🥠', '🥮', '🍢', '🍡', '🍧', '🍨', '🍦', '🥧', '🧁', '🍰', '🎂', '🍮', '🍭', '🍬', '🍫', '🍿', '🍩', '🍪', '☕', '🍵', '🧃', '🥤', '🧋', '🍶', '🍺', '🍻', '🥂', '🍷', '🥃', '🍸', '🍹', '🧉', '🍾', '🧊'] },
+    { name: 'Cờ vui', stickers: ['⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎱', '🪀', '🏓', '🏸', '🏒', '🏑', '🥍', '🏏', '🪃', '🥅', '⛳', '🪁', '🏹', '🎣', '🤿', '🥊', '🥋', '🎽', '🛹', '🛼', '🛷', '⛸️', '🥌', '🎿', '⛷️', '🏂', '🪂', '🏋️', '🤼', '🤸', '🤺', '⛹️', '🤾', '🏌️', '🏇', '🧘', '🏄', '🏊', '🤽', '🚣', '🧗', '🚵', '🚴', '🏆', '🥇', '🥈', '🥉', '🏅', '🎖️', '🏵️', '🎗️', '🎫', '🎟️', '🎪', '🤹', '🎭', '🩰', '🎨', '🎬', '🎤', '🎧', '🎼', '🎹', '🥁', '🪘', '🎷', '🎺', '🎸', '🪕', '🎻', '🎲', '♟️', '🎯', '🎳', '🎮', '🕹️', '🎰'] },
+    { name: 'Trái tim', stickers: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❤️‍🔥', '❤️‍🩹', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '♥️'] },
+    { name: 'Ký hiệu', stickers: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '✨', '💫', '⭐', '🌟', '💥', '🔥', '💥', '💢', '💬', '💭', '💤', '👋', '🫶', '🤝', '👌', '✔️', '❌', '❓', '❗', '⁉️', '‼️', '🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '⚫', '⚪', '🟤', '🔶', '🔷', '🔸', '🔹'] },
+  ];
 
   // Fetch Rooms on Mount
   useEffect(() => {
@@ -115,9 +150,43 @@ export const Messaging: React.FC = () => {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputText.trim() || !user || !activeRoom) return;
+    if ((!inputText.trim() && !attachedFile) || !user || !activeRoom) return;
+
+    // Nếu có file đính kèm, upload trước
+    if (attachedFile) {
+      setUploading(true);
+      try {
+        const formData = new FormData();
+        formData.append('file', attachedFile);
+        formData.append('room', activeRoom);
+        formData.append('text', inputText.trim() || (attachedFile.type.startsWith('image/') ? '📷 Đã gửi một ảnh' : '📎 Đã gửi một file'));
+
+        const res = await fetch('/api/messages', {
+          method: 'POST',
+          credentials: 'include',
+          body: formData,
+        });
+
+        if (res.ok) {
+          setInputText('');
+          setAttachedFile(null);
+          // Refresh messages
+          const msgsRes = await fetch(`/api/messages?room=${activeRoom}`, { credentials: 'include' });
+          if (msgsRes.ok) {
+            const data = await msgsRes.json();
+            setMessages(data);
+          }
+        }
+      } catch (err) {
+        console.error('Upload failed:', err);
+        alert('Gửi file thất bại');
+      } finally {
+        setUploading(false);
+      }
+      return;
+    }
 
     sendMessage(inputText.trim(), activeRoom);
     setInputText('');
@@ -151,6 +220,26 @@ export const Messaging: React.FC = () => {
           </div>
         </div>
 
+        {/* Action Buttons */}
+        <div className="p-3 border-b border-slate-200 bg-white space-y-2">
+          {isManager && (
+            <button
+              onClick={() => setShowCreateRoomModal(true)}
+              className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold ${themeBg} text-white hover:${themeHover} transition-colors`}
+            >
+              <Plus size={14} /> Tạo phòng
+            </button>
+          )}
+          {isMember && (
+            <button
+              onClick={() => setShowJoinRoomModal(true)}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+            >
+              <Key size={14} /> Vào phòng
+            </button>
+          )}
+        </div>
+
         {/* Channels List */}
         <div className="flex-1 overflow-y-auto p-3">
           {loadingRooms ? (
@@ -182,15 +271,27 @@ export const Messaging: React.FC = () => {
                           initial={{ opacity: 0, x: -20 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: idx * 0.05 }}
-                          onClick={() => joinRoom(room.id)}
+                          onClick={() => {
+                            // Staff cần nhập mã để vào phòng private
+                            if (isMember && room.isPrivate && !room.isMember) {
+                              setPendingRoomId(room.id);
+                              setPendingRoomName(room.name);
+                              setShowJoinCodeModal(true);
+                            } else {
+                              joinRoom(room.id);
+                            }
+                          }}
                           className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all ${
                             activeRoom === room.id
                               ? `${themeBg} text-white shadow-md`
                               : 'text-slate-600 hover:bg-white hover:shadow-sm'
                           }`}
                         >
-                          <Icon size={15} />
+                          {room.isPrivate ? <Lock size={15} /> : <Icon size={15} />}
                           <span className="text-sm font-medium truncate flex-1 text-left">{room.name}</span>
+                          {room.isPrivate && !room.isMember && isMember && (
+                            <Key size={12} className="text-amber-500" />
+                          )}
                           {room.unread > 0 && (
                             <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
                               {room.unread}
@@ -213,15 +314,27 @@ export const Messaging: React.FC = () => {
                       return (
                         <button
                           key={room.id}
-                          onClick={() => joinRoom(room.id)}
+                          onClick={() => {
+                            // Staff cần nhập mã để vào phòng private
+                            if (isMember && room.isPrivate && !room.isMember) {
+                              setPendingRoomId(room.id);
+                              setPendingRoomName(room.name);
+                              setShowJoinCodeModal(true);
+                            } else {
+                              joinRoom(room.id);
+                            }
+                          }}
                           className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all ${
                             activeRoom === room.id
                               ? `${themeBg} text-white shadow-md`
                               : 'text-slate-600 hover:bg-white hover:shadow-sm'
                           }`}
                         >
-                          <Icon size={15} />
+                          {room.isPrivate ? <Lock size={15} /> : <Icon size={15} />}
                           <span className="text-sm font-medium truncate flex-1 text-left">{room.name}</span>
+                          {room.isPrivate && !room.isMember && isMember && (
+                            <Key size={12} className="text-amber-500" />
+                          )}
                           {room.unread > 0 && (
                             <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
                               {room.unread}
@@ -259,6 +372,19 @@ export const Messaging: React.FC = () => {
               <Lock size={10} />
               <span className="text-[10px] font-semibold">E2EE</span>
             </div>
+            {isManager && activeRoomData && !activeRoomData.isPinned && (
+              <button
+                onClick={() => {
+                  setPendingRoomId(activeRoom);
+                  setPendingRoomName(activeRoomData?.name || '');
+                  setShowDeleteRoomModal(true);
+                }}
+                className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                title="Xóa kênh"
+              >
+                <Trash2 size={18} />
+              </button>
+            )}
             <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all">
               <MoreVertical size={18} />
             </button>
@@ -328,13 +454,41 @@ export const Messaging: React.FC = () => {
                         <motion.div
                           whileHover={{ scale: 1.01 }}
                           className={`px-4 py-2.5 rounded-2xl text-sm ${
-                            isMe 
-                              ? `${themeBg} text-white rounded-br-sm` 
+                            isMe
+                              ? `${themeBg} text-white rounded-br-sm`
                               : 'bg-white text-slate-700 rounded-bl-sm shadow-sm border border-slate-100'
                           }`}
                         >
                           {msg.text}
                         </motion.div>
+                        {/* File attachment */}
+                        {msg.attachments && msg.attachments.length > 0 && msg.attachments.map((att: any, ai: number) => (
+                          <a
+                            key={ai}
+                            href={att.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`block mt-1 px-3 py-2 rounded-xl border text-xs ${
+                              isMe
+                                ? 'bg-white/10 border-white/20 text-white hover:bg-white/20'
+                                : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                            }`}
+                          >
+                            {att.type?.startsWith('image/') ? (
+                              <img src={att.url} alt={att.name} className="max-w-[200px] max-h-[200px] rounded-lg" />
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <File size={16} />
+                                <span className="font-medium truncate">{att.name}</span>
+                                {att.size && (
+                                  <span className="text-[10px] opacity-60">
+                                    ({(att.size / 1024).toFixed(1)} KB)
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </a>
+                        ))}
                         {msg.reactions && msg.reactions.length > 0 && (
                           <div className={`flex gap-1 ${isMe ? 'justify-end' : 'justify-start'} ml-1`}>
                             {msg.reactions.map((reaction, i) => (
@@ -356,7 +510,92 @@ export const Messaging: React.FC = () => {
 
         {/* Input */}
         <div className="p-4 border-t border-slate-200 shrink-0 bg-white">
+          {/* Sticker Panel */}
+          {showStickerPanel && (
+            <div className="mb-3 bg-white border border-slate-200 rounded-xl shadow-lg p-3 max-h-64 overflow-hidden">
+              <div className="flex gap-1 mb-2 overflow-x-auto pb-1">
+                {stickerCategories.map((cat, i) => (
+                  <button
+                    key={i}
+                    onClick={() => {
+                      const el = document.getElementById(`sticker-cat-${i}`);
+                      if (el) el.scrollIntoView({ block: 'nearest', inline: 'center' });
+                    }}
+                    className="px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg whitespace-nowrap"
+                  >
+                    {cat.name}
+                  </button>
+                ))}
+              </div>
+              <div className="max-h-44 overflow-y-auto">
+                {stickerCategories.map((cat, i) => (
+                  <div key={i} id={`sticker-cat-${i}`} className="grid grid-cols-10 gap-1 mb-2">
+                    {cat.stickers.map((s, j) => (
+                      <button
+                        key={j}
+                        onClick={() => {
+                          sendMessage(s, activeRoom);
+                          setShowStickerPanel(false);
+                        }}
+                        className="w-8 h-8 flex items-center justify-center text-xl hover:bg-slate-100 rounded-lg transition-all hover:scale-110"
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* File Preview */}
+          {attachedFile && (
+            <div className="mb-2 p-2 bg-slate-50 border border-slate-200 rounded-lg flex items-center gap-2">
+              {attachedFile.type.startsWith('image/') ? (
+                <Image size={20} className="text-emerald-500" />
+              ) : (
+                <File size={20} className="text-slate-500" />
+              )}
+              <span className="text-xs text-slate-600 flex-1 truncate">{attachedFile.name}</span>
+              <span className="text-[10px] text-slate-400">
+                {(attachedFile.size / 1024).toFixed(1)} KB
+              </span>
+              <button
+                onClick={() => setAttachedFile(null)}
+                className="text-slate-400 hover:text-rose-500"
+              >
+                <XCircle size={16} />
+              </button>
+            </div>
+          )}
+
           <form onSubmit={handleSendMessage} className="relative flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowStickerPanel(!showStickerPanel)}
+              className="p-2.5 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded-xl transition-all"
+              title="Sticker"
+            >
+              <Smile size={18} />
+            </button>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="p-2.5 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 rounded-xl transition-all"
+              title="Đính kèm file"
+            >
+              <Paperclip size={18} />
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) setAttachedFile(file);
+                e.target.value = '';
+              }}
+            />
             <input
               type="text"
               value={inputText}
@@ -367,7 +606,7 @@ export const Messaging: React.FC = () => {
             />
             <button
               type="submit"
-              disabled={!activeRoom || !inputText.trim()}
+              disabled={!activeRoom || (!inputText.trim() && !attachedFile)}
               className={`${themeBg} text-white p-2.5 rounded-xl ${themeHover} disabled:opacity-50 disabled:cursor-not-allowed transition-all`}
             >
               <Send size={18} />
@@ -375,6 +614,345 @@ export const Messaging: React.FC = () => {
           </form>
         </div>
       </div>
+
+      {/* Create Room Modal (Manager) */}
+      <AnimatePresence>
+        {showCreateRoomModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+            onClick={() => setShowCreateRoomModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-slate-800">Tạo phòng chat mới</h3>
+                <button onClick={() => setShowCreateRoomModal(false)} className="text-slate-400 hover:text-slate-600">
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1">Tên phòng</label>
+                  <input
+                    type="text"
+                    value={newRoomName}
+                    onChange={e => setNewRoomName(e.target.value)}
+                    placeholder="Nhập tên phòng..."
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-transparent outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1">Mô tả (tùy chọn)</label>
+                  <textarea
+                    value={newRoomDescription}
+                    onChange={e => setNewRoomDescription(e.target.value)}
+                    placeholder="Nhập mô tả..."
+                    rows={2}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-transparent outline-none resize-none"
+                  />
+                </div>
+
+                {createdRoomCode ? (
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+                    <p className="text-xs font-semibold text-emerald-700 mb-2">Phòng đã được tạo! Mã tham gia:</p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl font-black text-emerald-600 tracking-wider">{createdRoomCode}</span>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(createdRoomCode);
+                          setCopiedCode(true);
+                          setTimeout(() => setCopiedCode(false), 2000);
+                        }}
+                        className="p-2 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-colors"
+                      >
+                        {copiedCode ? <Check size={18} /> : <Copy size={18} />}
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-emerald-600 mt-2">Chia mã này cho nhân viên để họ tham gia phòng</p>
+                  </div>
+                ) : (
+                  <button
+                    onClick={async () => {
+                      if (!newRoomName.trim()) return;
+                      setLoadingCreate(true);
+                      try {
+                        const res = await chatManagementApi.createRoomWithCode({
+                          name: newRoomName.trim(),
+                          description: newRoomDescription.trim()
+                        });
+                        if (res.success) {
+                          setCreatedRoomCode(res.joinCode);
+                          // Refresh rooms list
+                          const roomsRes = await fetch('/api/messaging/rooms', { credentials: 'include' });
+                          if (roomsRes.ok) {
+                            const data = await roomsRes.json();
+                            setRooms(data.rooms || []);
+                          }
+                        }
+                      } catch (err) {
+                        console.error('Failed to create room:', err);
+                        alert('Tạo phòng thất bại');
+                      } finally {
+                        setLoadingCreate(false);
+                      }
+                    }}
+                    disabled={!newRoomName.trim() || loadingCreate}
+                    className={`w-full py-2.5 rounded-xl font-semibold text-white ${loadingCreate ? 'bg-slate-400' : `${themeBg} ${themeHover}`} transition-colors disabled:opacity-50`}
+                  >
+                    {loadingCreate ? 'Đang tạo...' : 'Tạo phòng'}
+                  </button>
+                )}
+
+                {createdRoomCode && (
+                  <button
+                    onClick={() => {
+                      setShowCreateRoomModal(false);
+                      setNewRoomName('');
+                      setNewRoomDescription('');
+                      setCreatedRoomCode(null);
+                    }}
+                    className="w-full py-2.5 rounded-xl font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                  >
+                    Đóng
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Join Room Modal (Staff - từ button) */}
+      <AnimatePresence>
+        {showJoinRoomModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+            onClick={() => setShowJoinRoomModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-slate-800">Vào phòng chat</h3>
+                <button onClick={() => setShowJoinRoomModal(false)} className="text-slate-400 hover:text-slate-600">
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1">Mã tham gia</label>
+                  <input
+                    type="text"
+                    value={joinCode}
+                    onChange={e => setJoinCode(e.target.value.toUpperCase())}
+                    placeholder="Nhập mã..."
+                    maxLength={6}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none text-center text-lg tracking-widest font-bold"
+                  />
+                </div>
+
+                <button
+                  onClick={async () => {
+                    if (!joinCode.trim()) return;
+                    setLoadingJoin(true);
+                    try {
+                      const res = await chatManagementApi.joinRoomByCode(joinCode.trim());
+                      if (res.success) {
+                        alert('Tham gia phòng thành công!');
+                        setShowJoinRoomModal(false);
+                        setJoinCode('');
+                        // Refresh rooms list
+                        const roomsRes = await fetch('/api/messaging/rooms', { credentials: 'include' });
+                        if (roomsRes.ok) {
+                          const data = await roomsRes.json();
+                          setRooms(data.rooms || []);
+                        }
+                      }
+                    } catch (err: any) {
+                      alert(err?.message || 'Mã không hợp lệ');
+                    } finally {
+                      setLoadingJoin(false);
+                    }
+                  }}
+                  disabled={joinCode.length < 6 || loadingJoin}
+                  className="w-full py-2.5 rounded-xl font-semibold text-white bg-emerald-500 hover:bg-emerald-600 transition-colors disabled:opacity-50"
+                >
+                  {loadingJoin ? 'Đang tham gia...' : 'Tham gia phòng'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Join Code Modal (Staff - khi click vào phòng private) */}
+      <AnimatePresence>
+        {showJoinCodeModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+            onClick={() => setShowJoinCodeModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-slate-800">Nhập mã tham gia</h3>
+                <button onClick={() => setShowJoinCodeModal(false)} className="text-slate-400 hover:text-slate-600">
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <p className="text-sm text-slate-600">
+                  Phòng <span className="font-semibold text-slate-800">"{pendingRoomName}"</span> yêu cầu mã tham gia. Vui lòng nhập mã được cấp bởi quản lý.
+                </p>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1">Mã tham gia</label>
+                  <input
+                    type="text"
+                    value={joinCode}
+                    onChange={e => setJoinCode(e.target.value.toUpperCase())}
+                    placeholder="Nhập mã..."
+                    maxLength={6}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none text-center text-lg tracking-widest font-bold"
+                  />
+                </div>
+
+                <button
+                  onClick={async () => {
+                    if (!joinCode.trim()) return;
+                    setLoadingJoin(true);
+                    try {
+                      const res = await chatManagementApi.joinRoomByCode(joinCode.trim());
+                      if (res.success) {
+                        setShowJoinCodeModal(false);
+                        setJoinCode('');
+                        // Refresh rooms list
+                        const roomsRes = await fetch('/api/messaging/rooms', { credentials: 'include' });
+                        if (roomsRes.ok) {
+                          const data = await roomsRes.json();
+                          setRooms(data.rooms || []);
+                          // Join the room
+                          if (pendingRoomId) {
+                            joinRoom(pendingRoomId);
+                          }
+                        }
+                        setPendingRoomId(null);
+                        setPendingRoomName('');
+                      }
+                    } catch (err: any) {
+                      alert(err?.message || 'Mã không hợp lệ');
+                    } finally {
+                      setLoadingJoin(false);
+                    }
+                  }}
+                  disabled={joinCode.length < 6 || loadingJoin}
+                  className="w-full py-2.5 rounded-xl font-semibold text-white bg-emerald-500 hover:bg-emerald-600 transition-colors disabled:opacity-50"
+                >
+                  {loadingJoin ? 'Đang tham gia...' : 'Tham gia phòng'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Room Modal */}
+      <AnimatePresence>
+        {showDeleteRoomModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+            onClick={() => setShowDeleteRoomModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-slate-800">Xóa kênh</h3>
+                <button onClick={() => setShowDeleteRoomModal(false)} className="text-slate-400 hover:text-slate-600">
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <p className="text-sm text-slate-600">
+                  Bạn có chắc chắn muốn xóa kênh <span className="font-semibold text-slate-800">"{pendingRoomName}"</span>? Hành động này không thể hoàn tác.
+                </p>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowDeleteRoomModal(false)}
+                    className="flex-1 py-2.5 rounded-xl font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (!pendingRoomId) return;
+                      setLoadingDelete(true);
+                      try {
+                        const res = await chatManagementApi.deleteRoom(pendingRoomId);
+                        if (res.success) {
+                          setShowDeleteRoomModal(false);
+                          setPendingRoomId(null);
+                          setPendingRoomName('');
+                          // Refresh rooms list and leave current room
+                          const roomsRes = await fetch('/api/messaging/rooms', { credentials: 'include' });
+                          if (roomsRes.ok) {
+                            const data = await roomsRes.json();
+                            setRooms(data.rooms || []);
+                          }
+                        }
+                      } catch (err) {
+                        console.error('Failed to delete room:', err);
+                        alert('Xóa kênh thất bại');
+                      } finally {
+                        setLoadingDelete(false);
+                      }
+                    }}
+                    disabled={loadingDelete}
+                    className="flex-1 py-2.5 rounded-xl font-semibold text-white bg-rose-500 hover:bg-rose-600 transition-colors disabled:opacity-50"
+                  >
+                    {loadingDelete ? 'Đang xóa...' : 'Xóa kênh'}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

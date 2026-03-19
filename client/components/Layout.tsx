@@ -46,8 +46,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
   if (!user) return <>{children}</>;
 
-  const isManager = user.role === UserRole.MANAGER;
-  const isMember = user.role === UserRole.STAFF;
+  const isManager = user?.role === UserRole.MANAGER;
+  const isMember = user?.role === UserRole.STAFF;
 
   let navigation = ADMIN_NAVIGATION;
   if (isManager) navigation = MANAGER_NAVIGATION;
@@ -110,7 +110,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                 className="flex flex-col overflow-hidden whitespace-nowrap"
               >
                 <span className={`font-black text-xl tracking-tighter ${sidebarTextColor}`}>ZERO TRUST</span>
-                <span className={`text-[10px] font-bold uppercase tracking-widest ${sidebarSubTextColor}`}>{user.role} PORTAL</span>
+                <span className={`text-[10px] font-bold uppercase tracking-widest ${sidebarSubTextColor}`}>{user?.role} PORTAL</span>
               </motion.div>
             )}
           </AnimatePresence>
@@ -177,15 +177,15 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
               >
                 <div className="relative">
                   <img
-                    src={user.avatar}
+                    src={user?.avatar}
                     alt="avatar"
                     className={`w-10 h-10 rounded-[16px] object-cover transition-transform group-hover:scale-105 shadow-sm`}
                   />
                   <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full"></div>
                 </div>
                 <div className="text-left hidden lg:block">
-                  <p className="text-[14px] font-bold text-slate-800 leading-tight group-hover:text-blue-600 transition-colors">{user.name}</p>
-                  <p className={`text-[11px] font-black uppercase tracking-wider mt-0.5 ${isMember ? 'text-emerald-500' : isManager ? 'text-sky-500' : 'text-blue-500'}`}>{user.role}</p>
+                  <p className="text-[14px] font-bold text-slate-800 leading-tight group-hover:text-blue-600 transition-colors">{user?.name}</p>
+                  <p className={`text-[11px] font-black uppercase tracking-wider mt-0.5 ${isMember ? 'text-emerald-500' : isManager ? 'text-sky-500' : 'text-blue-500'}`}>{user?.role}</p>
                 </div>
                 <ChevronDown size={14} className={`text-slate-400 group-hover:text-slate-600 transition-transform duration-300 hidden lg:block ${isProfileOpen ? 'rotate-180' : ''}`} />
               </button>
@@ -200,8 +200,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                     className="absolute right-0 mt-3 w-64 bg-white/90 backdrop-blur-xl border border-slate-100/50 rounded-2xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] py-2 z-50"
                   >
                     <div className="px-5 py-3 border-b border-slate-100 mb-2">
-                      <p className="text-sm font-bold text-slate-800">{user.name}</p>
-                      <p className="text-xs text-slate-500 mt-0.5">{user.email || 'user@company.com'}</p>
+                      <p className="text-sm font-bold text-slate-800">{user?.name}</p>
+                      <p className="text-xs text-slate-500 mt-0.5">{user?.email || 'user@company.com'}</p>
                     </div>
                     <Link to="/profile" className="flex items-center gap-3 px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition-colors group">
                       <User size={16} className="text-slate-400 group-hover:text-blue-500 transition-colors" /> Hồ sơ của tôi

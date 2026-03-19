@@ -35,7 +35,7 @@ export const ManagerApprovals: React.FC = () => {
       const [requestsData, docsData, usersData] = await Promise.all([
         documentsApi.getRequests(),
         documentsApi.getAll(),
-        usersApi.getAll()
+        usersApi.getTeamMembers()
       ]);
       setRequests(Array.isArray(requestsData) ? requestsData : []);
       // Handle both array and { documents: [] } response

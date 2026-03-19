@@ -546,4 +546,24 @@ export const chatManagementApi = {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
+
+  // Create room with join code (Manager/Admin)
+  createRoomWithCode: (data: { name: string; description?: string; type?: string }) =>
+    apiRequest<{ success: boolean; room: any; joinCode: string }>('/chat/rooms/create-with-code', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  // Join room by code (Staff)
+  joinRoomByCode: (joinCode: string) =>
+    apiRequest<{ success: boolean; room: any }>('/chat/rooms/join-by-code', {
+      method: 'POST',
+      body: JSON.stringify({ joinCode }),
+    }),
+
+  // Regenerate join code (Manager/Admin - room owner)
+  regenerateJoinCode: (roomId: string) =>
+    apiRequest<{ success: boolean; joinCode: string }>(`/chat/rooms/${roomId}/regenerate-code`, {
+      method: 'POST',
+    }),
 };

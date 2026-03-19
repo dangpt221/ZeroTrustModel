@@ -21,6 +21,9 @@ export interface ChatRoom {
   isPinned?: boolean;
   unread: number;
   departmentId?: string;
+  isMember?: boolean;
+  isPrivate?: boolean;
+  hasJoinCode?: boolean;
 }
 
 const SOCKET_URL = ''; // Use relative URL to allow Vite proxy or same-host connection
