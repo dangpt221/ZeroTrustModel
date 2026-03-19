@@ -535,14 +535,46 @@ export function registerMessageRoutes(router) {
     }
   });
 
-  // ===== 8. ROOMS =====
+  // ===== 8. MESSAGE RECALL =====
 
+  router.delete('/messages/:id', requireAuth, async (req, res, next) => {
+    try {
+      const user = req.user;
+      const msg = await Message.findById(req.params.id);
+
+      if (!msg) {
+        return res.status(404).json({ success: false, message: 'Tin nhắn không tồn tại' });
+      }
+
+      if (msg.userId.toString() !== user.id) {
+        return res.status(403).json({ success: false, message: 'Bạn không có quyền thu hồi tin nhắn này' });
+      }
+
+      const hoursSinceCreated = (Date.now() - msg.createdAt.getTime()) / (1000 * 60 * 60);
+      if (hoursSinceCreated > 24) {
+        return res.status(400).json({ success: false, message: 'Chỉ có thể thu hồi tin nhắn trong vòng 24 giờ' });
+      }
+
+      await Message.deleteOne({ _id: msg._id });
+
+      // Emit deletion to room
+      const io = req.app.get('io');
+      if (io) {
+        io.to(msg.room).emit('message_deleted', { messageId: msg._id.toString() });
+      }
+
+      res.json({ success: true, message: 'Tin nhắn đã được thu hồi' });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // ===== 9. ROOMS =====
   router.get('/messaging/rooms', requireAuth, async (req, res, next) => {
     try {
       await ensureDefaultRooms();
 
       const currentUser = req.user;
-      const isAdmin = currentUser.role === 'ADMIN';
       const isManager = currentUser.role === 'MANAGER';
 
       let query = { isDeleted: { $ne: true }, isLocked: { $ne: true } };
