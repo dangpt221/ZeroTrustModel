@@ -10,9 +10,9 @@ const MessageSchema = new mongoose.Schema(
     text: { type: String, required: true },
     attachments: [{
       url: String,
-      fileName: String,
-      fileType: String,
-      fileSize: Number
+      name: String,
+      type: String,
+      size: Number
     }],
 
     // Room/Channel info

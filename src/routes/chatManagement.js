@@ -38,8 +38,11 @@ router.delete("/rooms/:id/members/:userId", requireRole(["ADMIN"]), chatControll
 // Send system message - ADMIN
 router.post("/rooms/:id/system-message", requireRole(["ADMIN"]), chatController.sendSystemMessage);
 
-// Delete room - ADMIN
-router.delete("/rooms/:id", requireRole(["ADMIN"]), chatController.deleteRoom);
+// Delete room - ADMIN/MANAGER (manager can only delete their own rooms)
+router.delete("/rooms/:id", requireRole(["ADMIN", "MANAGER"]), chatController.deleteRoom);
+
+// Delete room by manager (soft delete, only own rooms)
+router.delete("/rooms/:id/manager-delete", requireRole(["ADMIN", "MANAGER"]), chatController.managerDeleteRoom);
 
 // Export chat logs - ADMIN
 router.get("/export", requireRole(["ADMIN"]), chatController.exportChatLogs);
@@ -47,5 +50,14 @@ router.get("/export", requireRole(["ADMIN"]), chatController.exportChatLogs);
 // Chat policy - ADMIN
 router.get("/policy", requireRole(["ADMIN"]), chatController.getChatPolicy);
 router.put("/policy", requireRole(["ADMIN"]), chatController.updateChatPolicy);
+
+// Create room with join code - ADMIN/MANAGER
+router.post("/rooms/create-with-code", requireRole(["ADMIN", "MANAGER"]), chatController.createRoomWithCode);
+
+// Join room by code - All authenticated users
+router.post("/rooms/join-by-code", chatController.joinRoomByCode);
+
+// Regenerate join code - ADMIN/MANAGER (room owner)
+router.post("/rooms/:id/regenerate-code", requireRole(["ADMIN", "MANAGER"]), chatController.regenerateJoinCode);
 
 export default router;

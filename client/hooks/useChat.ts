@@ -31,6 +31,7 @@ export interface ChatMessage {
   hasAttachments?: boolean;
   // Mentions
   mentions?: string[];
+  highlightedText?: string;
 }
 
 export interface ChatRoom {
@@ -41,6 +42,9 @@ export interface ChatRoom {
   isPinned?: boolean;
   unread: number;
   departmentId?: string;
+  isMember?: boolean;
+  isPrivate?: boolean;
+  hasJoinCode?: boolean;
 }
 
 export interface Conversation {
@@ -144,6 +148,11 @@ export function useChat() {
     newSocket.on('mentioned', ({ message, mentionedBy }) => {
       // Could show a notification here
       console.log(`${mentionedBy} mentioned you in a message`);
+    });
+
+    // Message deleted (recall)
+    newSocket.on('message_deleted', ({ messageId }) => {
+      setMessages((prev) => prev.filter((m) => m.id !== messageId));
     });
 
     setSocket(newSocket);

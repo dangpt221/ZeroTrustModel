@@ -1,14 +1,13 @@
-import { requireAuth } from '../middleware/auth.js';
-import { Message } from '../models/Message.js';
-import { ChatRoom } from '../models/ChatRoom.js';
-import { User } from '../models/User.js';
 import mongoose from 'mongoose';
+import { requireAuth } from '../middleware/auth.js';
+import { ChatRoom } from '../models/ChatRoom.js';
+import { Message } from '../models/Message.js';
+import { User } from '../models/User.js';
 
 // ============ HELPER FUNCTIONS ============
 
 // Find or create 1-on-1 DM room
 async function findOrCreateDMRoom(currentUserId, otherUserId) {
-  // Try to find existing DM room
   let room = await ChatRoom.findOne({
     isDirectMessage: true,
     participants: { $all: [currentUserId, otherUserId], $size: 2 }
@@ -60,6 +59,7 @@ async function ensureDefaultRooms() {
 // ============ ROUTES ============
 
 export function registerMessageRoutes(router) {
+
   // ===== 1. CONVERSATIONS / 1-ON-1 CHAT =====
 
   // Get all conversations (DMs) for current user
@@ -67,14 +67,12 @@ export function registerMessageRoutes(router) {
     try {
       const currentUserId = new mongoose.Types.ObjectId(req.user.id);
 
-      // Get DM rooms
       const dmRooms = await ChatRoom.find({
         isDirectMessage: true,
         participants: currentUserId,
         isDeleted: { $ne: true }
       }).sort({ lastMessageAt: -1 }).lean();
 
-      // Get last message for each room and unread count
       const conversations = await Promise.all(dmRooms.map(async (room) => {
         const lastMessage = await Message.findOne({
           room: room._id.toString(),
@@ -85,7 +83,6 @@ export function registerMessageRoutes(router) {
           p => p.toString() !== currentUserId.toString()
         );
 
-        // Count unread messages
         const unreadCount = await Message.countDocuments({
           room: room._id.toString(),
           'readBy.userId': { $ne: currentUserId },
@@ -93,7 +90,6 @@ export function registerMessageRoutes(router) {
           isDeleted: { $ne: true }
         });
 
-        // Get other user info
         let otherUser = null;
         if (otherParticipantId) {
           otherUser = await User.findById(otherParticipantId).select('name avatar').lean();
@@ -136,8 +132,6 @@ export function registerMessageRoutes(router) {
       }
 
       const room = await findOrCreateDMRoom(currentUserId, userId);
-
-      // Get other user info
       const otherUser = await User.findById(userId).select('name avatar').lean();
 
       res.json({
@@ -152,7 +146,7 @@ export function registerMessageRoutes(router) {
     }
   });
 
-  // ===== 2. MESSAGES WITH THREADING, REACTIONS, READ RECEIPTS =====
+  // ===== 2. MESSAGES =====
 
   // Get messages for a room (with threading support)
   router.get('/messages', requireAuth, async (req, res, next) => {
@@ -162,11 +156,10 @@ export function registerMessageRoutes(router) {
       if (room) filter.room = room;
 
       const msgs = await Message.find(filter)
-        .sort({ createdAt: -1 })  // Most recent first
+        .sort({ createdAt: -1 })
         .limit(100)
         .lean();
 
-      // Transform messages for frontend
       const currentUserId = req.user.id;
       res.json(
         msgs.map((m) => {
@@ -182,18 +175,99 @@ export function registerMessageRoutes(router) {
             reactions: m.reactions || [],
             isEdited: m.isEdited || false,
             editedAt: m.editedAt ? new Date(m.editedAt).toISOString() : null,
-            // Threading
             parentMessageId: m.parentMessageId?.toString() || null,
             replyCount: m.replyCount || 0,
-            // Read receipts
             isRead: isRead || m.userId?.toString() === currentUserId,
             readCount: m.readBy?.length || 0,
-            // Attachments
             attachments: m.attachments || [],
             hasAttachments: m.hasAttachments || false
           };
-        }).reverse()  // Oldest first for display
+        }).reverse()
       );
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Send a message
+  router.post('/messages', requireAuth, async (req, res, next) => {
+    try {
+      const io = req.app.get('io');
+      const { text, room, parentMessageId } = req.body;
+
+      if (!text?.trim()) {
+        return res.status(400).json({ error: 'Message text is required' });
+      }
+
+      const chatRoom = await ChatRoom.findById(room);
+
+      // Parse @mentions from text
+      const mentionRegex = /@(\w+\s\w+)/g;
+      const mentions = [];
+      let match;
+      while ((match = mentionRegex.exec(text)) !== null) {
+        mentions.push(match[1]);
+      }
+
+      const msg = await Message.create({
+        userId: req.user.id,
+        userName: req.user.name,
+        text: text.trim(),
+        room: room || 'general',
+        parentMessageId: parentMessageId || null,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent')
+      });
+
+      if (parentMessageId) {
+        await Message.findByIdAndUpdate(parentMessageId, {
+          $inc: { replyCount: 1 }
+        });
+      }
+
+      if (chatRoom) {
+        await ChatRoom.findByIdAndUpdate(room, {
+          lastMessageAt: new Date(),
+          $inc: { messageCount: 1 }
+        });
+      }
+
+      const userAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(req.user.name || 'default')}`;
+
+      const messageData = {
+        id: msg._id.toString(),
+        userId: msg.userId?.toString?.() || msg.userId,
+        userName: msg.userName || 'Ẩn danh',
+        userAvatar,
+        text: msg.text || '',
+        room: msg.room || 'general',
+        timestamp: msg.createdAt ? new Date(msg.createdAt).toISOString() : new Date().toISOString(),
+        reactions: [],
+        isEdited: false,
+        parentMessageId: parentMessageId || null,
+        replyCount: 0,
+        isRead: true,
+        readCount: 1,
+        attachments: [],
+        hasAttachments: false,
+        mentions
+      };
+
+      if (io) {
+        io.to(msg.room).emit('receive_message', messageData);
+
+        if (mentions.length > 0) {
+          const mentionedUsers = await User.find({ name: { $in: mentions } }).select('_id').lean();
+          mentionedUsers.forEach(u => {
+            io.to(`user_${u._id.toString()}`).emit('mentioned', {
+              message: messageData,
+              mentionedBy: req.user.name
+            });
+          });
+        }
+      }
+
+      res.status(201).json(messageData);
     } catch (err) {
       next(err);
     }
@@ -227,101 +301,38 @@ export function registerMessageRoutes(router) {
     }
   });
 
-  // Send a message (with threading and attachments)
-  router.post('/messages', requireAuth, async (req, res, next) => {
+  // ===== 3. MESSAGE RECALL (delete own message within 24h) =====
+  router.delete('/messages/:id', requireAuth, async (req, res, next) => {
     try {
+      const user = req.user;
+      const msg = await Message.findById(req.params.id);
+      if (!msg) {
+        return res.status(404).json({ success: false, message: 'Tin nhắn không tồn tại' });
+      }
+      if (msg.userId.toString() !== user.id) {
+        return res.status(403).json({ success: false, message: 'Bạn không có quyền thu hồi tin nhắn này' });
+      }
+      const hoursSinceCreated = (Date.now() - msg.createdAt.getTime()) / (1000 * 60 * 60);
+      if (hoursSinceCreated > 24) {
+        return res.status(400).json({ success: false, message: 'Chỉ có thể thu hồi tin nhắn trong vòng 24 giờ' });
+      }
+
+      await Message.deleteOne({ _id: msg._id });
+
+      // Emit deletion to room
       const io = req.app.get('io');
-      const { text, room, parentMessageId, attachments } = req.body;
-
-      if (!text?.trim() && !attachments?.length) {
-        return res.status(400).json({ error: 'Message text or attachments required' });
-      }
-
-      // Get room info for participants
-      const chatRoom = await ChatRoom.findById(room);
-
-      // Parse @mentions from text
-      const mentionRegex = /@(\w+\s\w+)/g;
-      const mentions = [];
-      let match;
-      while ((match = mentionRegex.exec(text)) !== null) {
-        mentions.push(match[1]);
-      }
-
-      // Create message
-      const msg = await Message.create({
-        userId: req.user.id,
-        userName: req.user.name,
-        text: text?.trim() || '',
-        room: room || 'general',
-        attachments: attachments || [],
-        hasAttachments: (attachments && attachments.length > 0) || false,
-        parentMessageId: parentMessageId || null,
-        ipAddress: req.ip,
-        userAgent: req.get('user-agent')
-      });
-
-      // Update parent message reply count
-      if (parentMessageId) {
-        await Message.findByIdAndUpdate(parentMessageId, {
-          $inc: { replyCount: 1 }
-        });
-      }
-
-      // Update room last message
-      if (chatRoom) {
-        await ChatRoom.findByIdAndUpdate(room, {
-          lastMessageAt: new Date(),
-          $inc: { messageCount: 1 }
-        });
-      }
-
-      // Emit to room
-      const userAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(req.user.name || 'default')}`;
-
-      const messageData = {
-        id: msg._id.toString(),
-        userId: msg.userId?.toString?.() || msg.userId,
-        userName: msg.userName || 'Ẩn danh',
-        userAvatar,
-        text: msg.text || '',
-        room: msg.room || 'general',
-        timestamp: msg.createdAt ? new Date(msg.createdAt).toISOString() : new Date().toISOString(),
-        reactions: [],
-        isEdited: false,
-        parentMessageId: parentMessageId || null,
-        replyCount: 0,
-        isRead: true, // Sender always "read" their own message
-        readCount: 1,
-        attachments: msg.attachments || [],
-        hasAttachments: msg.hasAttachments || false,
-        mentions
-      };
-
       if (io) {
-        io.to(msg.room).emit('receive_message', messageData);
-
-        // Notify mentioned users
-        if (mentions.length > 0) {
-          const mentionedUsers = await User.find({ name: { $in: mentions } }).select('_id').lean();
-          mentionedUsers.forEach(u => {
-            io.to(`user_${u._id.toString()}`).emit('mentioned', {
-              message: messageData,
-              mentionedBy: req.user.name
-            });
-          });
-        }
+        io.to(msg.room).emit('message_deleted', { messageId: msg._id.toString() });
       }
 
-      res.status(201).json(messageData);
+      res.json({ success: true, message: 'Tin nhắn đã được thu hồi' });
     } catch (err) {
       next(err);
     }
   });
 
-  // ===== 3. REACTIONS =====
+  // ===== 4. REACTIONS =====
 
-  // Add reaction to message
   router.post('/messages/:messageId/reactions', requireAuth, async (req, res, next) => {
     try {
       const io = req.app.get('io');
@@ -337,18 +348,15 @@ export function registerMessageRoutes(router) {
         return res.status(404).json({ error: 'Message not found' });
       }
 
-      // Check if user already reacted with this emoji
       const existingReaction = message.reactions.find(
         r => r.userId.toString() === req.user.id && r.emoji === emoji
       );
 
       if (existingReaction) {
-        // Remove reaction
         message.reactions = message.reactions.filter(
           r => !(r.userId.toString() === req.user.id && r.emoji === emoji)
         );
       } else {
-        // Add reaction
         message.reactions.push({
           userId: req.user.id,
           emoji,
@@ -358,7 +366,6 @@ export function registerMessageRoutes(router) {
 
       await message.save();
 
-      // Emit update
       if (io) {
         io.to(message.room).emit('reaction_updated', {
           messageId: message._id.toString(),
@@ -372,9 +379,8 @@ export function registerMessageRoutes(router) {
     }
   });
 
-  // ===== 4. READ RECEIPTS =====
+  // ===== 5. READ RECEIPTS =====
 
-  // Mark message as read
   router.post('/messages/:messageId/read', requireAuth, async (req, res, next) => {
     try {
       const io = req.app.get('io');
@@ -386,7 +392,6 @@ export function registerMessageRoutes(router) {
         return res.status(404).json({ error: 'Message not found' });
       }
 
-      // Check if already read
       const alreadyRead = message.readBy?.some(r => r.userId.toString() === currentUserId);
 
       if (!alreadyRead) {
@@ -397,7 +402,6 @@ export function registerMessageRoutes(router) {
         });
         await message.save();
 
-        // Emit read receipt
         if (io) {
           io.to(message.room).emit('message_read', {
             messageId: message._id.toString(),
@@ -413,14 +417,12 @@ export function registerMessageRoutes(router) {
     }
   });
 
-  // Mark all messages in room as read
   router.post('/messages/room/:roomId/read-all', requireAuth, async (req, res, next) => {
     try {
       const io = req.app.get('io');
       const { roomId } = req.params;
       const currentUserId = req.user.id;
 
-      // Mark all unread messages in room as read
       const result = await Message.updateMany(
         {
           room: roomId,
@@ -438,7 +440,6 @@ export function registerMessageRoutes(router) {
         }
       );
 
-      // Emit bulk read receipt
       if (io) {
         io.to(roomId).emit('all_messages_read', {
           roomId,
@@ -454,11 +455,7 @@ export function registerMessageRoutes(router) {
     }
   });
 
-  // ===== 5. TYPING INDICATOR (Socket only - no API needed) =====
-
-  // ===== 6. MESSAGE THREADING (already implemented above) =====
-
-  // ===== 7. @MENTIONS - Get users for mention autocomplete =====
+  // ===== 6. @MENTIONS - Get users for mention autocomplete =====
 
   router.get('/messaging/users/search', requireAuth, async (req, res, next) => {
     try {
@@ -468,7 +465,6 @@ export function registerMessageRoutes(router) {
         return res.json({ users: [] });
       }
 
-      // Search users by name
       const users = await User.find({
         name: { $regex: q, $options: 'i' },
         isLocked: { $ne: true }
@@ -490,7 +486,7 @@ export function registerMessageRoutes(router) {
     }
   });
 
-  // ===== 8. SEARCH MESSAGES =====
+  // ===== 7. SEARCH MESSAGES =====
 
   router.get('/messages/search', requireAuth, async (req, res, next) => {
     try {
@@ -500,7 +496,6 @@ export function registerMessageRoutes(router) {
         return res.json({ messages: [] });
       }
 
-      // Build search query
       const query = {
         text: { $regex: q, $options: 'i' },
         isDeleted: { $ne: true }
@@ -517,7 +512,7 @@ export function registerMessageRoutes(router) {
 
       const currentUserId = req.user.id;
       res.json({
-        messages: messages.map(m => ({
+        messages: messages.map((m) => ({
           id: m._id.toString(),
           userId: m.userId?.toString?.() || m.userId,
           userName: m.userName || 'Ẩn danh',
@@ -527,11 +522,12 @@ export function registerMessageRoutes(router) {
           timestamp: m.createdAt ? new Date(m.createdAt).toISOString() : new Date().toISOString(),
           isRead: m.readBy?.some(r => r.userId.toString() === currentUserId) || m.userId?.toString() === currentUserId,
           parentMessageId: m.parentMessageId?.toString() || null,
-          // Highlight matched text
           highlightedText: m.text?.replace(
             new RegExp(`(${q})`, 'gi'),
             '<mark>$1</mark>'
-          ) || ''
+          ) || '',
+          reactions: m.reactions || [],
+          attachments: m.attachments || []
         }))
       });
     } catch (err) {
@@ -539,22 +535,19 @@ export function registerMessageRoutes(router) {
     }
   });
 
-  // ===== EXISTING ROOMS ROUTE =====
+  // ===== 8. ROOMS =====
 
-  // GET all chat rooms (filtered by department for managers)
   router.get('/messaging/rooms', requireAuth, async (req, res, next) => {
     try {
       await ensureDefaultRooms();
 
-      // Get current user to check department
       const currentUser = req.user;
       const isAdmin = currentUser.role === 'ADMIN';
+      const isManager = currentUser.role === 'MANAGER';
 
-      // Build query - managers only see their department's rooms + system rooms
       let query = { isDeleted: { $ne: true }, isLocked: { $ne: true } };
 
-      if (!isAdmin && currentUser.departmentId) {
-        // Manager/Staff sees system rooms OR rooms in their department
+      if (isManager && currentUser.departmentId) {
         query = {
           isDeleted: { $ne: true },
           isLocked: { $ne: true },
@@ -569,8 +562,11 @@ export function registerMessageRoutes(router) {
         .sort({ isSystemRoom: -1, name: 1 })
         .lean();
 
-      res.json({
-        rooms: rooms.map((r) => ({
+      const roomsWithMembership = rooms.map((r) => {
+        const isMember = r.members?.some(
+          (m) => m.userId?.toString() === currentUser.id && !m.leftAt
+        );
+        return {
           id: r._id.toString(),
           name: r.name,
           description: r.description || '',
@@ -578,8 +574,13 @@ export function registerMessageRoutes(router) {
           isPinned: r.isSystemRoom || false,
           unread: 0,
           departmentId: r.departmentId?.toString() || null,
-        })),
+          isMember: !!isMember,
+          isPrivate: r.isPrivate || r.joinCode != null,
+          hasJoinCode: r.joinCode != null,
+        };
       });
+
+      res.json({ rooms: roomsWithMembership });
     } catch (err) {
       next(err);
     }

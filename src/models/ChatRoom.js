@@ -16,6 +16,10 @@ const ChatRoomSchema = new mongoose.Schema({
   isPrivate: { type: Boolean, default: false },
   isSystemRoom: { type: Boolean, default: false }, // System announcements room
 
+  // Join code for staff to join room
+  joinCode: { type: String, default: null },
+  joinCodeExpiresAt: { type: Date, default: null },
+
   // Ownership and management
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   departmentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Department' },
@@ -70,6 +74,7 @@ ChatRoomSchema.index({ type: 1, isLocked: 1 });
 ChatRoomSchema.index({ 'members.userId': 1 });
 ChatRoomSchema.index({ departmentId: 1 });
 ChatRoomSchema.index({ createdBy: 1 });
+ChatRoomSchema.index({ joinCode: 1 });
 
 // New indexes for 1-on-1 chat and conversations
 ChatRoomSchema.index({ isDirectMessage: 1, participants: 1 });

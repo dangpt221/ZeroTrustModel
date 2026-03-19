@@ -28,7 +28,7 @@ function toClientMessage(msg) {
   };
 }
 
-function toClientRoom(room) {
+function toClientRoom(room, includeJoinCode = false) {
   return {
     id: room._id.toString(),
     name: room.name,
@@ -56,6 +56,7 @@ function toClientRoom(room) {
     maxMessageLength: room.maxMessageLength || 5000,
     lastMessageAt: room.lastMessageAt,
     messageCount: room.messageCount || 0,
+    joinCode: includeJoinCode ? room.joinCode : undefined,
     createdAt: room.createdAt,
     updatedAt: room.updatedAt
   };
@@ -668,6 +669,219 @@ export const deleteRoom = async (req, res, next) => {
     });
 
     res.json({ success: true, message: 'Room deleted successfully' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Manager delete own room (soft delete, only own rooms)
+export const managerDeleteRoom = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const user = req.user;
+
+    const room = await ChatRoom.findById(id);
+    if (!room) {
+      return res.status(404).json({ message: 'Room not found' });
+    }
+
+    // Check permission: ADMIN can delete any room, MANAGER can only delete own rooms
+    if (user.role === 'MANAGER' && room.createdBy?.toString() !== user.id) {
+      return res.status(403).json({ message: 'You can only delete rooms you created' });
+    }
+
+    room.isDeleted = true;
+    room.deletedAt = new Date();
+    await room.save();
+
+    // Audit log
+    await AuditLog.create({
+      userId: user.id,
+      userName: user.name,
+      action: 'CHAT_ROOM_DELETE',
+      details: `Deleted chat room: ${room.name}`,
+      ip: req.ip,
+      status: 'SUCCESS',
+      riskLevel: 'HIGH'
+    });
+
+    res.json({ success: true, message: 'Room deleted successfully' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Generate random join code
+function generateJoinCode(length = 6) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < length; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+
+// Create room with join code (Manager/Admin only)
+export const createRoomWithCode = async (req, res, next) => {
+  try {
+    const { name, description, type = 'GROUP' } = req.body;
+
+    if (!name) {
+      return res.status(400).json({ message: 'Room name is required' });
+    }
+
+    // Generate unique join code
+    let joinCode = generateJoinCode();
+    let existingRoom = await ChatRoom.findOne({ joinCode });
+    while (existingRoom) {
+      joinCode = generateJoinCode();
+      existingRoom = await ChatRoom.findOne({ joinCode });
+    }
+
+    const room = await ChatRoom.create({
+      name,
+      description: description || '',
+      type,
+      isPrivate: true,
+      isSystemRoom: false,
+      createdBy: req.user.id,
+      departmentId: req.user.departmentId || null,
+      members: [{
+        userId: req.user.id,
+        role: 'OWNER',
+        joinedAt: new Date()
+      }],
+      memberCount: 1,
+      joinCode,
+      joinCodeExpiresAt: null // No expiration by default
+    });
+
+    // Audit log
+    await AuditLog.create({
+      userId: req.user.id,
+      userName: req.user.name,
+      action: 'CHAT_ROOM_CREATE_CODE',
+      details: `Created chat room with join code: ${room.name}`,
+      ip: req.ip,
+      status: 'SUCCESS',
+      riskLevel: 'MEDIUM'
+    });
+
+    res.status(201).json({
+      success: true,
+      room: toClientRoom(room, true),
+      joinCode: room.joinCode
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Join room by code (Staff)
+export const joinRoomByCode = async (req, res, next) => {
+  try {
+    const { joinCode } = req.body;
+
+    if (!joinCode) {
+      return res.status(400).json({ message: 'Join code is required' });
+    }
+
+    const room = await ChatRoom.findOne({
+      joinCode: joinCode.toUpperCase(),
+      isDeleted: { $ne: true },
+      isLocked: { $ne: true }
+    });
+
+    if (!room) {
+      return res.status(404).json({ message: 'Invalid or expired join code' });
+    }
+
+    // Check if user is already a member
+    const isMember = room.members.some(m =>
+      m.userId.toString() === req.user.id && !m.leftAt
+    );
+
+    if (isMember) {
+      return res.status(400).json({ message: 'You are already a member of this room' });
+    }
+
+    // Add user as member
+    room.members.push({
+      userId: req.user.id,
+      role: 'MEMBER',
+      joinedAt: new Date()
+    });
+    room.memberCount = (room.memberCount || 0) + 1;
+    room.lastActivityAt = new Date();
+    await room.save();
+
+    // Audit log
+    await AuditLog.create({
+      userId: req.user.id,
+      userName: req.user.name,
+      action: 'CHAT_ROOM_JOIN_CODE',
+      details: `Joined room via code: ${room.name}`,
+      ip: req.ip,
+      status: 'SUCCESS',
+      riskLevel: 'LOW'
+    });
+
+    res.json({
+      success: true,
+      room: toClientRoom(room)
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Regenerate join code (Manager/Admin - room owner)
+export const regenerateJoinCode = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const room = await ChatRoom.findById(id);
+    if (!room) {
+      return res.status(404).json({ message: 'Room not found' });
+    }
+
+    // Check if user is owner or admin
+    const isOwner = room.members.some(m =>
+      m.userId.toString() === req.user.id && m.role === 'OWNER'
+    );
+    const isAdmin = req.user.role === 'ADMIN';
+
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ message: 'Only room owner can regenerate join code' });
+    }
+
+    // Generate new code
+    let newJoinCode = generateJoinCode();
+    let existingRoom = await ChatRoom.findOne({ joinCode: newJoinCode });
+    while (existingRoom) {
+      newJoinCode = generateJoinCode();
+      existingRoom = await ChatRoom.findOne({ joinCode: newJoinCode });
+    }
+
+    room.joinCode = newJoinCode;
+    room.joinCodeExpiresAt = null;
+    await room.save();
+
+    // Audit log
+    await AuditLog.create({
+      userId: req.user.id,
+      userName: req.user.name,
+      action: 'CHAT_ROOM_REGEN_CODE',
+      details: `Regenerated join code for room: ${room.name}`,
+      ip: req.ip,
+      status: 'SUCCESS',
+      riskLevel: 'MEDIUM'
+    });
+
+    res.json({
+      success: true,
+      joinCode: room.joinCode
+    });
   } catch (err) {
     next(err);
   }

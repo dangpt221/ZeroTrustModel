@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Send, Shield, Lock, Search, Hash, Pin, MoreVertical, 
-  Wifi, WifiOff, MessageSquare, ChevronRight, Paperclip,
-  Smile, MessageCircle, Users, X, Check, CheckCheck
+import {
+  Send, Lock, Search, Hash, Pin, MoreVertical,
+  Wifi, WifiOff, MessageSquare, ChevronRight,
+  Smile, MessageCircle, Users, X, Check, CheckCheck,
+  Plus, Key, Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
-import { useChat, ChatMessage, ChatRoom, Conversation, ChatAttachment } from '../hooks/useChat';
+import { useChat, ChatMessage, ChatRoom } from '../hooks/useChat';
+import { chatManagementApi } from '../api';
 
 const formatTime = (timestamp: string) => {
   const date = new Date(timestamp);
@@ -14,7 +16,7 @@ const formatTime = (timestamp: string) => {
   const diff = now.getTime() - date.getTime();
   const hours = Math.floor(diff / 3600000);
   const minutes = Math.floor(diff / 60000);
-  
+
   if (minutes < 60) return `${minutes} phút trước`;
   if (hours < 24) return `${hours} giờ trước`;
   return date.toLocaleDateString('vi-VN', { day: 'numeric', month: 'numeric' });
@@ -24,13 +26,13 @@ const COMMON_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🎉', '🔥',
 
 export const Messaging: React.FC = () => {
   const { user } = useAuth();
-  const { 
-    messages, setMessages, activeRoom, joinRoom, sendMessage, 
-    isConnected, typingUsers, startTyping, stopTyping, 
+  const {
+    messages, setMessages, activeRoom, joinRoom, sendMessage,
+    isConnected, typingUsers, startTyping, stopTyping,
     addReaction, markAsRead, conversations, fetchConversations,
     createConversation, searchMessages, getReplies
   } = useChat();
-  
+
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
   const [loadingRooms, setLoadingRooms] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
@@ -46,9 +48,7 @@ export const Messaging: React.FC = () => {
   const [showThread, setShowThread] = useState(false);
   const [threadMessages, setThreadMessages] = useState<ChatMessage[]>([]);
   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
-  const [showAttachments, setShowAttachments] = useState(false);
-  const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
-  
+
   const isManager = user?.role === 'MANAGER';
   const isMember = user?.role === 'STAFF';
 
@@ -78,7 +78,36 @@ export const Messaging: React.FC = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Fetch Rooms & Conversations
+  // Modal states
+  const [showCreateRoomModal, setShowCreateRoomModal] = useState(false);
+  const [showJoinRoomModal, setShowJoinRoomModal] = useState(false);
+  const [showJoinCodeModal, setShowJoinCodeModal] = useState(false);
+  const [showDeleteRoomModal, setShowDeleteRoomModal] = useState(false);
+  const [pendingRoomId, setPendingRoomId] = useState<string | null>(null);
+  const [pendingRoomName, setPendingRoomName] = useState<string>('');
+  const [newRoomName, setNewRoomName] = useState('');
+  const [newRoomDescription, setNewRoomDescription] = useState('');
+  const [joinCode, setJoinCode] = useState('');
+  const [createdRoomCode, setCreatedRoomCode] = useState<string | null>(null);
+  const [copiedCode, setCopiedCode] = useState(false);
+  const [loadingCreate, setLoadingCreate] = useState(false);
+  const [loadingJoin, setLoadingJoin] = useState(false);
+  const [loadingDelete, setLoadingDelete] = useState(false);
+  const [showStickerPanel, setShowStickerPanel] = useState(false);
+
+  // Stickers list
+  const stickerCategories = [
+    { name: 'Cảm xúc', stickers: ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '😮‍💨', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '🥸', '😎', '🤓', '🧐', '😕', '😟', '🙁', '😮', '😯', '😲', '😳', '🥺', '😦', '😧', '😨', '😰', '😥', '😢', '😭', '😱', '😖', '😣', '😞', '😓', '😩', '😫', '🥱', '😤', '😡', '😠', '🤬', '😈', '👿', '💀', '☠️', '💩', '🤡', '👹', '👺', '👻', '👽', '👾', '🤖'] },
+    { name: 'Tay & Người', stickers: ['👍', '👎', '👊', '✊', '🤛', '🤜', '🤝', '👏', '🙌', '👐', '🤲', '🙏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '👇', '☝️', '✋', '🤚', '🖐️', '🖖', '👋', '🤏', '✍️', '💪', '🦾', '🦿', '🦵', '🦶', '👂', '🦻', '👃', '🧠', '🫀', '🫁', '🦷', '🦴', '👀', '👁️', '👅', '👄'] },
+    { name: 'Hoạt động', stickers: ['👋', '🤚', '🖐️', '✋', '🖖', '👌', '🤌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '👇', '☝️', '🫵', '🙏', '💪', '🦾', '🦿', '🦵', '🦶', '👣', '🧳', '🌂', '☂️', '🧵', '🪡', '🧶', '🪢'] },
+    { name: 'Động vật', stickers: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐻‍❄️', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🙈', '🙉', '🙊', '🐒', '🐔', '🐧', '🐦', '🐤', '🐣', '🐥', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗', '🐴', '🦄', '🐝', '🪱', '🐛', '🦋', '🐌', '🐞', '🐜', '🪰', '🪲', '🪳', '🦟', '🦗', '🕷️', '🕸️', '🦂', '🐢', '🐍', '🦎', '🦖', '🦕', '🐙', '🦑', '🦐', '🦞', '🦀', '🐡', '🐠', '🐟', '🐬', '🐳', '🐋', '🦈', '🐊', '🐅', '🐆', '🦓', '🦍', '🦧', '🦣', '🐘', '🦛', '🦏', '🐪', '🐫', '🦒', '🦘', '🦬', '🦕', '🐇', '🦔', '🐿️', '🐉', '🐲'] },
+    { name: 'Đồ ăn', stickers: ['🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🫐', '🍈', '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅', '🥑', '🥦', '🥬', '🥒', '🌶️', '🫑', '🌽', '🥕', '🧄', '🧅', '🥔', '🍠', '🥐', '🥯', '🍞', '🥖', '🥨', '🧀', '🥚', '🍳', '🧈', '🥞', '🧇', '🥓', '🥩', '🍗', '🍖', '🦴', '🌭', '🍔', '🍟', '🍕', '🫓', '🥪', '🥙', '🧆', '🌮', '🌯', '🫔', '🥗', '🥘', '🫕', '🍝', '🍜', '🍲', '🍛', '🍣', '🍱', '🥟', '🦪', '🍤', '🍙', '🍚', '🍘', '🍥', '🥠', '🥮', '🍢', '🍡', '🍧', '🍨', '🍦', '🥧', '🧁', '🍰', '🎂', '🍮', '🍭', '🍬', '🍫', '🍿', '🍩', '🍪', '☕', '🍵', '🧃', '🥤', '🧋', '🍶', '🍺', '🍻', '🥂', '🍷', '🥃', '🍸', '🍹', '🧉', '🍾', '🧊'] },
+    { name: 'Cờ vui', stickers: ['⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎱', '🪀', '🏓', '🏸', '🏒', '🏑', '🥍', '🏏', '🪃', '🥅', '⛳', '🪁', '🏹', '🎣', '🤿', '🥊', '🥋', '🎽', '🛹', '🛼', '🛷', '⛸️', '🥌', '🎿', '⛷️', '🏂', '🪂', '🏋️', '🤼', '🤸', '🤺', '⛹️', '🤾', '🏌️', '🏇', '🧘', '🏄', '🏊', '🤽', '🚣', '🧗', '🚵', '🚴', '🏆', '🥇', '🥈', '🥉', '🏅', '🎖️', '🏵️', '🎗️', '🎫', '🎟️', '🎪', '🤹', '🎭', '🩰', '🎨', '🎬', '🎤', '🎧', '🎼', '🎹', '🥁', '🪘', '🎷', '🎺', '🎸', '🪕', '🎻', '🎲', '♟️', '🎯', '🎳', '🎮', '🕹️', '🎰'] },
+    { name: 'Trái tim', stickers: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❤️‍🔥', '❤️‍🩹', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '♥️'] },
+    { name: 'Ký hiệu', stickers: ['✨', '💫', '⭐', '🌟', '💥', '🔥', '💢', '💬', '💭', '💤', '🫶', '🤝', '👌', '✔️', '❌', '❓', '❗', '⁉️', '‼️', '🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '⚫', '⚪', '🟤', '🔶', '🔷', '🔸', '🔹'] },
+  ];
+
+  // Fetch Rooms on Mount
   useEffect(() => {
     const fetchData = async () => {
       setLoadingRooms(true);
@@ -111,8 +140,7 @@ export const Messaging: React.FC = () => {
         if (res.ok) {
           const data = await res.json();
           setMessages(Array.isArray(data) ? data : []);
-          
-          // Mark messages as read
+
           const msgs = Array.isArray(data) ? data : [];
           msgs.forEach((msg: ChatMessage) => {
             if (!msg.isRead && msg.userId !== user?.id) {
@@ -133,7 +161,7 @@ export const Messaging: React.FC = () => {
 
   const activeRoomData = rooms.find(r => r.id === activeRoom);
   const departmentId = user?.departmentId;
-  
+
   const filteredRooms = rooms.filter(r => {
     const matchesSearch = r.name.toLowerCase().includes(roomSearch.toLowerCase());
     if (isManager && departmentId) {
@@ -152,10 +180,10 @@ export const Messaging: React.FC = () => {
   // Typing handler
   const handleInputChange = (text: string) => {
     setInputText(text);
-    
+
     if (activeRoom) {
       startTyping(activeRoom);
-      
+
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
@@ -167,14 +195,31 @@ export const Messaging: React.FC = () => {
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputText.trim() && attachments.length === 0 || !user || !activeRoom) return;
+    if (!inputText.trim() || !user || !activeRoom) return;
 
-    sendMessage(inputText.trim(), activeRoom, replyingTo?.id || undefined, attachments.length > 0 ? attachments : undefined);
+    sendMessage(inputText.trim(), activeRoom, replyingTo?.id || undefined);
     setInputText('');
     setReplyingTo(null);
-    setAttachments([]);
-    setShowAttachments(false);
     stopTyping(activeRoom);
+  };
+
+  const handleRecall = async (msgId: string) => {
+    if (!confirm('Thu hồi tin nhắn này?')) return;
+    try {
+      const res = await fetch(`/api/messages/${msgId}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+      if (res.ok) {
+        setMessages(prev => prev.filter(m => m.id !== msgId));
+      } else {
+        const data = await res.json();
+        alert(data.message || 'Không thể thu hồi');
+      }
+    } catch (err) {
+      console.error('Recall failed:', err);
+      alert('Không thể thu hồi tin nhắn');
+    }
   };
 
   const handleSearch = async () => {
@@ -203,7 +248,6 @@ export const Messaging: React.FC = () => {
       const res = await fetch(`/api/messaging/users/search?q=${encodeURIComponent(userSearch)}`, { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
-        // Filter out current user
         const filtered = (data.users || []).filter((u: any) => u.id !== user?.id);
         setUserSearchResults(filtered);
       }
@@ -214,7 +258,6 @@ export const Messaging: React.FC = () => {
     }
   };
 
-  // Debounced search users
   useEffect(() => {
     if (!userSearch.trim()) {
       setUserSearchResults([]);
@@ -256,7 +299,7 @@ export const Messaging: React.FC = () => {
               {isConnected ? 'Online' : 'Offline'}
             </div>
           </div>
-          
+
           {/* Tabs */}
           <div className="flex gap-1 bg-slate-100 p-1 rounded-lg">
             <button
@@ -281,7 +324,7 @@ export const Messaging: React.FC = () => {
         </div>
 
         {/* Search */}
-        <div className="p-3 border-b border-slate-200 bg-white">
+        <div className="p-3 border-b border-slate-200 bg-white space-y-2">
           {activeTab === 'channels' ? (
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={13} />
@@ -304,11 +347,31 @@ export const Messaging: React.FC = () => {
           )}
         </div>
 
-        {/* List */}
+        {/* Action Buttons */}
+        <div className="p-3 border-b border-slate-200 bg-white space-y-2">
+          {isManager && (
+            <button
+              onClick={() => setShowCreateRoomModal(true)}
+              className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold ${themeBg} text-white ${themeHover} transition-colors`}
+            >
+              <Plus size={14} /> Tạo phòng
+            </button>
+          )}
+          {isMember && (
+            <button
+              onClick={() => setShowJoinRoomModal(true)}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+            >
+              <Key size={14} /> Vào phòng
+            </button>
+          )}
+        </div>
+
+        {/* Room List */}
         <div className="flex-1 overflow-y-auto p-3">
           {loadingRooms ? (
             <div className="flex flex-col gap-2 p-2">
-              {[1,2,3].map(i => (
+              {[1, 2, 3].map(i => (
                 <div key={i} className="h-9 bg-slate-200 rounded-xl animate-pulse" />
               ))}
             </div>
@@ -326,15 +389,26 @@ export const Messaging: React.FC = () => {
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: idx * 0.05 }}
-                        onClick={() => joinRoom(room.id)}
+                        onClick={() => {
+                          if (isMember && room.isPrivate && !room.isMember) {
+                            setPendingRoomId(room.id);
+                            setPendingRoomName(room.name);
+                            setShowJoinCodeModal(true);
+                          } else {
+                            joinRoom(room.id);
+                          }
+                        }}
                         className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all ${
                           activeRoom === room.id
                             ? `${themeBg} text-white shadow-md`
                             : 'text-slate-600 hover:bg-white hover:shadow-sm'
                         }`}
                       >
-                        <Hash size={15} />
+                        {room.isPrivate ? <Lock size={15} /> : <Hash size={15} />}
                         <span className="text-sm font-medium truncate flex-1 text-left">{room.name}</span>
+                        {room.isPrivate && !room.isMember && isMember && (
+                          <Key size={12} className="text-amber-500" />
+                        )}
                         {room.unread > 0 && (
                           <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
                             {room.unread}
@@ -352,15 +426,26 @@ export const Messaging: React.FC = () => {
                     {normalRooms.map(room => (
                       <button
                         key={room.id}
-                        onClick={() => joinRoom(room.id)}
+                        onClick={() => {
+                          if (isMember && room.isPrivate && !room.isMember) {
+                            setPendingRoomId(room.id);
+                            setPendingRoomName(room.name);
+                            setShowJoinCodeModal(true);
+                          } else {
+                            joinRoom(room.id);
+                          }
+                        }}
                         className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all ${
                           activeRoom === room.id
                             ? `${themeBg} text-white shadow-md`
                             : 'text-slate-600 hover:bg-white hover:shadow-sm'
                         }`}
                       >
-                        <Hash size={15} />
+                        {room.isPrivate ? <Lock size={15} /> : <Hash size={15} />}
                         <span className="text-sm font-medium truncate flex-1 text-left">{room.name}</span>
+                        {room.isPrivate && !room.isMember && isMember && (
+                          <Key size={12} className="text-amber-500" />
+                        )}
                         {room.unread > 0 && (
                           <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
                             {room.unread}
@@ -418,7 +503,7 @@ export const Messaging: React.FC = () => {
             <div>
               <h3 className="font-semibold text-slate-800 text-sm">{activeRoomData?.name || 'Chọn kênh'}</h3>
               <p className="text-xs text-slate-500">
-                {typingInRoom.length > 0 
+                {typingInRoom.length > 0
                   ? `${typingInRoom.map(u => u.userName).join(', ')} đang nhập...`
                   : activeRoomData?.description || 'Chọn một kênh bên trái để xem hội thoại'
                 }
@@ -436,6 +521,22 @@ export const Messaging: React.FC = () => {
               <Lock size={10} />
               <span className="text-[10px] font-semibold">E2EE</span>
             </div>
+            {isManager && activeRoomData && !activeRoomData.isPinned && (
+              <button
+                onClick={() => {
+                  setPendingRoomId(activeRoom);
+                  setPendingRoomName(activeRoomData?.name || '');
+                  setShowDeleteRoomModal(true);
+                }}
+                className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                title="Xóa kênh"
+              >
+                <Trash2 size={18} />
+              </button>
+            )}
+            <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all">
+              <MoreVertical size={18} />
+            </button>
           </div>
         </div>
 
@@ -473,7 +574,7 @@ export const Messaging: React.FC = () => {
                   const isMe = msg.userId === (user?.id || 'user1');
                   const showAvatar = idx === 0 || roomMessages[idx - 1].userId !== msg.userId;
                   const avatarUrl = msg.userAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(msg.userName || msg.userId)}`;
-                  
+
                   return (
                     <motion.div
                       key={msg.id}
@@ -498,35 +599,25 @@ export const Messaging: React.FC = () => {
                             <p className="text-[10px] text-slate-400">{formatTime(msg.timestamp)}</p>
                           </div>
                         )}
-                        
+
                         {/* Reply indicator */}
                         {msg.parentMessageId && (
                           <div className={`text-xs text-slate-500 px-3 py-1 ${isMe ? 'bg-blue-700/30' : 'bg-slate-100'} rounded-t-lg`}>
                             ↩ Đang trả lời tin nhắn
                           </div>
                         )}
-                        
+
                         <motion.div
                           whileHover={{ scale: 1.01 }}
-                          className={`px-4 py-2.5 rounded-2xl text-sm relative ${
-                            isMe ? `${themeBg} text-white rounded-br-sm` : 'bg-white text-slate-700 rounded-bl-sm shadow-sm border border-slate-100'
+                          className={`px-4 py-2.5 rounded-2xl text-sm ${
+                            isMe
+                              ? `${themeBg} text-white rounded-br-sm`
+                              : 'bg-white text-slate-700 rounded-bl-sm shadow-sm border border-slate-100'
                           }`}
                         >
-                          {/* Attachments */}
-                          {msg.hasAttachments && msg.attachments && msg.attachments.length > 0 && (
-                            <div className="mb-2 space-y-1">
-                              {msg.attachments.map((att, i) => (
-                                <div key={i} className={`flex items-center gap-2 p-2 rounded-lg ${isMe ? 'bg-blue-700/30' : 'bg-slate-100'}`}>
-                                  <Paperclip size={14} />
-                                  <span className="text-xs truncate">{att.fileName}</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                          
                           {/* Message text */}
                           <p className="whitespace-pre-wrap">{msg.text}</p>
-                          
+
                           {/* Read receipt */}
                           {isMe && (
                             <div className="absolute -bottom-5 right-0 flex items-center gap-1">
@@ -537,8 +628,8 @@ export const Messaging: React.FC = () => {
                               )}
                             </div>
                           )}
-                          
-                          {/* Actions */}
+
+                          {/* Message actions */}
                           <div className={`absolute top-1/2 -translate-y-1/2 ${isMe ? '-left-20' : '-right-20'} flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity`}>
                             <button
                               onClick={() => setReplyingTo(msg)}
@@ -575,9 +666,19 @@ export const Messaging: React.FC = () => {
                                 <ChevronRight size={14} className="text-slate-600" />
                               </button>
                             )}
+                            {/* Recall button - only for own messages */}
+                            {isMe && (
+                              <button
+                                onClick={() => handleRecall(msg.id)}
+                                className="px-1.5 py-1.5 bg-white rounded-full shadow border border-slate-200 hover:bg-rose-50 hover:border-rose-200 hover:text-rose-600"
+                                title="Thu hồi tin nhắn"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            )}
                           </div>
                         </motion.div>
-                        
+
                         {/* Reactions */}
                         {msg.reactions && msg.reactions.length > 0 && (
                           <div className={`flex gap-1 flex-wrap ${isMe ? 'justify-end' : 'justify-start'} ml-1`}>
@@ -592,7 +693,7 @@ export const Messaging: React.FC = () => {
                             ))}
                           </div>
                         )}
-                        
+
                         {/* Reply count */}
                         {msg.replyCount && msg.replyCount > 0 && !msg.parentMessageId && (
                           <button
@@ -625,30 +726,54 @@ export const Messaging: React.FC = () => {
           </div>
         )}
 
-        {/* Attachments preview */}
-        {attachments.length > 0 && (
-          <div className="px-4 py-2 bg-slate-50 border-t border-slate-200 flex items-center gap-2 overflow-x-auto">
-            {attachments.map((att, i) => (
-              <div key={i} className="flex items-center gap-2 px-2 py-1 bg-white rounded-lg border border-slate-200 shrink-0">
-                <Paperclip size={14} className="text-slate-500" />
-                <span className="text-xs truncate max-w-[100px]">{att.fileName}</span>
-                <button onClick={() => setAttachments(attachments.filter((_, idx) => idx !== i))} className="p-1 hover:bg-slate-100 rounded">
-                  <X size={12} className="text-slate-500" />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-
         {/* Input */}
         <div className="p-4 border-t border-slate-200 shrink-0 bg-white">
+          {/* Sticker Panel */}
+          {showStickerPanel && (
+            <div className="mb-3 bg-white border border-slate-200 rounded-xl shadow-lg p-3 max-h-64 overflow-hidden">
+              <div className="flex gap-1 mb-2 overflow-x-auto pb-1">
+                {stickerCategories.map((cat, i) => (
+                  <button
+                    key={i}
+                    onClick={() => {
+                      const el = document.getElementById(`sticker-cat-${i}`);
+                      if (el) el.scrollIntoView({ block: 'nearest', inline: 'center' });
+                    }}
+                    className="px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg whitespace-nowrap"
+                  >
+                    {cat.name}
+                  </button>
+                ))}
+              </div>
+              <div className="max-h-44 overflow-y-auto">
+                {stickerCategories.map((cat, i) => (
+                  <div key={i} id={`sticker-cat-${i}`} className="grid grid-cols-10 gap-1 mb-2">
+                    {cat.stickers.map((s, j) => (
+                      <button
+                        key={j}
+                        onClick={() => {
+                          sendMessage(s, activeRoom);
+                          setShowStickerPanel(false);
+                        }}
+                        className="w-8 h-8 flex items-center justify-center text-xl hover:bg-slate-100 rounded-lg transition-all hover:scale-110"
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <form onSubmit={handleSendMessage} className="relative flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setShowAttachments(!showAttachments)}
-              className="p-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
+              onClick={() => setShowStickerPanel(!showStickerPanel)}
+              className="p-2.5 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded-xl transition-all"
+              title="Sticker"
             >
-              <Paperclip size={18} />
+              <Smile size={18} />
             </button>
             <input
               ref={inputRef}
@@ -660,21 +785,14 @@ export const Messaging: React.FC = () => {
               className={`flex-1 bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 text-sm text-slate-700 placeholder-slate-400 outline-none focus:ring-2 ${themeRing} transition-all disabled:opacity-60 disabled:cursor-not-allowed`}
             />
             <button
-              type="button"
-              onClick={() => setShowEmojiPicker(showEmojiPicker === 'input' ? null : 'input')}
-              className="p-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
-            >
-              <Smile size={18} />
-            </button>
-            <button
               type="submit"
-              disabled={!activeRoom || (!inputText.trim() && attachments.length === 0)}
+              disabled={!activeRoom || !inputText.trim()}
               className={`${themeBg} text-white p-2.5 rounded-xl ${themeHover} disabled:opacity-50 disabled:cursor-not-allowed transition-all`}
             >
               <Send size={18} />
             </button>
           </form>
-          
+
           {/* Emoji picker for input */}
           {showEmojiPicker === 'input' && (
             <div className="absolute bottom-20 right-20 bg-white rounded-lg shadow-lg border border-slate-200 p-2 flex gap-1 z-20">
@@ -807,6 +925,340 @@ export const Messaging: React.FC = () => {
         )}
       </AnimatePresence>
 
+      {/* Create Room Modal (Manager) */}
+      <AnimatePresence>
+        {showCreateRoomModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+            onClick={() => setShowCreateRoomModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-slate-800">Tạo phòng chat mới</h3>
+                <button onClick={() => setShowCreateRoomModal(false)} className="text-slate-400 hover:text-slate-600">
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1">Tên phòng</label>
+                  <input
+                    type="text"
+                    value={newRoomName}
+                    onChange={e => setNewRoomName(e.target.value)}
+                    placeholder="Nhập tên phòng..."
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-transparent outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1">Mô tả (tùy chọn)</label>
+                  <textarea
+                    value={newRoomDescription}
+                    onChange={e => setNewRoomDescription(e.target.value)}
+                    placeholder="Nhập mô tả..."
+                    rows={2}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 focus:border-transparent outline-none resize-none"
+                  />
+                </div>
+
+                {createdRoomCode ? (
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+                    <p className="text-xs font-semibold text-emerald-700 mb-2">Phòng đã được tạo! Mã tham gia:</p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl font-black text-emerald-600 tracking-wider">{createdRoomCode}</span>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(createdRoomCode);
+                          setCopiedCode(true);
+                          setTimeout(() => setCopiedCode(false), 2000);
+                        }}
+                        className="p-2 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-colors"
+                      >
+                        {copiedCode ? <Check size={18} /> : <X size={18} />}
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-emerald-600 mt-2">Chia mã này cho nhân viên để họ tham gia phòng</p>
+                  </div>
+                ) : (
+                  <button
+                    onClick={async () => {
+                      if (!newRoomName.trim()) return;
+                      setLoadingCreate(true);
+                      try {
+                        const res = await chatManagementApi.createRoomWithCode({
+                          name: newRoomName.trim(),
+                          description: newRoomDescription.trim()
+                        });
+                        if (res.success) {
+                          setCreatedRoomCode(res.joinCode);
+                          const roomsRes = await fetch('/api/messaging/rooms', { credentials: 'include' });
+                          if (roomsRes.ok) {
+                            const data = await roomsRes.json();
+                            setRooms(data.rooms || []);
+                          }
+                        }
+                      } catch (err) {
+                        console.error('Failed to create room:', err);
+                        alert('Tạo phòng thất bại');
+                      } finally {
+                        setLoadingCreate(false);
+                      }
+                    }}
+                    disabled={!newRoomName.trim() || loadingCreate}
+                    className={`w-full py-2.5 rounded-xl font-semibold text-white ${loadingCreate ? 'bg-slate-400' : `${themeBg} ${themeHover}`} transition-colors disabled:opacity-50`}
+                  >
+                    {loadingCreate ? 'Đang tạo...' : 'Tạo phòng'}
+                  </button>
+                )}
+
+                {createdRoomCode && (
+                  <button
+                    onClick={() => {
+                      setShowCreateRoomModal(false);
+                      setNewRoomName('');
+                      setNewRoomDescription('');
+                      setCreatedRoomCode(null);
+                    }}
+                    className="w-full py-2.5 rounded-xl font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                  >
+                    Đóng
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Join Room Modal (Staff - từ button) */}
+      <AnimatePresence>
+        {showJoinRoomModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+            onClick={() => setShowJoinRoomModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-slate-800">Vào phòng chat</h3>
+                <button onClick={() => setShowJoinRoomModal(false)} className="text-slate-400 hover:text-slate-600">
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1">Mã tham gia</label>
+                  <input
+                    type="text"
+                    value={joinCode}
+                    onChange={e => setJoinCode(e.target.value.toUpperCase())}
+                    placeholder="Nhập mã..."
+                    maxLength={6}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none text-center text-lg tracking-widest font-bold"
+                  />
+                </div>
+
+                <button
+                  onClick={async () => {
+                    if (!joinCode.trim()) return;
+                    setLoadingJoin(true);
+                    try {
+                      const res = await chatManagementApi.joinRoomByCode(joinCode.trim());
+                      if (res.success) {
+                        alert('Tham gia phòng thành công!');
+                        setShowJoinRoomModal(false);
+                        setJoinCode('');
+                        const roomsRes = await fetch('/api/messaging/rooms', { credentials: 'include' });
+                        if (roomsRes.ok) {
+                          const data = await roomsRes.json();
+                          setRooms(data.rooms || []);
+                        }
+                      }
+                    } catch (err: any) {
+                      alert(err?.message || 'Mã không hợp lệ');
+                    } finally {
+                      setLoadingJoin(false);
+                    }
+                  }}
+                  disabled={joinCode.length < 6 || loadingJoin}
+                  className="w-full py-2.5 rounded-xl font-semibold text-white bg-emerald-500 hover:bg-emerald-600 transition-colors disabled:opacity-50"
+                >
+                  {loadingJoin ? 'Đang tham gia...' : 'Tham gia phòng'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Join Code Modal (Staff - khi click vào phòng private) */}
+      <AnimatePresence>
+        {showJoinCodeModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+            onClick={() => setShowJoinCodeModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-slate-800">Nhập mã tham gia</h3>
+                <button onClick={() => setShowJoinCodeModal(false)} className="text-slate-400 hover:text-slate-600">
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <p className="text-sm text-slate-600">
+                  Phòng <span className="font-semibold text-slate-800">"{pendingRoomName}"</span> yêu cầu mã tham gia. Vui lòng nhập mã được cấp bởi quản lý.
+                </p>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1">Mã tham gia</label>
+                  <input
+                    type="text"
+                    value={joinCode}
+                    onChange={e => setJoinCode(e.target.value.toUpperCase())}
+                    placeholder="Nhập mã..."
+                    maxLength={6}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none text-center text-lg tracking-widest font-bold"
+                  />
+                </div>
+
+                <button
+                  onClick={async () => {
+                    if (!joinCode.trim()) return;
+                    setLoadingJoin(true);
+                    try {
+                      const res = await chatManagementApi.joinRoomByCode(joinCode.trim());
+                      if (res.success) {
+                        setShowJoinCodeModal(false);
+                        setJoinCode('');
+                        const roomsRes = await fetch('/api/messaging/rooms', { credentials: 'include' });
+                        if (roomsRes.ok) {
+                          const data = await roomsRes.json();
+                          setRooms(data.rooms || []);
+                          if (pendingRoomId) {
+                            joinRoom(pendingRoomId);
+                          }
+                        }
+                        setPendingRoomId(null);
+                        setPendingRoomName('');
+                      }
+                    } catch (err: any) {
+                      alert(err?.message || 'Mã không hợp lệ');
+                    } finally {
+                      setLoadingJoin(false);
+                    }
+                  }}
+                  disabled={joinCode.length < 6 || loadingJoin}
+                  className="w-full py-2.5 rounded-xl font-semibold text-white bg-emerald-500 hover:bg-emerald-600 transition-colors disabled:opacity-50"
+                >
+                  {loadingJoin ? 'Đang tham gia...' : 'Tham gia phòng'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Room Modal */}
+      <AnimatePresence>
+        {showDeleteRoomModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+            onClick={() => setShowDeleteRoomModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-slate-800">Xóa kênh</h3>
+                <button onClick={() => setShowDeleteRoomModal(false)} className="text-slate-400 hover:text-slate-600">
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <p className="text-sm text-slate-600">
+                  Bạn có chắc chắn muốn xóa kênh <span className="font-semibold text-slate-800">"{pendingRoomName}"</span>? Hành động này không thể hoàn tác.
+                </p>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowDeleteRoomModal(false)}
+                    className="flex-1 py-2.5 rounded-xl font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (!pendingRoomId) return;
+                      setLoadingDelete(true);
+                      try {
+                        const res = await chatManagementApi.deleteRoom(pendingRoomId);
+                        if (res.success) {
+                          setShowDeleteRoomModal(false);
+                          setPendingRoomId(null);
+                          setPendingRoomName('');
+                          const roomsRes = await fetch('/api/messaging/rooms', { credentials: 'include' });
+                          if (roomsRes.ok) {
+                            const data = await roomsRes.json();
+                            setRooms(data.rooms || []);
+                          }
+                        }
+                      } catch (err) {
+                        console.error('Failed to delete room:', err);
+                        alert('Xóa kênh thất bại');
+                      } finally {
+                        setLoadingDelete(false);
+                      }
+                    }}
+                    disabled={loadingDelete}
+                    className="flex-1 py-2.5 rounded-xl font-semibold text-white bg-rose-500 hover:bg-rose-600 transition-colors disabled:opacity-50"
+                  >
+                    {loadingDelete ? 'Đang xóa...' : 'Xóa kênh'}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Thread Panel */}
       <AnimatePresence>
         {showThread && replyingTo && (
@@ -823,14 +1275,12 @@ export const Messaging: React.FC = () => {
               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              {/* Original message */}
               <div className="p-3 bg-slate-50 rounded-lg">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-xs font-medium text-slate-600">{replyingTo.userName}</span>
                 </div>
                 <p className="text-sm text-slate-700">{replyingTo.text}</p>
               </div>
-              {/* Replies */}
               {threadMessages.map(msg => (
                 <div key={msg.id} className="flex gap-2">
                   <img src={msg.userAvatar} alt={msg.userName} className="w-6 h-6 rounded-full bg-slate-200 shrink-0" />
@@ -850,4 +1300,3 @@ export const Messaging: React.FC = () => {
     </div>
   );
 };
-
