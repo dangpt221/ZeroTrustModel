@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Shield, Lock, Search, Hash, Pin, MoreVertical, Wifi, WifiOff, MessageSquare, ChevronRight, Plus, Key, X, Copy, Check, Trash2, Smile, Paperclip, File, Image, XCircle } from 'lucide-react';
+import { Send, Shield, Lock, Search, Hash, Pin, MoreVertical, Wifi, WifiOff, MessageSquare, ChevronRight, Plus, Key, X, Copy, Check, Trash2, Smile } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 
@@ -68,11 +68,6 @@ export const Messaging: React.FC = () => {
   const [loadingJoin, setLoadingJoin] = useState(false);
   const [loadingDelete, setLoadingDelete] = useState(false);
   const [showStickerPanel, setShowStickerPanel] = useState(false);
-  const [showFileInput, setShowFileInput] = useState(false);
-  const [attachedFile, setAttachedFile] = useState<File | null>(null);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Stickers list (using free emoji/sticker URLs)
   const stickerCategories = [
@@ -152,41 +147,7 @@ export const Messaging: React.FC = () => {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if ((!inputText.trim() && !attachedFile) || !user || !activeRoom) return;
-
-    // Nếu có file đính kèm, upload trước
-    if (attachedFile) {
-      setUploading(true);
-      try {
-        const formData = new FormData();
-        formData.append('file', attachedFile);
-        formData.append('room', activeRoom);
-        formData.append('text', inputText.trim() || (attachedFile.type.startsWith('image/') ? '📷 Đã gửi một ảnh' : '📎 Đã gửi một file'));
-
-        const res = await fetch('/api/messages', {
-          method: 'POST',
-          credentials: 'include',
-          body: formData,
-        });
-
-        if (res.ok) {
-          setInputText('');
-          setAttachedFile(null);
-          // Refresh messages
-          const msgsRes = await fetch(`/api/messages?room=${activeRoom}`, { credentials: 'include' });
-          if (msgsRes.ok) {
-            const data = await msgsRes.json();
-            setMessages(data);
-          }
-        }
-      } catch (err) {
-        console.error('Upload failed:', err);
-        alert('Gửi file thất bại');
-      } finally {
-        setUploading(false);
-      }
-      return;
-    }
+    if (!inputText.trim() || !user || !activeRoom) return;
 
     sendMessage(inputText.trim(), activeRoom);
     setInputText('');
@@ -451,44 +412,43 @@ export const Messaging: React.FC = () => {
                             <p className="text-[10px] text-slate-400">{formatTime(msg.timestamp)}</p>
                           </div>
                         )}
-                        <motion.div
-                          whileHover={{ scale: 1.01 }}
-                          className={`px-4 py-2.5 rounded-2xl text-sm ${
-                            isMe
-                              ? `${themeBg} text-white rounded-br-sm`
-                              : 'bg-white text-slate-700 rounded-bl-sm shadow-sm border border-slate-100'
-                          }`}
-                        >
-                          {msg.text}
-                        </motion.div>
-                        {/* File attachment */}
-                        {msg.attachments && msg.attachments.length > 0 && msg.attachments.map((att: any, ai: number) => (
-                          <a
-                            key={ai}
-                            href={att.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={`block mt-1 px-3 py-2 rounded-xl border text-xs ${
+                        <div className="relative group">
+                          <motion.div
+                            whileHover={{ scale: 1.01 }}
+                            className={`px-4 py-2.5 rounded-2xl text-sm ${
                               isMe
-                                ? 'bg-white/10 border-white/20 text-white hover:bg-white/20'
-                                : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                                ? `${themeBg} text-white rounded-br-sm`
+                                : 'bg-white text-slate-700 rounded-bl-sm shadow-sm border border-slate-100'
                             }`}
                           >
-                            {att.type?.startsWith('image/') ? (
-                              <img src={att.url} alt={att.name} className="max-w-[200px] max-h-[200px] rounded-lg" />
-                            ) : (
-                              <div className="flex items-center gap-2">
-                                <File size={16} />
-                                <span className="font-medium truncate">{att.name}</span>
-                                {att.size && (
-                                  <span className="text-[10px] opacity-60">
-                                    ({(att.size / 1024).toFixed(1)} KB)
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                          </a>
-                        ))}
+                            {msg.text}
+                          </motion.div>
+                          {/* Recall button - chỉ hiện khi là tin nhắn của mình */}
+                          {isMe && (
+                            <button
+                              onClick={async () => {
+                                if (!confirm('Thu hồi tin nhắn này?')) return;
+                                try {
+                                  const res = await fetch(`/api/messages/${msg.id}`, {
+                                    method: 'DELETE',
+                                    credentials: 'include',
+                                  });
+                                  if (res.ok) {
+                                    setMessages(prev => prev.filter(m => m.id !== msg.id));
+                                  } else {
+                                    const data = await res.json();
+                                    alert(data.message || 'Không thể thu hồi');
+                                  }
+                                } catch {
+                                  alert('Lỗi khi thu hồi tin nhắn');
+                                }
+                              }}
+                              className="absolute -top-6 right-0 px-1.5 py-0.5 bg-slate-100 border border-slate-200 rounded text-[10px] text-slate-500 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 opacity-0 group-hover:opacity-100 transition-all"
+                            >
+                              Thu hồi
+                            </button>
+                          )}
+                        </div>
                         {msg.reactions && msg.reactions.length > 0 && (
                           <div className={`flex gap-1 ${isMe ? 'justify-end' : 'justify-start'} ml-1`}>
                             {msg.reactions.map((reaction, i) => (
@@ -548,27 +508,6 @@ export const Messaging: React.FC = () => {
             </div>
           )}
 
-          {/* File Preview */}
-          {attachedFile && (
-            <div className="mb-2 p-2 bg-slate-50 border border-slate-200 rounded-lg flex items-center gap-2">
-              {attachedFile.type.startsWith('image/') ? (
-                <Image size={20} className="text-emerald-500" />
-              ) : (
-                <File size={20} className="text-slate-500" />
-              )}
-              <span className="text-xs text-slate-600 flex-1 truncate">{attachedFile.name}</span>
-              <span className="text-[10px] text-slate-400">
-                {(attachedFile.size / 1024).toFixed(1)} KB
-              </span>
-              <button
-                onClick={() => setAttachedFile(null)}
-                className="text-slate-400 hover:text-rose-500"
-              >
-                <XCircle size={16} />
-              </button>
-            </div>
-          )}
-
           <form onSubmit={handleSendMessage} className="relative flex items-center gap-2">
             <button
               type="button"
@@ -578,24 +517,6 @@ export const Messaging: React.FC = () => {
             >
               <Smile size={18} />
             </button>
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="p-2.5 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 rounded-xl transition-all"
-              title="Đính kèm file"
-            >
-              <Paperclip size={18} />
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) setAttachedFile(file);
-                e.target.value = '';
-              }}
-            />
             <input
               type="text"
               value={inputText}
@@ -606,7 +527,7 @@ export const Messaging: React.FC = () => {
             />
             <button
               type="submit"
-              disabled={!activeRoom || (!inputText.trim() && !attachedFile)}
+              disabled={!activeRoom || !inputText.trim()}
               className={`${themeBg} text-white p-2.5 rounded-xl ${themeHover} disabled:opacity-50 disabled:cursor-not-allowed transition-all`}
             >
               <Send size={18} />

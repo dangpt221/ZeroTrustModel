@@ -1,22 +1,6 @@
 import { requireAuth } from '../middleware/auth.js';
 import { Message } from '../models/Message.js';
 import { ChatRoom } from '../models/ChatRoom.js';
-import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
-
-// Setup multer for file uploads - using memory storage then save manually
-const uploadDir = path.join(process.cwd(), 'uploads', 'chat');
-console.log('[Messages] Upload directory:', uploadDir);
-if (!fs.existsSync(uploadDir)) {
-  console.log('[Messages] Creating upload directory...');
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB
-});
 
 // Default rooms to seed if none exist
 const DEFAULT_ROOMS = [
@@ -63,43 +47,21 @@ export function registerMessageRoutes(router) {
     }
   });
 
-  // POST message with file attachment
-  router.post('/messages', requireAuth, upload.single('file'), async (req, res, next) => {
+  // POST message
+  router.post('/messages', requireAuth, async (req, res, next) => {
     try {
-      const { text, room } = req.body;
       const user = req.user;
+      const { text, room } = req.body || {};
 
-      console.log('[POST /messages] User:', user?.email, 'Has file:', !!req.file, 'Text:', text, 'Room:', room);
-
-      let fileUrl = null;
-      let fileType = null;
-      let fileName = null;
-
-      if (req.file) {
-        // Save file from memory to disk
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-        const ext = path.extname(req.file.originalname).toLowerCase();
-        const filename = `${uniqueSuffix}${ext}`;
-        const filepath = path.join(uploadDir, filename);
-
-        await fs.promises.writeFile(filepath, req.file.buffer);
-
-        fileUrl = `/uploads/chat/${filename}`;
-        fileType = req.file.mimetype;
-        fileName = req.file.originalname;
+      if (!text || !text.trim()) {
+        return res.status(400).json({ message: 'Text is required' });
       }
 
       const msg = await Message.create({
         userId: user.id,
         userName: user.name || 'Ẩn danh',
-        text: text || '',
+        text: text.trim(),
         room: room || 'general',
-        attachments: req.file ? [{
-          url: fileUrl,
-          type: fileType,
-          name: fileName,
-          size: req.file.size,
-        }] : [],
       });
 
       res.json({
@@ -113,11 +75,39 @@ export function registerMessageRoutes(router) {
           room: msg.room || 'general',
           timestamp: msg.createdAt ? new Date(msg.createdAt).toISOString() : new Date().toISOString(),
           reactions: [],
-          attachments: msg.attachments || [],
+          attachments: [],
         },
       });
     } catch (err) {
-      console.error('[POST /messages] Error:', err);
+      next(err);
+    }
+  });
+
+  // DELETE / recall message (only by owner)
+  router.delete('/messages/:id', requireAuth, async (req, res, next) => {
+    try {
+      const user = req.user;
+      const msg = await Message.findById(req.params.id);
+
+      if (!msg) {
+        return res.status(404).json({ success: false, message: 'Tin nhắn không tồn tại' });
+      }
+
+      // Chỉ người gửi mới được thu hồi
+      if (msg.userId.toString() !== user.id) {
+        return res.status(403).json({ success: false, message: 'Bạn không có quyền thu hồi tin nhắn này' });
+      }
+
+      // Kiểm tra thời gian: chỉ được thu hồi trong 24h
+      const hoursSinceCreated = (Date.now() - msg.createdAt.getTime()) / (1000 * 60 * 60);
+      if (hoursSinceCreated > 24) {
+        return res.status(400).json({ success: false, message: 'Chỉ có thể thu hồi tin nhắn trong vòng 24 giờ' });
+      }
+
+      await Message.deleteOne({ _id: msg._id });
+
+      res.json({ success: true, message: 'Tin nhắn đã được thu hồi' });
+    } catch (err) {
       next(err);
     }
   });
@@ -129,7 +119,6 @@ export function registerMessageRoutes(router) {
 
       // Get current user to check department
       const currentUser = req.user;
-      const isAdmin = currentUser.role === 'ADMIN';
       const isManager = currentUser.role === 'MANAGER';
 
       // Build query
