@@ -20,16 +20,12 @@ export interface ChatMessage {
   reactions?: { emoji: string; userId: string; createdAt: string }[];
   isEdited?: boolean;
   editedAt?: string;
-  // Threading
   parentMessageId?: string | null;
   replyCount?: number;
-  // Read receipts
   isRead?: boolean;
   readCount?: number;
-  // Attachments
   attachments?: ChatAttachment[];
   hasAttachments?: boolean;
-  // Mentions
   mentions?: string[];
   highlightedText?: string;
 }
@@ -72,12 +68,46 @@ export function useChat() {
   const [activeRoom, setActiveRoom] = useState<string>('');
   const [typingUsers, setTypingUsers] = useState<Map<string, { userId: string; userName: string }[]>>(new Map());
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const activeRoomRef = useRef(activeRoom);
-  const pendingRoomRef = useRef<string | null>(null);
 
+  // Use refs to avoid stale closures
+  const activeRoomRef = useRef<string>('');
+  const socketRef = useRef<Socket | null>(null);
+  const userRef = useRef(user);
+  const messageIdsRef = useRef<Set<string>>(new Set());
+
+  // Keep refs in sync
   useEffect(() => {
     activeRoomRef.current = activeRoom;
   }, [activeRoom]);
+
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
+  // Fetch messages from REST API (for persistence on load)
+  const fetchMessages = useCallback(async (roomId: string) => {
+    try {
+      const res = await fetch(`/api/messages?room=${roomId}`, { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        const msgs: ChatMessage[] = Array.isArray(data) ? data : (data.messages || []);
+
+        setMessages(prev => {
+          // Merge: keep socket messages, add REST messages that aren't already present
+          const existingIds = new Set(prev.map(m => m.id));
+          const newMsgs = msgs.filter(m => !existingIds.has(m.id));
+          return [...prev, ...newMsgs].sort((a, b) =>
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+          );
+        });
+
+        // Track message IDs to avoid duplicates
+        msgs.forEach(m => messageIdsRef.current.add(m.id));
+      }
+    } catch (err) {
+      console.error('Failed to fetch messages', err);
+    }
+  }, []);
 
   // Connect socket
   useEffect(() => {
@@ -90,13 +120,13 @@ export function useChat() {
       query: { userId: user.id, userName: user.name }
     });
 
+    socketRef.current = newSocket;
+
     newSocket.on('connect', () => {
       setIsConnected(true);
-      newSocket.emit('join_user_room', user.id);
-      if (pendingRoomRef.current) {
-        newSocket.emit('join_room', pendingRoomRef.current);
-        setActiveRoom(pendingRoomRef.current);
-        pendingRoomRef.current = null;
+      // Rejoin room after reconnect
+      if (activeRoomRef.current) {
+        newSocket.emit('join_room', activeRoomRef.current);
       }
     });
 
@@ -104,31 +134,40 @@ export function useChat() {
       setIsConnected(false);
     });
 
-    // Receive message
+    // Receive message - only add if for current room and not duplicate
     newSocket.on('receive_message', (message: ChatMessage) => {
-      setMessages((prev) => {
-        if (prev.find((m) => m.id === message.id)) return prev;
-        return [...prev, message];
+      // Only add if message is for the current room or no room filter
+      if (message.room !== activeRoomRef.current) return;
+
+      // Deduplicate
+      if (messageIdsRef.current.has(message.id)) return;
+      messageIdsRef.current.add(message.id);
+
+      setMessages(prev => {
+        if (prev.find(m => m.id === message.id)) return prev;
+        return [...prev, message].sort((a, b) =>
+          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+        );
       });
     });
 
     // Reaction updated
     newSocket.on('reaction_updated', ({ messageId, reactions }) => {
-      setMessages((prev) =>
-        prev.map((m) => (m.id === messageId ? { ...m, reactions } : m))
+      setMessages(prev =>
+        prev.map(m => (m.id === messageId ? { ...m, reactions } : m))
       );
     });
 
     // Message read
     newSocket.on('message_read', ({ messageId, readCount }) => {
-      setMessages((prev) =>
-        prev.map((m) => (m.id === messageId ? { ...m, readCount } : m))
+      setMessages(prev =>
+        prev.map(m => (m.id === messageId ? { ...m, readCount } : m))
       );
     });
 
     // Typing indicator
     newSocket.on('user_typing', ({ room, userId, userName, isTyping }) => {
-      setTypingUsers((prev) => {
+      setTypingUsers(prev => {
         const newMap = new Map(prev);
         const roomTyping = newMap.get(room) || [];
 
@@ -146,13 +185,12 @@ export function useChat() {
 
     // Mentioned notification
     newSocket.on('mentioned', ({ message, mentionedBy }) => {
-      // Could show a notification here
       console.log(`${mentionedBy} mentioned you in a message`);
     });
 
     // Message deleted (recall)
     newSocket.on('message_deleted', ({ messageId }) => {
-      setMessages((prev) => prev.filter((m) => m.id !== messageId));
+      setMessages(prev => prev.filter(m => m.id !== messageId));
     });
 
     setSocket(newSocket);
@@ -162,55 +200,110 @@ export function useChat() {
     };
   }, [user]);
 
+  // Join room - fetch messages and join socket room
   const joinRoom = useCallback((roomId: string) => {
     if (!roomId) return;
-    setActiveRoom(roomId);
-    if (socket && isConnected) {
-      socket.emit('join_room', roomId);
-    } else {
-      pendingRoomRef.current = roomId;
+
+    // Leave previous room
+    if (socketRef.current && isConnected && activeRoomRef.current) {
+      socketRef.current.emit('leave_room', activeRoomRef.current);
     }
-  }, [socket, isConnected]);
+
+    setActiveRoom(roomId);
+    activeRoomRef.current = roomId;
+
+    // Clear messages for new room
+    setMessages([]);
+    messageIdsRef.current.clear();
+
+    // Join socket room
+    if (socketRef.current && isConnected) {
+      socketRef.current.emit('join_room', roomId);
+    }
+
+    // Fetch messages from REST API
+    fetchMessages(roomId);
+  }, [isConnected, fetchMessages]);
 
   const sendMessage = useCallback((text: string, roomId: string, parentMessageId?: string, attachments?: ChatAttachment[]) => {
-    if (socket && isConnected && user) {
-      socket.emit('send_message', {
-        userId: user.id,
-        userName: user.name,
+    const currentUser = userRef.current;
+    if (!currentUser) return;
+
+    if (socketRef.current && isConnected) {
+      socketRef.current.emit('send_message', {
+        userId: currentUser.id,
+        userName: currentUser.name,
         text,
         room: roomId,
         parentMessageId,
         attachments
       });
+    } else {
+      // Fallback: send via REST API
+      fetch(`/api/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ text, room: roomId, parentMessageId })
+      }).then(async res => {
+        if (res.ok) {
+          const data = await res.json();
+          if (data.message) {
+            setMessages(prev => {
+              if (prev.find(m => m.id === data.message.id)) return prev;
+              return [...prev, data.message];
+            });
+          }
+        }
+      }).catch(err => console.error('Failed to send message', err));
     }
-  }, [socket, isConnected, user]);
+  }, [isConnected]);
 
   // Typing indicator
   const startTyping = useCallback((roomId: string) => {
-    if (socket && isConnected && user) {
-      socket.emit('typing_start', { room: roomId, userId: user.id, userName: user.name });
+    const currentUser = userRef.current;
+    if (socketRef.current && isConnected && currentUser) {
+      socketRef.current.emit('typing_start', { room: roomId, userId: currentUser.id, userName: currentUser.name });
     }
-  }, [socket, isConnected, user]);
+  }, [isConnected]);
 
   const stopTyping = useCallback((roomId: string) => {
-    if (socket && isConnected && user) {
-      socket.emit('typing_stop', { room: roomId, userId: user.id, userName: user.name });
+    const currentUser = userRef.current;
+    if (socketRef.current && isConnected && currentUser) {
+      socketRef.current.emit('typing_stop', { room: roomId, userId: currentUser.id, userName: currentUser.name });
     }
-  }, [socket, isConnected, user]);
+  }, [isConnected]);
 
   // Reactions
   const addReaction = useCallback((messageId: string, emoji: string, roomId: string) => {
-    if (socket && isConnected && user) {
-      socket.emit('add_reaction', { messageId, emoji, userId: user.id, userName: user.name, room: roomId });
+    const currentUser = userRef.current;
+    if (socketRef.current && isConnected && currentUser) {
+      socketRef.current.emit('add_reaction', { messageId, emoji, userId: currentUser.id, userName: currentUser.name, room: roomId });
+    } else {
+      // Fallback: REST API
+      fetch(`/api/messages/${messageId}/reactions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ emoji })
+      }).then(async res => {
+        if (res.ok) {
+          const data = await res.json();
+          setMessages(prev =>
+            prev.map(m => (m.id === messageId ? { ...m, reactions: data.reactions } : m))
+          );
+        }
+      }).catch(err => console.error('Failed to add reaction', err));
     }
-  }, [socket, isConnected, user]);
+  }, [isConnected]);
 
   // Mark as read
   const markAsRead = useCallback((messageId: string, roomId: string) => {
-    if (socket && isConnected && user) {
-      socket.emit('mark_read', { messageId, userId: user.id, room: roomId });
+    const currentUser = userRef.current;
+    if (socketRef.current && isConnected && currentUser) {
+      socketRef.current.emit('mark_read', { messageId, userId: currentUser.id, room: roomId });
     }
-  }, [socket, isConnected, user]);
+  }, [isConnected]);
 
   // Fetch conversations (DMs)
   const fetchConversations = useCallback(async () => {
@@ -226,13 +319,13 @@ export function useChat() {
   }, []);
 
   // Create new DM
-  const createConversation = useCallback(async (userId: string) => {
+  const createConversation = useCallback(async (targetUserId: string) => {
     try {
       const res = await fetch('/api/messaging/conversations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ userId })
+        body: JSON.stringify({ userId: targetUserId })
       });
       if (res.ok) {
         const data = await res.json();
@@ -252,7 +345,7 @@ export function useChat() {
       const res = await fetch(`/api/messages/search?${params}`, { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
-        return data.messages;
+        return data.messages || [];
       }
     } catch (err) {
       console.error('Failed to search messages', err);

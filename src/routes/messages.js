@@ -151,18 +151,34 @@ export function registerMessageRoutes(router) {
   // Get messages for a room (with threading support)
   router.get('/messages', requireAuth, async (req, res, next) => {
     try {
-      const room = req.query.room;
+      const roomId = req.query.room;
+      const currentUser = req.user;
+
+      if (roomId) {
+        // Verify user has access to this room
+        const chatRoom = await ChatRoom.findById(roomId).lean();
+        if (!chatRoom) {
+          return res.status(404).json({ error: 'Phòng không tồn tại' });
+        }
+        // Check if user is a member or room has no security code
+        const isMember = chatRoom.members?.some(m => m.userId.toString() === currentUser.id);
+        const isAdmin = currentUser.role === 'MANAGER';
+        if (chatRoom.joinCode && !isMember && !isAdmin) {
+          return res.status(403).json({ error: 'Bạn cần nhập mã bảo mật để tham gia phòng này' });
+        }
+      }
+
       const filter = { isDeleted: { $ne: true } };
-      if (room) filter.room = room;
+      if (roomId) filter.room = roomId;
 
       const msgs = await Message.find(filter)
         .sort({ createdAt: -1 })
         .limit(100)
         .lean();
 
-      const currentUserId = req.user.id;
-      res.json(
-        msgs.map((m) => {
+      const currentUserId = currentUser.id;
+      res.json({
+        messages: msgs.map((m) => {
           const isRead = m.readBy?.some(r => r.userId.toString() === currentUserId);
           return {
             id: m._id.toString(),
@@ -183,7 +199,7 @@ export function registerMessageRoutes(router) {
             hasAttachments: m.hasAttachments || false
           };
         }).reverse()
-      );
+      });
     } catch (err) {
       next(err);
     }
@@ -528,72 +544,7 @@ export function registerMessageRoutes(router) {
           ) || '',
           reactions: m.reactions || [],
         })),
-      );
-    } catch (err) {
-      next(err);
-    }
-  });
-
-  // POST message
-  router.post('/messages', requireAuth, async (req, res, next) => {
-    try {
-      const user = req.user;
-      const { text, room } = req.body || {};
-
-      if (!text || !text.trim()) {
-        return res.status(400).json({ message: 'Text is required' });
-      }
-
-      const msg = await Message.create({
-        userId: user.id,
-        userName: user.name || 'Ẩn danh',
-        text: text.trim(),
-        room: room || 'general',
       });
-
-      res.json({
-        success: true,
-        message: {
-          id: msg._id.toString(),
-          userId: msg.userId?.toString?.() || msg.userId,
-          userName: msg.userName || 'Ẩn danh',
-          userAvatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.name || 'default')}`,
-          text: msg.text || '',
-          room: msg.room || 'general',
-          timestamp: msg.createdAt ? new Date(msg.createdAt).toISOString() : new Date().toISOString(),
-          reactions: [],
-          attachments: [],
-        },
-      });
-    } catch (err) {
-      next(err);
-    }
-  });
-
-  // DELETE / recall message (only by owner)
-  router.delete('/messages/:id', requireAuth, async (req, res, next) => {
-    try {
-      const user = req.user;
-      const msg = await Message.findById(req.params.id);
-
-      if (!msg) {
-        return res.status(404).json({ success: false, message: 'Tin nhắn không tồn tại' });
-      }
-
-      // Chỉ người gửi mới được thu hồi
-      if (msg.userId.toString() !== user.id) {
-        return res.status(403).json({ success: false, message: 'Bạn không có quyền thu hồi tin nhắn này' });
-      }
-
-      // Kiểm tra thời gian: chỉ được thu hồi trong 24h
-      const hoursSinceCreated = (Date.now() - msg.createdAt.getTime()) / (1000 * 60 * 60);
-      if (hoursSinceCreated > 24) {
-        return res.status(400).json({ success: false, message: 'Chỉ có thể thu hồi tin nhắn trong vòng 24 giờ' });
-      }
-
-      await Message.deleteOne({ _id: msg._id });
-
-      res.json({ success: true, message: 'Tin nhắn đã được thu hồi' });
     } catch (err) {
       next(err);
     }
@@ -607,11 +558,9 @@ export function registerMessageRoutes(router) {
       const currentUser = req.user;
       const isManager = currentUser.role === 'MANAGER';
 
-      // Build query - managers only see their department's rooms + system rooms
       let query = { isDeleted: { $ne: true }, isLocked: { $ne: true } };
 
-      if (!isAdmin && currentUser.departmentId) {
-        // Manager/Staff sees system rooms OR rooms in their department
+      if (!isManager && currentUser.departmentId) {
         query = {
           isDeleted: { $ne: true },
           isLocked: { $ne: true },
@@ -622,9 +571,22 @@ export function registerMessageRoutes(router) {
         };
       }
 
-      const rooms = await ChatRoom.find(query)
+      const allRooms = await ChatRoom.find(query)
         .sort({ isSystemRoom: -1, name: 1 })
         .lean();
+
+      // Filter: user must be a member OR room has no security code OR same department
+      const rooms = allRooms.filter(r => {
+        // System rooms are visible to all
+        if (r.isSystemRoom) return true;
+        // Rooms without security code are visible
+        if (!r.joinCode) return true;
+        // For rooms with security code, check if user is a member
+        if (r.members && r.members.some(m => m.userId.toString() === currentUser.id)) return true;
+        // Rooms with security code are visible to same department (but need code to enter)
+        if (r.departmentId && r.departmentId.toString() === currentUser.departmentId?.toString()) return true;
+        return false;
+      });
 
       res.json({
         rooms: rooms.map((r) => ({
@@ -635,13 +597,181 @@ export function registerMessageRoutes(router) {
           isPinned: r.isSystemRoom || false,
           unread: 0,
           departmentId: r.departmentId?.toString() || null,
-          isMember: !!isMember,
           isPrivate: r.isPrivate || r.joinCode != null,
           hasJoinCode: r.joinCode != null,
-        };
+          isMember: r.members?.some(m => m.userId.toString() === currentUser.id) || false,
+        })),
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Create room
+  router.post('/messaging/rooms', requireAuth, async (req, res, next) => {
+    try {
+      const currentUser = req.user;
+      const { name, description, hasSecurityCode, securityCode } = req.body;
+
+      if (!name?.trim()) {
+        return res.status(400).json({ success: false, message: 'Tên phòng không được để trống' });
+      }
+
+      const room = await ChatRoom.create({
+        name: name.trim(),
+        description: description?.trim() || '',
+        type: 'GROUP',
+        departmentId: currentUser.departmentId,
+        members: [{ userId: currentUser.id, role: 'ADMIN' }],
+        memberCount: 1,
+        isSystemRoom: false,
+        isPrivate: hasSecurityCode || false,
+        joinCode: hasSecurityCode ? securityCode : null
       });
 
-      res.json({ rooms: roomsWithMembership });
+      res.status(201).json({
+        success: true,
+        room: {
+          id: room._id.toString(),
+          name: room.name,
+          description: room.description,
+          type: 'channel',
+          isPinned: false,
+          unread: 0,
+          departmentId: room.departmentId?.toString() || null,
+          isPrivate: room.isPrivate,
+          hasJoinCode: !!room.joinCode
+        }
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Join room with security code
+  router.post('/messaging/rooms/:roomId/join', requireAuth, async (req, res, next) => {
+    try {
+      const { roomId } = req.params;
+      const { securityCode } = req.body;
+      const currentUser = req.user;
+
+      const room = await ChatRoom.findById(roomId);
+      if (!room) {
+        return res.status(404).json({ success: false, message: 'Phòng không tồn tại' });
+      }
+
+      // Check security code
+      if (room.joinCode && room.joinCode !== securityCode) {
+        return res.status(403).json({ success: false, message: 'Mã bảo mật không đúng' });
+      }
+
+      // Check if already a member
+      const alreadyMember = room.members?.some(m => m.userId.toString() === currentUser.id);
+      if (alreadyMember) {
+        return res.json({
+          success: true,
+          room: {
+            id: room._id.toString(),
+            name: room.name,
+            description: room.description,
+            type: 'channel',
+            isPinned: false,
+            unread: 0,
+            departmentId: room.departmentId?.toString() || null,
+            isPrivate: room.isPrivate,
+            hasJoinCode: !!room.joinCode
+          }
+        });
+      }
+
+      // Add user to room
+      room.members = room.members || [];
+      room.members.push({ userId: currentUser.id, role: 'MEMBER' });
+      room.memberCount = (room.memberCount || 0) + 1;
+      await room.save();
+
+      res.json({
+        success: true,
+        room: {
+          id: room._id.toString(),
+          name: room.name,
+          description: room.description,
+          type: 'channel',
+          isPinned: false,
+          unread: 0,
+          departmentId: room.departmentId?.toString() || null,
+          isPrivate: room.isPrivate,
+          hasJoinCode: !!room.joinCode
+        }
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Get room members for @mention
+  router.get('/messaging/rooms/:roomId/members', requireAuth, async (req, res, next) => {
+    try {
+      const { roomId } = req.params;
+      const chatRoom = await ChatRoom.findById(roomId).lean();
+
+      if (!chatRoom) {
+        return res.status(404).json({ error: 'Room not found' });
+      }
+
+      const members = [];
+      if (chatRoom.members && chatRoom.members.length > 0) {
+        const userIds = chatRoom.members.map(m => m.userId);
+        const users = await User.find({ _id: { $in: userIds } }).select('name email avatar').lean();
+        users.forEach(u => {
+          const member = chatRoom.members.find(m => m.userId.toString() === u._id.toString());
+          members.push({
+            id: u._id.toString(),
+            name: u.name,
+            email: u.email,
+            avatar: u.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(u.name)}`,
+            role: member?.role || 'MEMBER'
+          });
+        });
+      } else if (chatRoom.participants && chatRoom.participants.length > 0) {
+        const users = await User.find({ _id: { $in: chatRoom.participants } }).select('name email avatar').lean();
+        users.forEach(u => {
+          members.push({
+            id: u._id.toString(),
+            name: u.name,
+            email: u.email,
+            avatar: u.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(u.name)}`,
+            role: 'MEMBER'
+          });
+        });
+      }
+
+      res.json({ members });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Delete room
+  router.delete('/messaging/rooms/:roomId', requireAuth, async (req, res, next) => {
+    try {
+      const { roomId } = req.params;
+      const currentUser = req.user;
+
+      if (currentUser.role !== 'MANAGER') {
+        return res.status(403).json({ success: false, message: 'Chỉ quản lý mới có quyền xóa phòng' });
+      }
+
+      const chatRoom = await ChatRoom.findById(roomId);
+      if (!chatRoom) {
+        return res.status(404).json({ success: false, message: 'Phòng không tồn tại' });
+      }
+
+      // Soft delete
+      chatRoom.isDeleted = true;
+      await chatRoom.save();
+
+      res.json({ success: true, message: 'Đã xóa phòng thành công' });
     } catch (err) {
       next(err);
     }

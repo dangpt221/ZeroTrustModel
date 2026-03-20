@@ -1,5 +1,9 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronRight, Hash, Lock, MessageSquare, MoreVertical, Pin, Search, Send, Shield, Wifi, WifiOff } from 'lucide-react';
+import {
+  ChevronRight, Hash, Key, Lock, MessageCircle, MessageSquare,
+  MoreVertical, Pin, Plus, Search, Send, Shield, Smile,
+  Trash2, Users, Wifi, WifiOff, X
+} from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { ChatMessage, ChatRoom, useChat } from '../hooks/useChat';
@@ -18,6 +22,15 @@ const formatTime = (timestamp: string) => {
 
 const COMMON_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🎉', '🔥', '👀'];
 
+const STICKER_CATEGORIES = [
+  { name: 'Cảm xúc', stickers: ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😋', '😛', '😜', '🤪', '😝', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '😮‍💨', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '🥸', '😎', '🤓', '🧐', '😕', '😟', '🙁', '😮', '😯', '😲', '😳', '🥺', '😦', '😧', '😨', '😰', '😥', '😢', '😭', '😱', '😖', '😣', '😞', '😓', '😩', '😫', '🥱', '😤', '😡', '😠', '🤬', '😈', '👿', '💀', '☠️', '💩', '🤡', '👹', '👺', '👻', '👽', '👾', '🤖'] },
+  { name: 'Hand', stickers: ['👍', '👎', '👊', '✊', '🤛', '🤜', '🤝', '👏', '🙌', '👐', '🤲', '🤞', '✌️', '🤟', '🤘', '👌', '🤌', '👈', '👉', '👆', '👇', '☝️', '✋', '🤚', '🖐', '🖖', '👋', '🤙', '💪', '🦾', '🖕', '✍️', '🙏'] },
+  { name: 'Symbols', stickers: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '♥️', '♦️', '♣️', '♠️', '🃏', '🎴', '🀄', '🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '⚫', '⚪', '🟤', '🔺', '🔻', '🔸', '🔹', '🔶', '🔷', '💎', '🏆', '🥇', '🥈', '🥉', '🏅', '🎖', '🎗', '🎪', '🎫', '🎟', '🎭', '🎨', '🎬', '🎤', '🎧', '🎼', '🎹', '🥁', '🎷', '🎺', '🎸', '🪕', '🎻', '🎲', '♟️', '🎯', '🎳', '🎮', '🎰'] },
+  { name: 'Con vật', stickers: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐻‍❄️', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🙈', '🙉', '🙊', '🐒', '🐔', '🐧', '🐦', '🐤', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗', '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐞', '🐜', '🦟', '🦗', '🕷️', '🦂', '🐢', '🐍', '🦎', '🦖', '🦕', '🐙', '🦑', '🦐', '🦞', '🦀', '🐡', '🐠', '🐟', '🐬', '🐳', '🐋', '🦈', '🐊', '🐅', '🐆', '🦓', '🦍', '🦧', '🦣', '🐘', '🦛', '🦏', '🐪', '🐫', '🦒', '🦘', '🦬', '🐃', '🐂', '🐄', '🐎', '🐖', '🐏', '🐑', '🦙', '🐐', '🦌', '🐕', '🐩', '🦮', '🐈', '🐓', '🦃', '🦚', '🦜', '🦢', '🦩', '🕊️', '🐇', '🦝', '🦨', '🦡', '🦫', '🦦', '🦥', '🐁', '🐀', '🐿️', '🦔'] },
+  { name: 'Food', stickers: ['🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🫐', '🍈', '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅', '🍆', '🥑', '🥦', '🥬', '🥒', '🌶️', '🫑', '🌽', '🥕', '🧄', '🧅', '🥔', '🍠', '🥐', '🥯', '🍞', '🥖', '🥨', '🧀', '🥚', '🍳', '🧈', '🥞', '🧇', '🥓', '🥩', '🍗', '🍖', '🦴', '🌭', '🍔', '🍟', '🍕', '🫓', '🥪', '🥙', '🧆', '🌮', '🌯', '🫔', '🥗', '🥘', '🫕', '🍝', '🍜', '🍲', '🍛', '🍣', '🍱', '🥟', '🦪', '🍤', '🍙', '🍚', '🍘', '🍥', '🥠', '🥮', '🍢', '🍡', '🍧', '🍨', '🍦', '🥧', '🧁', '🍰', '🎂', '🍮', '🍭', '🍬', '🍫', '🍿', '🍩', '🍪', '🌰', '🥜', '🍯', '🥛', '🍼', '☕', '🫖', '🍵', '🧃', '🥤', '🧋', '🍶', '🍺', '🍻', '🥂', '🍷', '🥃', '🍸', '🍹', '🧉', '🍾', '🧊'] },
+  { name: 'Đồ vật', stickers: ['⌚', '📱', '💻', '⌨️', '🖥️', '🖨️', '🖱️', '🖲️', '💽', '💾', '💿', '📀', '📼', '📷', '📸', '📹', '🎥', '📽️', '🎞️', '📞', '☎️', '📟', '📠', '📺', '📻', '🎙️', '🎚️', '🎛️', '🧭', '⏱️', '⏲️', '⏰', '🕰️', '⌛', '⏳', '📡', '🔋', '🔌', '💡', '🔦', '🕯️', '🪔', '🧯', '🛢️', '💸', '💵', '💴', '💶', '💷', '🪙', '💰', '💳', '💎', '⚖️', '🪜', '🧰', '🪛', '🔧', '🔨', '⚒️', '🛠️', '⛏️', '🪚', '🔩', '⚙️', '🪤', '🧱', '⛓️', '🧲', '🔫', '💣', '🧨', '🪓', '🔪', '🗡️', '⚔️', '🛡️', '🚬', '⚰️', '🪦', '⚱️', '🏺', '🔮', '📿', '🧿', '💈', '⚗️', '🔭', '🔬', '🕳️', '🩹', '🩺', '💊', '💉', '🩸', '🧬', '🦠', '🧫', '🧪', '🌡️', '🧹', '🪠', '🧺', '🧻', '🚽', '🚿', '🛁', '🛀', '🧼', '🪥', '🪒', '🧽', '🪣', '🧴', '🛎️', '🔑', '🗝️', '🚪', '🪑', '🛋️', '🛏️', '🛌', '🧸', '🪆', '🖼️', '🪞', '🪟', '🛒', '🎁', '🎈', '🎏', '🎀', '🪄', '🪅', '🎊', '🎉', '🎎', '🏮', '🎐', '🧧', '✉️', '📩', '📨', '📧', '💌', '📥', '📤', '📦', '🏷️', '🧳', '📪', '📫', '📬', '📭', '📮', '📯', '📜', '📃', '📄', '📑', '🧾', '📊', '📈', '📉', '🗒️', '🗓️', '📆', '📅', '🗑️', '📇', '🗃️', '🗳️', '🗄️', '📋', '📁', '📂', '🗂️', '🗞️', '📰', '📓', '📔', '📒', '📕', '📗', '📘', '📙', '📚', '📖', '🔖', '🧷', '🔗', '📎', '🖇️', '📐', '📏', '🧮', '📌', '📍', '✂️', '🖊️', '🖋️', '✒️', '🖌️', '🖍️', '📝', '✏️', '🔍', '🔎', '🔏', '🔐', '🔒', '🔓'] },
+];
+
 export const Messaging: React.FC = () => {
   const { user } = useAuth();
   const {
@@ -31,7 +44,6 @@ export const Messaging: React.FC = () => {
   const [loadingRooms, setLoadingRooms] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [activeTab, setActiveTab] = useState<'channels' | 'dms'>('channels');
-  const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<ChatMessage[]>([]);
   const [showNewChat, setShowNewChat] = useState(false);
@@ -42,6 +54,34 @@ export const Messaging: React.FC = () => {
   const [showThread, setShowThread] = useState(false);
   const [threadMessages, setThreadMessages] = useState<ChatMessage[]>([]);
   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
+  const [showStickerPanel, setShowStickerPanel] = useState(false);
+  const [showMentionDropdown, setShowMentionDropdown] = useState(false);
+  const [mentionUsers, setMentionUsers] = useState<any[]>([]);
+  const [mentionQuery, setMentionQuery] = useState('');
+  const [mentionFilter, setMentionFilter] = useState<any[]>([]);
+
+  // Create room form
+  const [newRoomName, setNewRoomName] = useState('');
+  const [newRoomDesc, setNewRoomDesc] = useState('');
+  const [newRoomHasCode, setNewRoomHasCode] = useState(false);
+  const [newRoomCode, setNewRoomCode] = useState('');
+  const [creatingRoom, setCreatingRoom] = useState(false);
+
+  // Join room form
+  const [joinRoomCode, setJoinRoomCode] = useState('');
+  const [joinRoomId, setJoinRoomId] = useState('');
+  const [joiningRoom, setJoiningRoom] = useState(false);
+
+  // Modal states
+  const [showCreateRoomModal, setShowCreateRoomModal] = useState(false);
+  const [showJoinRoomModal, setShowJoinRoomModal] = useState(false);
+  const [showDeleteRoomModal, setShowDeleteRoomModal] = useState(false);
+  const [pendingRoomId, setPendingRoomId] = useState('');
+  const [pendingRoomName, setPendingRoomName] = useState('');
+
+  const inputRef = useRef<HTMLInputElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isManager = user?.role === 'MANAGER';
   const isMember = user?.role === 'STAFF';
@@ -68,7 +108,6 @@ export const Messaging: React.FC = () => {
 
   const [inputText, setInputText] = useState('');
   const [roomSearch, setRoomSearch] = useState('');
-  const scrollRef = useRef<HTMLDivElement>(null);
 
   // Fetch Rooms on Mount
   useEffect(() => {
@@ -97,14 +136,23 @@ export const Messaging: React.FC = () => {
   useEffect(() => {
     if (!activeRoom) return;
     setLoadingMessages(true);
+
     const fetchMessages = async () => {
       try {
         const res = await fetch(`/api/messages?room=${activeRoom}`, { credentials: 'include' });
+        if (res.status === 403) {
+          const data = await res.json();
+          alert(data.error || 'Bạn cần nhập mã bảo mật để tham gia');
+          setShowJoinRoomModal(true);
+          setJoinRoomId(activeRoom);
+          setMessages([]);
+          setLoadingMessages(false);
+          return;
+        }
         if (res.ok) {
           const data = await res.json();
-          setMessages(Array.isArray(data) ? data : []);
-
-          const msgs = Array.isArray(data) ? data : [];
+          const msgs = Array.isArray(data) ? data : (data.messages || []);
+          setMessages(msgs);
           msgs.forEach((msg: ChatMessage) => {
             if (!msg.isRead && msg.userId !== user?.id) {
               markAsRead(msg.id, activeRoom);
@@ -119,8 +167,7 @@ export const Messaging: React.FC = () => {
       }
     };
     fetchMessages();
-    joinRoom(activeRoom);
-  }, [activeRoom, joinRoom, setMessages, user?.id, markAsRead]);
+  }, [activeRoom, user?.id, markAsRead, setMessages]);
 
   const activeRoomData = rooms.find(r => r.id === activeRoom);
   const departmentId = user?.departmentId;
@@ -144,6 +191,29 @@ export const Messaging: React.FC = () => {
   const handleInputChange = (text: string) => {
     setInputText(text);
 
+    // Detect @ mention
+    const lastAtIndex = text.lastIndexOf('@');
+    if (lastAtIndex !== -1 && lastAtIndex === text.length - 1) {
+      // User just typed @
+      setShowMentionDropdown(true);
+      setMentionQuery('');
+      setMentionFilter(mentionUsers);
+    } else if (lastAtIndex !== -1 && showMentionDropdown) {
+      // User is typing after @
+      const query = text.slice(lastAtIndex + 1);
+      setMentionQuery(query);
+      if (query.length === 0) {
+        setMentionFilter(mentionUsers);
+      } else {
+        setMentionFilter(mentionUsers.filter(u =>
+          u.name.toLowerCase().includes(query.toLowerCase())
+        ));
+      }
+    } else {
+      setShowMentionDropdown(false);
+      setMentionQuery('');
+    }
+
     if (activeRoom) {
       startTyping(activeRoom);
 
@@ -154,6 +224,35 @@ export const Messaging: React.FC = () => {
         stopTyping(activeRoom);
       }, 2000);
     }
+  };
+
+  // Fetch mention users when room changes
+  useEffect(() => {
+    if (!activeRoom) return;
+    const fetchMentionUsers = async () => {
+      try {
+        const res = await fetch(`/api/messaging/rooms/${activeRoom}/members`, { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          setMentionUsers(data.members || []);
+          setMentionFilter(data.members || []);
+        }
+      } catch (err) {
+        console.error('Failed to fetch mention users', err);
+      }
+    };
+    fetchMentionUsers();
+  }, [activeRoom]);
+
+  // Handle mention selection
+  const handleMentionSelect = (selectedUser: any) => {
+    const lastAtIndex = inputText.lastIndexOf('@');
+    const beforeMention = inputText.slice(0, lastAtIndex);
+    const newText = beforeMention + `@${selectedUser.name} `;
+    setInputText(newText);
+    setShowMentionDropdown(false);
+    setMentionQuery('');
+    inputRef.current?.focus();
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -230,7 +329,7 @@ export const Messaging: React.FC = () => {
       handleSearchUsers();
     }, 300);
     return () => clearTimeout(timer);
-  }, [userSearch, user]);
+  }, [userSearch]);
 
   const handleViewThread = async (message: ChatMessage) => {
     setReplyingTo(message);
@@ -246,8 +345,114 @@ export const Messaging: React.FC = () => {
     }
   };
 
+  const handleDeleteRoom = async () => {
+    if (!pendingRoomId) return;
+    try {
+      const res = await fetch(`/api/messaging/rooms/${pendingRoomId}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+      if (res.ok) {
+        setRooms(prev => prev.filter(r => r.id !== pendingRoomId));
+        setShowDeleteRoomModal(false);
+        setPendingRoomId('');
+        setPendingRoomName('');
+      } else {
+        const data = await res.json();
+        alert(data.message || 'Không thể xóa phòng');
+      }
+    } catch (err) {
+      console.error('Delete room failed:', err);
+      alert('Không thể xóa phòng');
+    }
+  };
+
+  const handleCreateRoom = async () => {
+    if (!newRoomName.trim()) {
+      alert('Vui lòng nhập tên phòng');
+      return;
+    }
+    if (newRoomHasCode && !newRoomCode.trim()) {
+      alert('Vui lòng nhập mã bảo mật');
+      return;
+    }
+    setCreatingRoom(true);
+    try {
+      const res = await fetch('/api/messaging/rooms', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newRoomName.trim(),
+          description: newRoomDesc.trim(),
+          hasSecurityCode: newRoomHasCode,
+          securityCode: newRoomHasCode ? newRoomCode.trim() : null
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setRooms(prev => [...prev, data.room]);
+        setShowCreateRoomModal(false);
+        setNewRoomName('');
+        setNewRoomDesc('');
+        setNewRoomHasCode(false);
+        setNewRoomCode('');
+        joinRoom(data.room.id);
+      } else {
+        const data = await res.json();
+        alert(data.message || 'Không thể tạo phòng');
+      }
+    } catch (err) {
+      console.error('Create room failed:', err);
+      alert('Không thể tạo phòng');
+    } finally {
+      setCreatingRoom(false);
+    }
+  };
+
+  const handleJoinRoom = async () => {
+    if (!joinRoomId.trim() || !joinRoomCode.trim()) {
+      alert('Vui lòng nhập đầy đủ thông tin');
+      return;
+    }
+    setJoiningRoom(true);
+    try {
+      const res = await fetch(`/api/messaging/rooms/${joinRoomId}/join`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ securityCode: joinRoomCode.trim() })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (!rooms.find(r => r.id === joinRoomId)) {
+          setRooms(prev => [...prev, data.room]);
+        }
+        setShowJoinRoomModal(false);
+        setJoinRoomId('');
+        setJoinRoomCode('');
+        joinRoom(joinRoomId);
+        alert('Tham gia phòng thành công!');
+      } else {
+        const data = await res.json();
+        alert(data.message || 'Không thể tham gia phòng');
+      }
+    } catch (err) {
+      console.error('Join room failed:', err);
+      alert('Không thể tham gia phòng');
+    } finally {
+      setJoiningRoom(false);
+    }
+  };
+
   const roomMessages = messages.filter(m => m.room === activeRoom);
   const typingInRoom = typingUsers.get(activeRoom || '') || [];
+
+  const getRoomIcon = (room: ChatRoom) => {
+    if (room.type === 'direct' || room.type === 'DM') return MessageCircle;
+    if (room.type === 'GROUP' || room.type === 'channel') return Hash;
+    return Shield;
+  };
 
   return (
     <div className="flex-1 w-full h-full flex bg-white overflow-hidden">
@@ -330,26 +535,6 @@ export const Messaging: React.FC = () => {
           )}
         </div>
 
-        {/* Action Buttons */}
-        <div className="p-3 border-b border-slate-200 bg-white space-y-2">
-          {isManager && (
-            <button
-              onClick={() => setShowCreateRoomModal(true)}
-              className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold ${themeBg} text-white hover:${themeHover} transition-colors`}
-            >
-              <Plus size={14} /> Tạo phòng
-            </button>
-          )}
-          {isMember && (
-            <button
-              onClick={() => setShowJoinRoomModal(true)}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
-            >
-              <Key size={14} /> Vào phòng
-            </button>
-          )}
-        </div>
-
         {/* Room List */}
         <div className="flex-1 overflow-y-auto p-3">
           {loadingRooms ? (
@@ -371,7 +556,7 @@ export const Messaging: React.FC = () => {
                     className="space-y-1 mb-3"
                   >
                     {pinnedRooms.map((room, idx) => {
-                      const Icon = room.type === 'channel' ? Hash : Shield;
+                      const Icon = getRoomIcon(room);
                       return (
                         <motion.button
                           key={room.id}
@@ -386,7 +571,10 @@ export const Messaging: React.FC = () => {
                           }`}
                         >
                           <Icon size={15} />
-                          <span className="text-sm font-medium truncate flex-1 text-left">{room.name}</span>
+                          <span className="text-sm font-medium truncate flex-1 text-left flex items-center gap-1">
+                            {room.name}
+                            {room.isPrivate && <Lock size={10} />}
+                          </span>
                           {room.unread > 0 && (
                             <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
                               {room.unread}
@@ -403,7 +591,7 @@ export const Messaging: React.FC = () => {
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-2">Kênh</p>
                   <div className="space-y-1">
                     {normalRooms.map(room => {
-                      const Icon = room.type === 'channel' ? Hash : Shield;
+                      const Icon = getRoomIcon(room);
                       return (
                         <button
                           key={room.id}
@@ -415,7 +603,10 @@ export const Messaging: React.FC = () => {
                           }`}
                         >
                           <Icon size={15} />
-                          <span className="text-sm font-medium truncate flex-1 text-left">{room.name}</span>
+                          <span className="text-sm font-medium truncate flex-1 text-left flex items-center gap-1">
+                            {room.name}
+                            {room.isPrivate && <Lock size={10} />}
+                          </span>
                           {room.unread > 0 && (
                             <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
                               {room.unread}
@@ -469,7 +660,7 @@ export const Messaging: React.FC = () => {
         <div className="h-16 px-5 border-b border-slate-200 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className={`p-2 ${themeIconBg} ${themeText} rounded-lg`}>
-              {activeRoomData && <Hash size={18} />}
+              <Hash size={18} />
             </div>
             <div>
               <h3 className="font-semibold text-slate-800 text-sm">{activeRoomData?.name || 'Chọn kênh'}</h3>
@@ -483,7 +674,7 @@ export const Messaging: React.FC = () => {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setShowSearch(true)}
+              onClick={handleSearch}
               className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all"
             >
               <Search size={18} />
@@ -510,6 +701,219 @@ export const Messaging: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {/* Search Results */}
+        {searchResults.length > 0 && (
+          <div className="px-5 py-3 border-b border-slate-200 bg-amber-50">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-semibold text-amber-700">Kết quả tìm kiếm: {searchResults.length} tin nhắn</p>
+              <button onClick={() => setSearchResults([])} className="text-amber-600 hover:text-amber-800">
+                <X size={14} />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* New Chat Modal */}
+        {showNewChat && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="bg-white rounded-xl shadow-2xl w-96 p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-slate-800">Tin nhắn mới</h3>
+                <button onClick={() => setShowNewChat(false)} className="text-slate-400 hover:text-slate-600">
+                  <X size={18} />
+                </button>
+              </div>
+              <input
+                type="text"
+                placeholder="Tìm người dùng..."
+                value={userSearch}
+                onChange={(e) => setUserSearch(e.target.value)}
+                className="w-full bg-slate-100 border-none rounded-lg py-2 px-3 text-sm text-slate-700 placeholder-slate-400 outline-none focus:ring-2 focus:ring-blue-200 mb-3"
+              />
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {loadingSearch ? (
+                  <div className="text-center text-slate-400 text-sm py-2">Đang tìm...</div>
+                ) : userSearchResults.length === 0 ? (
+                  <div className="text-center text-slate-400 text-sm py-2">
+                    {userSearch ? 'Không tìm thấy người dùng' : 'Nhập tên để tìm kiếm'}
+                  </div>
+                ) : (
+                  userSearchResults.map(u => (
+                    <button
+                      key={u.id}
+                      onClick={() => handleNewChat(u.id)}
+                      className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-100 transition-all"
+                    >
+                      <img src={u.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(u.name)}`} alt={u.name} className="w-8 h-8 rounded-full bg-slate-200" />
+                      <div className="text-left">
+                        <p className="text-sm font-medium text-slate-700">{u.name}</p>
+                        <p className="text-xs text-slate-400">{u.email}</p>
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Create Room Modal */}
+        {showCreateRoomModal && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="bg-white rounded-xl shadow-2xl w-96 p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-slate-800">Tạo phòng mới</h3>
+                <button onClick={() => setShowCreateRoomModal(false)} className="text-slate-400 hover:text-slate-600">
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">Tên phòng</label>
+                  <input
+                    type="text"
+                    value={newRoomName}
+                    onChange={(e) => setNewRoomName(e.target.value)}
+                    placeholder="VD: Nhóm dự án A"
+                    className="w-full bg-slate-100 border-none rounded-lg py-2.5 px-3 text-sm text-slate-700 placeholder-slate-400 outline-none focus:ring-2 focus:ring-blue-200"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">Mô tả (tùy chọn)</label>
+                  <input
+                    type="text"
+                    value={newRoomDesc}
+                    onChange={(e) => setNewRoomDesc(e.target.value)}
+                    placeholder="VD: Thảo luận về dự án..."
+                    className="w-full bg-slate-100 border-none rounded-lg py-2.5 px-3 text-sm text-slate-700 placeholder-slate-400 outline-none focus:ring-2 focus:ring-blue-200"
+                  />
+                </div>
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={newRoomHasCode}
+                      onChange={(e) => setNewRoomHasCode(e.target.checked)}
+                      className="w-4 h-4 rounded border-slate-300 text-blue-500 focus:ring-blue-200"
+                    />
+                    <span className="text-sm text-slate-600">Bảo vệ bằng mã</span>
+                  </label>
+                </div>
+                {newRoomHasCode && (
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 mb-1">Mã bảo mật</label>
+                    <input
+                      type="password"
+                      value={newRoomCode}
+                      onChange={(e) => setNewRoomCode(e.target.value)}
+                      placeholder="Nhập mã bảo mật"
+                      className="w-full bg-slate-100 border-none rounded-lg py-2.5 px-3 text-sm text-slate-700 placeholder-slate-400 outline-none focus:ring-2 focus:ring-blue-200"
+                    />
+                    <p className="text-xs text-slate-400 mt-1">Chia sẻ mã này cho người muốn tham gia</p>
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-2 mt-4">
+                <button
+                  onClick={() => setShowCreateRoomModal(false)}
+                  className="flex-1 px-3 py-2 rounded-lg text-sm font-medium bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={handleCreateRoom}
+                  disabled={creatingRoom}
+                  className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium ${themeBg} text-white ${themeHover} transition-colors disabled:opacity-50`}
+                >
+                  {creatingRoom ? 'Đang tạo...' : 'Tạo phòng'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Room Modal */}
+        {showDeleteRoomModal && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="bg-white rounded-xl shadow-2xl w-96 p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-slate-800">Xóa phòng</h3>
+                <button onClick={() => setShowDeleteRoomModal(false)} className="text-slate-400 hover:text-slate-600">
+                  <X size={18} />
+                </button>
+              </div>
+              <p className="text-sm text-slate-600 mb-4">
+                Bạn có chắc muốn xóa phòng <strong>"{pendingRoomName}"</strong>? Tin nhắn trong phòng sẽ được giữ lại trong hệ thống.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowDeleteRoomModal(false)}
+                  className="flex-1 px-3 py-2 rounded-lg text-sm font-medium bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={handleDeleteRoom}
+                  className="flex-1 px-3 py-2 rounded-lg text-sm font-medium bg-red-500 text-white hover:bg-red-600 transition-colors"
+                >
+                  Xóa
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Join Room Modal */}
+        {showJoinRoomModal && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="bg-white rounded-xl shadow-2xl w-96 p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-slate-800">Tham gia phòng</h3>
+                <button onClick={() => setShowJoinRoomModal(false)} className="text-slate-400 hover:text-slate-600">
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">ID Phòng</label>
+                  <input
+                    type="text"
+                    value={joinRoomId}
+                    onChange={(e) => setJoinRoomId(e.target.value)}
+                    placeholder="Dán ID phòng cần tham gia"
+                    className="w-full bg-slate-100 border-none rounded-lg py-2.5 px-3 text-sm text-slate-700 placeholder-slate-400 outline-none focus:ring-2 focus:ring-blue-200"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">Mã bảo mật</label>
+                  <input
+                    type="password"
+                    value={joinRoomCode}
+                    onChange={(e) => setJoinRoomCode(e.target.value)}
+                    placeholder="Nhập mã bảo mật"
+                    className="w-full bg-slate-100 border-none rounded-lg py-2.5 px-3 text-sm text-slate-700 placeholder-slate-400 outline-none focus:ring-2 focus:ring-blue-200"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2 mt-4">
+                <button
+                  onClick={() => setShowJoinRoomModal(false)}
+                  className="flex-1 px-3 py-2 rounded-lg text-sm font-medium bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={handleJoinRoom}
+                  disabled={joiningRoom}
+                  className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium ${themeBg} text-white ${themeHover} transition-colors disabled:opacity-50`}
+                >
+                  {joiningRoom ? 'Đang tham gia...' : 'Tham gia'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-5 space-y-3 bg-slate-50/50 flex flex-col">
@@ -570,32 +974,85 @@ export const Messaging: React.FC = () => {
                             <p className="text-[10px] text-slate-400">{formatTime(msg.timestamp)}</p>
                           </div>
                         )}
-                        <motion.div
-                          whileHover={{ scale: 1.01 }}
-                          className={`px-4 py-2.5 rounded-2xl text-sm ${
-                            isMe 
-                              ? `${themeBg} text-white rounded-br-sm` 
-                              : 'bg-white text-slate-700 rounded-bl-sm shadow-sm border border-slate-100'
-                          }`}
-                        >
-                          {msg.text}
-                        </motion.div>
-                        {msg.reactions && msg.reactions.length > 0 && (
+                        <div className="relative group/menu">
+                          <motion.div
+                            whileHover={{ scale: 1.01 }}
+                            className={`px-4 py-2.5 rounded-2xl text-sm ${
+                              isMe
+                                ? `${themeBg} text-white rounded-br-sm`
+                                : 'bg-white text-slate-700 rounded-bl-sm shadow-sm border border-slate-100'
+                            }`}
+                          >
+                            {msg.text}
+                          </motion.div>
+                          {/* Action buttons on hover */}
+                          <div className={`absolute top-1/2 -translate-y-1/2 ${isMe ? 'left-0 -translate-x-full' : 'right-0 translate-x-full'} flex items-center gap-1 bg-white rounded-lg shadow-lg border border-slate-200 p-1 opacity-0 group-hover/menu:opacity-100 transition-opacity z-10`}>
+                            {/* Reaction button */}
+                            <div className="relative">
+                              <button
+                                onClick={() => {
+                                  if (showEmojiPicker === msg.id) {
+                                    setShowEmojiPicker(null);
+                                  } else {
+                                    setShowEmojiPicker(msg.id);
+                                  }
+                                }}
+                                className="p-1.5 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded transition-all"
+                                title="Thêm cảm xúc"
+                              >
+                                <Smile size={14} />
+                              </button>
+                              {/* Emoji picker */}
+                              {showEmojiPicker === msg.id && (
+                                <div className={`absolute top-full mt-1 ${isMe ? 'left-0' : 'right-0'} bg-white rounded-lg shadow-lg border border-slate-200 p-2 flex gap-1 z-20`}>
+                                  {COMMON_EMOJIS.map(emoji => (
+                                    <button
+                                      key={emoji}
+                                      onClick={() => { handleReaction(msg.id, emoji); setShowEmojiPicker(null); }}
+                                      className="p-1 hover:bg-slate-100 rounded text-sm transition-all hover:scale-125"
+                                    >
+                                      {emoji}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            {/* Reply button */}
+                            <button
+                              onClick={() => setReplyingTo(msg)}
+                              className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded transition-all"
+                              title="Trả lời"
+                            >
+                              <MessageCircle size={14} />
+                            </button>
+                            {/* Recall button - only for own messages */}
+                            {isMe && (
+                              <button
+                                onClick={() => handleRecall(msg.id)}
+                                className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-all"
+                                title="Thu hồi tin nhắn"
+                              >
+                                <X size={14} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        {msg.reactions != null && msg.reactions.length > 0 && (
                           <div className={`flex gap-1 flex-wrap ${isMe ? 'justify-end' : 'justify-start'} ml-1`}>
                             {msg.reactions.map((reaction, i) => (
                               <button
                                 key={i}
                                 onClick={() => handleReaction(msg.id, reaction.emoji)}
-                                className="px-1.5 py-0.5 bg-slate-100 rounded-full text-xs hover:bg-slate-200"
+                                className="px-1.5 py-0.5 bg-slate-100 rounded-full text-xs hover:bg-slate-200 flex items-center gap-1"
                               >
-                                {reaction.emoji}
+                                <span>{reaction.emoji}</span>
                               </button>
                             ))}
                           </div>
                         )}
 
                         {/* Reply count */}
-                        {msg.replyCount && msg.replyCount > 0 && !msg.parentMessageId && (
+                        {msg.replyCount != null && msg.replyCount > 0 && !msg.parentMessageId && (
                           <button
                             onClick={() => handleViewThread(msg)}
                             className={`text-xs ${themeText} hover:underline flex items-center gap-1 ${isMe ? 'justify-end' : 'justify-start'} ml-1`}
@@ -632,7 +1089,7 @@ export const Messaging: React.FC = () => {
           {showStickerPanel && (
             <div className="mb-3 bg-white border border-slate-200 rounded-xl shadow-lg p-3 max-h-64 overflow-hidden">
               <div className="flex gap-1 mb-2 overflow-x-auto pb-1">
-                {stickerCategories.map((cat, i) => (
+                {STICKER_CATEGORIES.map((cat, i) => (
                   <button
                     key={i}
                     onClick={() => {
@@ -646,7 +1103,7 @@ export const Messaging: React.FC = () => {
                 ))}
               </div>
               <div className="max-h-44 overflow-y-auto">
-                {stickerCategories.map((cat, i) => (
+                {STICKER_CATEGORIES.map((cat, i) => (
                   <div key={i} id={`sticker-cat-${i}`} className="grid grid-cols-10 gap-1 mb-2">
                     {cat.stickers.map((s, j) => (
                       <button
@@ -705,6 +1162,34 @@ export const Messaging: React.FC = () => {
                   {emoji}
                 </button>
               ))}
+            </div>
+          )}
+
+          {/* @Mention dropdown */}
+          {showMentionDropdown && (
+            <div className="absolute bottom-full mb-2 left-0 w-72 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden z-30">
+              <div className="px-3 py-2 bg-slate-50 border-b border-slate-200">
+                <p className="text-xs font-semibold text-slate-500">Nhắc đến</p>
+              </div>
+              <div className="max-h-60 overflow-y-auto py-1">
+                {mentionFilter.length === 0 ? (
+                  <div className="px-3 py-2 text-sm text-slate-400 text-center">Không tìm thấy người dùng</div>
+                ) : (
+                  mentionFilter.map(u => (
+                    <button
+                      key={u.id}
+                      onClick={() => handleMentionSelect(u)}
+                      className="w-full flex items-center gap-3 px-3 py-2 hover:bg-slate-50 transition-all"
+                    >
+                      <img src={u.avatar} alt={u.name} className="w-8 h-8 rounded-full bg-slate-200" />
+                      <div className="text-left">
+                        <p className="text-sm font-medium text-slate-700">{u.name}</p>
+                        <p className="text-xs text-slate-400">{u.email}</p>
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
             </div>
           )}
         </div>
