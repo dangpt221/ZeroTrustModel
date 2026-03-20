@@ -31,15 +31,19 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
       let user = await User.findOne({ googleId: profile.id });
 
       if (!user) {
-        // Create new user
+        // Create new user (Google OAuth users get a placeholder password)
+        const { hashPassword } = await import('../middleware/auth.js');
         user = await User.create({
           googleId: profile.id,
           email: profile.emails[0].value,
           name: profile.displayName,
+          passwordHash: await hashPassword('google_oauth_placeholder'),
           avatar: profile.photos[0]?.value,
           role: 'STAFF',
           isApproved: true, // Auto-approve Google auth users
-          mfaEnabled: false
+          mfaEnabled: false,
+          status: 'ACTIVE',
+          trustScore: 95
         });
       }
 

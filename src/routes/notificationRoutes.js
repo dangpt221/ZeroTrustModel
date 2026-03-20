@@ -7,7 +7,8 @@ import {
   getMyNotifications,
   markAsRead,
   markAllAsRead,
-  getUnreadCount
+  getUnreadCount,
+  deleteNotification
 } from '../controllers/notificationController.js';
 
 export function registerNotificationRoutes(router) {
@@ -15,6 +16,7 @@ export function registerNotificationRoutes(router) {
   router.post('/notifications', requireRole(['ADMIN']), createNotification);
   router.post('/notifications/broadcast', requireRole(['ADMIN']), broadcastNotification);
   router.get('/notifications/all', requireRole(['ADMIN']), getAllNotifications);
+  router.delete('/notifications/:notificationId', requireRole(['ADMIN']), deleteNotification);
 
   // User routes
   router.get('/notifications', requireAuth, getMyNotifications);

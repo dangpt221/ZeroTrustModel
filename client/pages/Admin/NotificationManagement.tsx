@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Bell, Send, Users, AlertTriangle, CheckCircle, Info, X, Mail } from 'lucide-react';
+import { Bell, Send, Users, AlertTriangle, CheckCircle, Info, X, Trash2, RefreshCw, Search, Filter } from 'lucide-react';
 import { notificationsApi, usersApi } from '../../api';
 import { Notification, User } from '../../types';
 import { Modal } from '../../components/Admin/Modal';
@@ -8,8 +8,12 @@ export const NotificationManagement: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
+  const [filterType, setFilterType] = useState<string>('ALL');
+  const [filterReadStatus, setFilterReadStatus] = useState<string>('ALL');
+  const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState({
     userId: '',
     title: '',
@@ -22,36 +26,46 @@ export const NotificationManagement: React.FC = () => {
     title: '',
     message: '',
     type: 'INFO',
-    priority: 'NORMAL'
+    priority: 'NORMAL',
+    sendToAll: false
   });
 
+  const fetchData = async () => {
+    try {
+      const [notifData, usersData] = await Promise.all([
+        notificationsApi.getAllAdmin(),
+        usersApi.getAll()
+      ]);
+      setNotifications(notifData || []);
+      setUsers(usersData || []);
+    } catch (err) {
+      console.error('Fetch notification data error:', err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [notifData, usersData] = await Promise.all([
-          notificationsApi.getAllAdmin(),
-          usersApi.getAll()
-        ]);
-        setNotifications(notifData || []);
-        setUsers(usersData || []);
-      } catch (err) {
-        console.error('Fetch notification data error:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchData();
   }, []);
 
+  const handleRefresh = () => {
+    setRefreshing(true);
+    fetchData();
+  };
+
   const handleSendNotification = async () => {
+    if (!formData.userId || !formData.title || !formData.message) {
+      alert('Vui lòng điền đầy đủ thông tin!');
+      return;
+    }
     try {
       await notificationsApi.create(formData);
       alert('Gửi thông báo thành công!');
       setIsModalOpen(false);
       setFormData({ userId: '', title: '', message: '', type: 'INFO', priority: 'NORMAL' });
-      // Refresh list
-      const data = await notificationsApi.getAllAdmin();
-      setNotifications(data || []);
+      fetchData();
     } catch (err) {
       console.error('Send notification error:', err);
       alert('Gửi thông báo thất bại!');
@@ -59,21 +73,35 @@ export const NotificationManagement: React.FC = () => {
   };
 
   const handleBroadcast = async () => {
-    if (broadcastData.userIds.length === 0) {
-      alert('Vui lòng chọn ít nhất một người dùng!');
+    if (!broadcastData.sendToAll && broadcastData.userIds.length === 0) {
+      alert('Vui lòng chọn ít nhất một người dùng hoặc chọn gửi cho tất cả!');
+      return;
+    }
+    if (!broadcastData.title || !broadcastData.message) {
+      alert('Vui lòng nhập tiêu đề và nội dung!');
       return;
     }
     try {
-      await notificationsApi.broadcast(broadcastData);
-      alert(`Đã gửi thông báo cho ${broadcastData.userIds.length} người dùng!`);
+      const result = await notificationsApi.broadcast(broadcastData);
+      alert(result.message);
       setIsBroadcastModalOpen(false);
-      setBroadcastData({ userIds: [], title: '', message: '', type: 'INFO', priority: 'NORMAL' });
-      // Refresh list
-      const data = await notificationsApi.getAllAdmin();
-      setNotifications(data || []);
+      setBroadcastData({ userIds: [], title: '', message: '', type: 'INFO', priority: 'NORMAL', sendToAll: false });
+      fetchData();
     } catch (err) {
       console.error('Broadcast error:', err);
       alert('Gửi thông báo thất bại!');
+    }
+  };
+
+  const handleDeleteNotification = async (id: string) => {
+    if (!confirm('Bạn có chắc muốn xóa thông báo này?')) return;
+    try {
+      await notificationsApi.delete(id);
+      alert('Xóa thông báo thành công!');
+      fetchData();
+    } catch (err) {
+      console.error('Delete notification error:', err);
+      alert('Xóa thông báo thất bại!');
     }
   };
 
@@ -93,6 +121,20 @@ export const NotificationManagement: React.FC = () => {
     }));
   };
 
+  const filteredNotifications = notifications.filter(notif => {
+    const matchesType = filterType === 'ALL' || notif.type === filterType;
+    const isRead = (notif as any).isRead ?? (notif as any).read ?? false;
+    const matchesReadStatus =
+      filterReadStatus === 'ALL' ||
+      (filterReadStatus === 'READ' && isRead) ||
+      (filterReadStatus === 'UNREAD' && !isRead);
+    const matchesSearch = searchTerm === '' ||
+      notif.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      notif.message?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      ((notif as any).userId?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesType && matchesReadStatus && matchesSearch;
+  });
+
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'WARNING': return <AlertTriangle size={16} className="text-amber-500" />;
@@ -111,6 +153,14 @@ export const NotificationManagement: React.FC = () => {
     }
   };
 
+  const getPriorityBadge = (priority: string) => {
+    switch (priority) {
+      case 'HIGH': return 'bg-red-100 text-red-700';
+      case 'LOW': return 'bg-slate-100 text-slate-600';
+      default: return 'bg-blue-100 text-blue-700';
+    }
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -119,14 +169,21 @@ export const NotificationManagement: React.FC = () => {
           <p className="text-slate-500 text-sm">Gửi thông báo và cập nhật cho nhân sự</p>
         </div>
         <div className="flex gap-3">
-          <button 
-            onClick={() => setIsBroadcastModalOpen(true)} 
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50"
+          >
+            <RefreshCw size={18} className={refreshing ? 'animate-spin' : ''} /> Làm mới
+          </button>
+          <button
+            onClick={() => setIsBroadcastModalOpen(true)}
             className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-emerald-500/20 transition-all active:scale-95"
           >
             <Users size={18} /> Gửi nhiều người
           </button>
-          <button 
-            onClick={() => setIsModalOpen(true)} 
+          <button
+            onClick={() => setIsModalOpen(true)}
             className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-blue-500/20 transition-all active:scale-95"
           >
             <Send size={18} /> Gửi một người
@@ -186,40 +243,103 @@ export const NotificationManagement: React.FC = () => {
         </div>
       </div>
 
+      {/* Filter & Search */}
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1 relative">
+            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Tìm kiếm thông báo..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Filter size={18} className="text-slate-400" />
+            <select
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value)}
+              className="px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white text-sm"
+            >
+              <option value="ALL">Tất cả loại</option>
+              <option value="INFO">Thông tin</option>
+              <option value="WARNING">Cảnh báo</option>
+              <option value="ALERT">Khẩn cấp</option>
+              <option value="SUCCESS">Thành công</option>
+            </select>
+            <select
+              value={filterReadStatus}
+              onChange={(e) => setFilterReadStatus(e.target.value)}
+              className="px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white text-sm"
+            >
+              <option value="ALL">Tất cả trạng thái</option>
+              <option value="UNREAD">Chưa đọc</option>
+              <option value="READ">Đã đọc</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
       {/* Notification List */}
       <div className="bg-white rounded-[32px] shadow-sm border border-slate-100 overflow-hidden">
         <div className="p-6 border-b border-slate-100">
-          <h3 className="font-bold text-slate-800">Lịch sử thông báo đã gửi</h3>
+          <h3 className="font-bold text-slate-800">
+            Lịch sử thông báo đã gửi
+            <span className="ml-2 text-sm font-normal text-slate-400">
+              ({filteredNotifications.length} / {notifications.length})
+            </span>
+          </h3>
         </div>
         <div className="divide-y divide-slate-50">
           {loading ? (
             <div className="p-8 text-center text-slate-400">Đang tải...</div>
-          ) : notifications.length === 0 ? (
-            <div className="p-8 text-center text-slate-400">Chưa có thông báo nào</div>
+          ) : filteredNotifications.length === 0 ? (
+            <div className="p-8 text-center text-slate-400">
+              {searchTerm || filterType !== 'ALL' ? 'Không tìm thấy thông báo nào' : 'Chưa có thông báo nào'}
+            </div>
           ) : (
-            notifications.map((notif) => (
-              <div key={notif.id} className="p-6 hover:bg-slate-50 transition-colors">
+            filteredNotifications.map((notif) => (
+              <div key={notif.id} className="p-6 hover:bg-slate-50 transition-colors group">
                 <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-start gap-4">
+                  <div className="flex items-start gap-4 flex-1">
                     <div className={`p-2 rounded-xl ${getTypeBadge(notif.type)}`}>
                       {getTypeIcon(notif.type)}
                     </div>
-                    <div>
-                      <h4 className="font-bold text-slate-800">{notif.title}</h4>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="font-bold text-slate-800">{notif.title}</h4>
+                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase ${getTypeBadge(notif.type)}`}>
+                          {notif.type}
+                        </span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${getPriorityBadge(notif.priority)}`}>
+                          {notif.priority === 'HIGH' ? 'Cao' : notif.priority === 'LOW' ? 'Thấp' : 'Bình thường'}
+                        </span>
+                      </div>
                       <p className="text-sm text-slate-500 mt-1">{notif.message}</p>
                       <div className="flex items-center gap-4 mt-2">
                         <span className="text-xs text-slate-400">
-                          Gửi đến: {(notif as any).userId?.name || notif.userId}
+                          Gửi đến: <span className="font-medium">{(notif as any).userId?.name || (notif as any).userId?.email || notif.userId || 'Nhiều người'}</span>
                         </span>
                         <span className="text-xs text-slate-400">
                           {new Date(notif.createdAt).toLocaleString('vi-VN')}
                         </span>
+                        {(((notif as any).isRead ?? (notif as any).read) === false) && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 uppercase">
+                            Chưa đọc
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
-                  <span className={`text-[10px] font-black px-2 py-1 rounded-full uppercase ${getTypeBadge(notif.type)}`}>
-                    {notif.type}
-                  </span>
+                  <button
+                    onClick={() => handleDeleteNotification(notif.id)}
+                    className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                    title="Xóa thông báo"
+                  >
+                    <Trash2 size={18} />
+                  </button>
                 </div>
               </div>
             ))
@@ -303,41 +423,63 @@ export const NotificationManagement: React.FC = () => {
       {/* Broadcast Modal */}
       <Modal isOpen={isBroadcastModalOpen} onClose={() => setIsBroadcastModalOpen(false)} title="Gửi thông báo cho nhiều người" size="lg">
         <div className="space-y-4">
-          <div>
-            <label className="text-xs font-bold text-slate-500 uppercase">Người nhận ({broadcastData.userIds.length} đã chọn)</label>
-            <div className="mt-2 flex gap-2 mb-2">
-              <button
-                onClick={selectAllUsers}
-                className="text-xs text-blue-600 hover:underline"
-              >
-                {broadcastData.userIds.length === users.length ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
-              </button>
-            </div>
-            <div className="max-h-40 overflow-y-auto border border-slate-200 rounded-xl p-2">
-              {users.map(user => (
-                <label
-                  key={user.id}
-                  className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer hover:bg-slate-50 ${
-                    broadcastData.userIds.includes(user.id) ? 'bg-blue-50' : ''
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={broadcastData.userIds.includes(user.id)}
-                    onChange={() => toggleUserSelection(user.id)}
-                    className="sr-only"
-                  />
-                  <div className={`w-4 h-4 rounded border flex items-center justify-center ${
-                    broadcastData.userIds.includes(user.id) ? 'bg-blue-500 border-blue-500' : 'border-slate-300'
-                  }`}>
-                    {broadcastData.userIds.includes(user.id) && <CheckCircle size={12} className="text-white" />}
-                  </div>
-                  <span className="text-sm">{user.name}</span>
-                  <span className="text-xs text-slate-400">({user.email})</span>
-                </label>
-              ))}
-            </div>
+          {/* Send to all option */}
+          <div className="bg-gradient-to-r from-emerald-50 to-blue-50 p-4 rounded-xl border border-emerald-200">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={broadcastData.sendToAll}
+                onChange={(e) => setBroadcastData({
+                  ...broadcastData,
+                  sendToAll: e.target.checked,
+                  userIds: e.target.checked ? [] : broadcastData.userIds
+                })}
+                className="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500"
+              />
+              <div>
+                <span className="font-bold text-slate-800">Gửi cho tất cả mọi người</span>
+                <p className="text-xs text-slate-500">Thông báo sẽ được gửi đến tất cả người dùng đang hoạt động</p>
+              </div>
+            </label>
           </div>
+
+          {!broadcastData.sendToAll && (
+            <div>
+              <label className="text-xs font-bold text-slate-500 uppercase">Người nhận ({broadcastData.userIds.length} đã chọn)</label>
+              <div className="mt-2 flex gap-2 mb-2">
+                <button
+                  onClick={selectAllUsers}
+                  className="text-xs text-blue-600 hover:underline"
+                >
+                  {broadcastData.userIds.length === users.length ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
+                </button>
+              </div>
+              <div className="max-h-40 overflow-y-auto border border-slate-200 rounded-xl p-2">
+                {users.map(user => (
+                  <label
+                    key={user.id}
+                    className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer hover:bg-slate-50 ${
+                      broadcastData.userIds.includes(user.id) ? 'bg-blue-50' : ''
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={broadcastData.userIds.includes(user.id)}
+                      onChange={() => toggleUserSelection(user.id)}
+                      className="sr-only"
+                    />
+                    <div className={`w-4 h-4 rounded border flex items-center justify-center ${
+                      broadcastData.userIds.includes(user.id) ? 'bg-blue-500 border-blue-500' : 'border-slate-300'
+                    }`}>
+                      {broadcastData.userIds.includes(user.id) && <CheckCircle size={12} className="text-white" />}
+                    </div>
+                    <span className="text-sm">{user.name}</span>
+                    <span className="text-xs text-slate-400">({user.email})</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
           <div>
             <label className="text-xs font-bold text-slate-500 uppercase">Tiêu đề</label>
             <input
@@ -387,10 +529,10 @@ export const NotificationManagement: React.FC = () => {
           </div>
           <button
             onClick={handleBroadcast}
-            disabled={broadcastData.userIds.length === 0 || !broadcastData.title || !broadcastData.message}
+            disabled={(!broadcastData.sendToAll && broadcastData.userIds.length === 0) || !broadcastData.title || !broadcastData.message}
             className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2"
           >
-            <Users size={18} /> Gửi cho {broadcastData.userIds.length} người
+            <Users size={18} /> {broadcastData.sendToAll ? `Gửi cho tất cả (${users.length} người)` : `Gửi cho ${broadcastData.userIds.length} người`}
           </button>
         </div>
       </Modal>

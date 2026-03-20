@@ -2,6 +2,7 @@ import { Message } from "../models/Message.js";
 import { ChatRoom } from "../models/ChatRoom.js";
 import { ChatPolicy } from "../models/ChatPolicy.js";
 import { AuditLog } from "../models/AuditLog.js";
+import { getClientIP, parseDeviceFromUserAgent } from "../middleware/securityMiddleware.js";
 
 // Helper: Transform to client format
 function toClientMessage(msg) {
@@ -139,7 +140,8 @@ export const getRoomById = async (req, res, next) => {
       userName: req.user.name,
       action: 'CHAT_ROOM_VIEW',
       details: `Viewed chat room: ${room.name}`,
-      ip: req.ip,
+      ip: getClientIP(req),
+      device: parseDeviceFromUserAgent(req.headers['user-agent']),
       status: 'SUCCESS',
       riskLevel: 'LOW'
     });
@@ -242,7 +244,8 @@ export const searchMessages = async (req, res, next) => {
       userName: req.user.name,
       action: 'CHAT_SEARCH',
       details: `Searched messages: ${keyword || 'filters applied'}`,
-      ip: req.ip,
+      ip: getClientIP(req),
+      device: parseDeviceFromUserAgent(req.headers['user-agent']),
       status: 'SUCCESS',
       riskLevel: 'LOW'
     });
@@ -286,7 +289,8 @@ export const deleteMessage = async (req, res, next) => {
       userName: req.user.name,
       action: 'CHAT_MESSAGE_DELETE',
       details: `Deleted message in room ${message.room}: ${reason || 'No reason provided'}`,
-      ip: req.ip,
+      ip: getClientIP(req),
+      device: parseDeviceFromUserAgent(req.headers['user-agent']),
       status: 'SUCCESS',
       riskLevel: 'MEDIUM'
     });
@@ -320,7 +324,8 @@ export const toggleRoomLock = async (req, res, next) => {
       userName: req.user.name,
       action: lock ? 'CHAT_ROOM_LOCK' : 'CHAT_ROOM_UNLOCK',
       details: `${lock ? 'Locked' : 'Unlocked'} chat room: ${room.name}`,
-      ip: req.ip,
+      ip: getClientIP(req),
+      device: parseDeviceFromUserAgent(req.headers['user-agent']),
       status: 'SUCCESS',
       riskLevel: 'MEDIUM'
     });
@@ -362,7 +367,8 @@ export const addRoomMember = async (req, res, next) => {
       userName: req.user.name,
       action: 'CHAT_MEMBER_ADD',
       details: `Added member to room: ${room.name}`,
-      ip: req.ip,
+      ip: getClientIP(req),
+      device: parseDeviceFromUserAgent(req.headers['user-agent']),
       status: 'SUCCESS',
       riskLevel: 'MEDIUM'
     });
@@ -398,7 +404,8 @@ export const removeRoomMember = async (req, res, next) => {
       userName: req.user.name,
       action: 'CHAT_MEMBER_REMOVE',
       details: `Removed member from room: ${room.name}`,
-      ip: req.ip,
+      ip: getClientIP(req),
+      device: parseDeviceFromUserAgent(req.headers['user-agent']),
       status: 'SUCCESS',
       riskLevel: 'MEDIUM'
     });
@@ -442,7 +449,8 @@ export const sendSystemMessage = async (req, res, next) => {
       userName: req.user.name,
       action: 'CHAT_SYSTEM_MESSAGE',
       details: `Sent system message to room: ${room.name}`,
-      ip: req.ip,
+      ip: getClientIP(req),
+      device: parseDeviceFromUserAgent(req.headers['user-agent']),
       status: 'SUCCESS',
       riskLevel: 'MEDIUM'
     });
@@ -535,7 +543,8 @@ export const exportChatLogs = async (req, res, next) => {
       userName: req.user.name,
       action: 'CHAT_EXPORT',
       details: `Exported chat logs: ${messages.length} messages`,
-      ip: req.ip,
+      ip: getClientIP(req),
+      device: parseDeviceFromUserAgent(req.headers['user-agent']),
       status: 'SUCCESS',
       riskLevel: 'MEDIUM'
     });
@@ -621,7 +630,8 @@ export const updateChatPolicy = async (req, res, next) => {
       userName: req.user.name,
       action: 'CHAT_POLICY_UPDATE',
       details: 'Updated chat policy',
-      ip: req.ip,
+      ip: getClientIP(req),
+      device: parseDeviceFromUserAgent(req.headers['user-agent']),
       status: 'SUCCESS',
       riskLevel: 'HIGH'
     });
@@ -652,7 +662,8 @@ export const deleteRoom = async (req, res, next) => {
       userName: req.user.name,
       action: 'CHAT_ROOM_DELETE',
       details: `Deleted chat room: ${room.name}`,
-      ip: req.ip,
+      ip: getClientIP(req),
+      device: parseDeviceFromUserAgent(req.headers['user-agent']),
       status: 'SUCCESS',
       riskLevel: 'HIGH'
     });

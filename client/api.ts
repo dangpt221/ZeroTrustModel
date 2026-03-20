@@ -384,6 +384,7 @@ export const messagesApi = {
 
 // ==================== Notifications API ====================
 export const notificationsApi = {
+  // User notifications
   getAll: () => apiRequest<Notification[]>('/notifications'),
 
   getAllAdmin: () => apiRequest<Notification[]>('/notifications/all'),
@@ -402,11 +403,28 @@ export const notificationsApi = {
   markAllAsRead: () =>
     apiRequest<void>('/notifications/read-all', { method: 'PUT' }),
 
+<<<<<<< HEAD
   broadcast: (data: { userIds: string[]; title: string; message: string; type?: string; priority?: string }) =>
+    apiRequest<{ message: string; count: number }>('/notifications/broadcast', {
+=======
+  // Admin notifications
+  getAllAdmin: () => apiRequest<Notification[]>('/notifications/all'),
+
+  create: (data: { userId: string; title: string; message: string; type?: string; priority?: string }) =>
+    apiRequest<Notification>('/notifications', {
+>>>>>>> c401b77824b0eaff96dde1e3fba4e47fb1c9fee9
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  broadcast: (data: { userIds: string[]; title: string; message: string; type?: string; priority?: string; sendToAll?: boolean }) =>
     apiRequest<{ message: string; count: number }>('/notifications/broadcast', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+
+  delete: (id: string) =>
+    apiRequest<void>(`/notifications/${id}`, { method: 'DELETE' }),
 };
 
 // ==================== Audit Logs API ====================

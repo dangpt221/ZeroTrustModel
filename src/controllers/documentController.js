@@ -3,6 +3,7 @@ import { User } from "../models/User.js";
 import { Department } from "../models/Department.js";
 import { AuditLog } from "../models/AuditLog.js";
 import { DocumentRequest } from "../models/DocumentRequest.js";
+import { getClientIP, parseDeviceFromUserAgent } from "../middleware/securityMiddleware.js";
 import bcrypt from "bcryptjs";
 
 // Helper: Transform document to client format
@@ -215,7 +216,8 @@ export const getDocumentById = async (req, res, next) => {
         userName: req.user.name,
         action: 'DOCUMENT_VIEW',
         details: `Viewed document: ${doc.title}`,
-        ip: req.ip,
+        ip: getClientIP(req),
+        device: parseDeviceFromUserAgent(req.headers['user-agent']),
         status: 'SUCCESS',
         riskLevel: 'LOW'
       });
@@ -286,7 +288,8 @@ export const createDocument = async (req, res, next) => {
       userName: req.user.name,
       action: 'DOCUMENT_CREATE',
       details: `Created document: ${title}`,
-      ip: req.ip,
+      ip: getClientIP(req),
+      device: parseDeviceFromUserAgent(req.headers['user-agent']),
       status: 'SUCCESS',
       riskLevel: 'LOW'
     });
@@ -370,7 +373,8 @@ export const updateDocument = async (req, res, next) => {
       userName: req.user.name,
       action: 'DOCUMENT_UPDATE',
       details: `Updated document: ${doc.title}`,
-      ip: req.ip,
+      ip: getClientIP(req),
+      device: parseDeviceFromUserAgent(req.headers['user-agent']),
       status: 'SUCCESS',
       riskLevel: 'LOW'
     });
@@ -419,7 +423,8 @@ export const deleteDocument = async (req, res, next) => {
       userName: req.user.name,
       action: 'DOCUMENT_DELETE',
       details: `Deleted document: ${doc.title || doc.name || id}`,
-      ip: req.ip,
+      ip: getClientIP(req),
+      device: parseDeviceFromUserAgent(req.headers['user-agent']),
       status: 'SUCCESS',
       riskLevel: 'MEDIUM'
     });
@@ -460,7 +465,8 @@ export const approveDocument = async (req, res, next) => {
       userName: req.user.name,
       action: 'DOCUMENT_APPROVE',
       details: `Approved document: ${doc.title}`,
-      ip: req.ip,
+      ip: getClientIP(req),
+      device: parseDeviceFromUserAgent(req.headers['user-agent']),
       status: 'SUCCESS',
       riskLevel: 'MEDIUM'
     });
@@ -496,7 +502,8 @@ export const rejectDocument = async (req, res, next) => {
       userName: req.user.name,
       action: 'DOCUMENT_REJECT',
       details: `Rejected document: ${doc.title}. Reason: ${reason || 'None'}`,
-      ip: req.ip,
+      ip: getClientIP(req),
+      device: parseDeviceFromUserAgent(req.headers['user-agent']),
       status: 'SUCCESS',
       riskLevel: 'MEDIUM'
     });
@@ -543,7 +550,8 @@ export const downloadDocument = async (req, res, next) => {
       userName: req.user.name,
       action: 'DOCUMENT_DOWNLOAD',
       details: `Downloaded document: ${doc.title}`,
-      ip: req.ip,
+      ip: getClientIP(req),
+      device: parseDeviceFromUserAgent(req.headers['user-agent']),
       status: 'SUCCESS',
       riskLevel: 'MEDIUM'
     });

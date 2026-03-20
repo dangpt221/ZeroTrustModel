@@ -28,6 +28,9 @@ export async function createApp() {
   const app = express();
   const httpServer = createServer(app);
 
+  // Trust proxy - important for getting real IP behind nginx/proxy
+  app.set('trust proxy', 1);
+
   // 3. Socket.io
   const io = new Server(httpServer, {
     cors: { origin: '*', methods: ['GET', 'POST'] },

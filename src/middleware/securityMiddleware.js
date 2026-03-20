@@ -78,11 +78,44 @@ export function clearFailedAttempts(ip, email) {
  * Get client IP from request
  */
 export function getClientIP(req) {
-  return req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
-    req.headers['x-real-ip'] ||
-    req.connection?.remoteAddress ||
-    req.socket?.remoteAddress ||
-    'unknown';
+  // Try various headers (common in proxies/load balancers)
+  const forwardedFor = req.headers['x-forwarded-for'];
+  const realIp = req.headers['x-real-ip'];
+  const clientIp = req.headers['x-client-ip'];
+  const cfConnectingIp = req.headers['cf-connecting-ip']; // Cloudflare
+  const fastlyClientIp = req.headers['fastly-client-ip']; // Fastly
+
+  let ip = null;
+
+  // Priority order: Cloudflare > Custom headers > Standard headers
+  if (cfConnectingIp) ip = cfConnectingIp;
+  else if (fastlyClientIp) ip = fastlyClientIp;
+  else if (clientIp) ip = clientIp;
+  else if (realIp) ip = realIp;
+  else if (forwardedFor) ip = forwardedFor.split(',')[0].trim();
+  else if (req.connection?.remoteAddress) ip = req.connection.remoteAddress;
+  else if (req.socket?.remoteAddress) ip = req.socket.remoteAddress;
+
+  // Handle IPv6-mapped IPv4 addresses (::ffff:127.0.0.1 -> 127.0.0.1)
+  if (ip && ip.startsWith('::ffff:')) {
+    ip = ip.substring(7);
+  }
+
+  // Handle IPv6 localhost
+  if (ip === '::1') {
+    ip = '127.0.0.1';
+  }
+
+  // Debug log (remove in production)
+  console.log('[IP_DETECT] Client IP:', ip, '| Headers:', JSON.stringify({
+    'x-forwarded-for': forwardedFor,
+    'x-real-ip': realIp,
+    'x-client-ip': clientIp,
+    'cf-connecting-ip': cfConnectingIp,
+    'remoteAddress': req.connection?.remoteAddress || req.socket?.remoteAddress
+  }));
+
+  return ip || 'unknown';
 }
 
 /**
