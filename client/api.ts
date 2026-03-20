@@ -386,6 +386,14 @@ export const messagesApi = {
 export const notificationsApi = {
   getAll: () => apiRequest<Notification[]>('/notifications'),
 
+  getAllAdmin: () => apiRequest<Notification[]>('/notifications/all'),
+
+  create: (data: { userId: string; title: string; message: string; type?: string; priority?: string }) =>
+    apiRequest<Notification>('/notifications', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
   getUnreadCount: () => apiRequest<{ count: number }>('/notifications/unread-count'),
 
   markAsRead: (id: string) =>
@@ -394,8 +402,8 @@ export const notificationsApi = {
   markAllAsRead: () =>
     apiRequest<void>('/notifications/read-all', { method: 'PUT' }),
 
-  broadcast: (data: { title: string; message: string; type?: string }) =>
-    apiRequest<Notification>('/notifications/broadcast', {
+  broadcast: (data: { userIds: string[]; title: string; message: string; type?: string; priority?: string }) =>
+    apiRequest<{ message: string; count: number }>('/notifications/broadcast', {
       method: 'POST',
       body: JSON.stringify(data),
     }),

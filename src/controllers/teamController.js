@@ -7,9 +7,9 @@ export const getAllTeams = async (req, res, next) => {
       id: t._id.toString(),
       name: t.name,
       description: t.description,
-      leaderId: t.leaderId,
-      memberIds: t.members || [],
-      projectId: t.projectId,
+      departmentId: t.departmentId ? t.departmentId.toString() : null,
+      managerId: t.managerId ? t.managerId.toString() : null,
+      memberIds: (t.members || []).map((m) => m.toString()),
       createdAt: t.createdAt,
     })));
   } catch (err) { next(err); }
@@ -24,9 +24,9 @@ export const getTeamById = async (req, res, next) => {
       id: team._id.toString(),
       name: team.name,
       description: team.description,
-      leaderId: team.leaderId,
-      memberIds: team.members || [],
-      projectId: team.projectId,
+      departmentId: team.departmentId ? team.departmentId.toString() : null,
+      managerId: team.managerId ? team.managerId.toString() : null,
+      memberIds: (team.members || []).map((m) => m.toString()),
       createdAt: team.createdAt,
     });
   } catch (err) { next(err); }
@@ -34,8 +34,15 @@ export const getTeamById = async (req, res, next) => {
 
 export const createTeam = async (req, res, next) => {
   try {
-    const { name, description, leaderId, projectId, memberIds } = req.body;
-    const team = await Team.create({ name, description, leaderId, projectId, members: memberIds || [] });
+    const { name, description, departmentId, managerId, memberIds } = req.body;
+    if (!departmentId) return res.status(400).json({ message: "departmentId is required" });
+    const team = await Team.create({
+      name,
+      description,
+      departmentId,
+      managerId: managerId || req.user?.id,
+      members: memberIds || [],
+    });
     res.status(201).json({ id: team._id.toString(), message: "Team created" });
   } catch (err) { next(err); }
 };
@@ -43,8 +50,13 @@ export const createTeam = async (req, res, next) => {
 export const updateTeam = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { name, description, leaderId, projectId, memberIds } = req.body;
-    const team = await Team.findByIdAndUpdate(id, { name, description, leaderId, projectId, members: memberIds }, { new: true });
+    const { name, description, managerId, memberIds } = req.body;
+    const updateData = {};
+    if (name !== undefined) updateData.name = name;
+    if (description !== undefined) updateData.description = description;
+    if (managerId !== undefined) updateData.managerId = managerId;
+    if (memberIds !== undefined) updateData.members = memberIds;
+    const team = await Team.findByIdAndUpdate(id, updateData, { new: true });
     if (!team) return res.status(404).json({ message: "Team not found" });
     res.json({ id: team._id.toString(), message: "Team updated" });
   } catch (err) { next(err); }
@@ -53,6 +65,16 @@ export const updateTeam = async (req, res, next) => {
 export const deleteTeam = async (req, res, next) => {
   try {
     const { id } = req.params;
+
+    // Authorization: Manager can only delete teams in their department
+    if (req.user.role === "MANAGER") {
+      const team = await Team.findById(id);
+      if (!team) return res.status(404).json({ message: "Team not found" });
+      if (team.departmentId?.toString() !== req.user.departmentId?.toString()) {
+        return res.status(403).json({ message: "Bạn chỉ có thể xóa đội ngũ trong phòng ban của mình." });
+      }
+    }
+
     const team = await Team.findByIdAndDelete(id);
     if (!team) return res.status(404).json({ message: "Team not found" });
     res.json({ success: true, message: "Team deleted" });
@@ -63,9 +85,19 @@ export const addTeamMember = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { userId } = req.body;
+
+    if (req.user.role === "MANAGER") {
+      const team = await Team.findById(id);
+      if (!team) return res.status(404).json({ message: "Team not found" });
+      if (team.departmentId?.toString() !== req.user.departmentId?.toString()) {
+        return res.status(403).json({ message: "Bạn chỉ có thể thêm thành viên vào đội ngũ trong phòng ban của mình." });
+      }
+    }
+
     const team = await Team.findById(id);
     if (!team) return res.status(404).json({ message: "Team not found" });
-    if (!team.members.includes(userId)) {
+    const memberStr = userId.toString();
+    if (!team.members.map(m => m.toString()).includes(memberStr)) {
       team.members.push(userId);
       await team.save();
     }
@@ -76,6 +108,15 @@ export const addTeamMember = async (req, res, next) => {
 export const removeTeamMember = async (req, res, next) => {
   try {
     const { id, userId } = req.params;
+
+    if (req.user.role === "MANAGER") {
+      const team = await Team.findById(id);
+      if (!team) return res.status(404).json({ message: "Team not found" });
+      if (team.departmentId?.toString() !== req.user.departmentId?.toString()) {
+        return res.status(403).json({ message: "Bạn chỉ có thể xóa thành viên khỏi đội ngũ trong phòng ban của mình." });
+      }
+    }
+
     const team = await Team.findById(id);
     if (!team) return res.status(404).json({ message: "Team not found" });
     team.members = team.members.filter((m) => m.toString() !== userId);

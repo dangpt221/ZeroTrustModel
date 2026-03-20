@@ -15,7 +15,8 @@ import {
   LayoutGrid,
   Trash2
 } from 'lucide-react';
-import { Team, User } from '../types';
+import { Team, User, Department } from '../types';
+import { departmentsApi } from '../api';
 
 export const TeamManagement: React.FC = () => {
   const { user } = useAuth();
@@ -23,7 +24,8 @@ export const TeamManagement: React.FC = () => {
   const [teams, setTeams] = useState<Team[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newTeam, setNewTeam] = useState({ name: '', description: '' });
+  const [newTeam, setNewTeam] = useState({ name: '', description: '', departmentId: '' });
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -35,7 +37,17 @@ export const TeamManagement: React.FC = () => {
   useEffect(() => {
     fetchTeams();
     fetchUsers();
+    fetchDepartments();
   }, []);
+
+  const fetchDepartments = async () => {
+    try {
+      const data = await departmentsApi.getAll();
+      setDepartments(data || []);
+    } catch (error) {
+      console.error('Error fetching departments:', error);
+    }
+  };
 
   const fetchTeams = async () => {
     const data = await teamsApi.getAll();
@@ -58,10 +70,19 @@ export const TeamManagement: React.FC = () => {
 
   const handleCreateTeam = async (e: React.FormEvent) => {
     e.preventDefault();
-    const created = await teamsApi.create(newTeam);
+    if (isManager && managerDepartmentId) {
+      // Manager: auto-assign to their department
+      await teamsApi.create({ ...newTeam, departmentId: managerDepartmentId });
+    } else if (newTeam.departmentId) {
+      // Admin: allow choosing department
+      await teamsApi.create(newTeam);
+    } else {
+      alert('Vui lòng chọn phòng ban.');
+      return;
+    }
     fetchTeams();
     setIsModalOpen(false);
-    setNewTeam({ name: '', description: '' });
+    setNewTeam({ name: '', description: '', departmentId: '' });
   };
 
   const handleAddMember = async (userId: string) => {
@@ -221,7 +242,7 @@ export const TeamManagement: React.FC = () => {
             <form onSubmit={handleCreateTeam} className="p-8 space-y-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tên nhóm</label>
-                <input 
+                <input
                   required
                   value={newTeam.name}
                   onChange={e => setNewTeam({...newTeam, name: e.target.value})}
@@ -229,9 +250,30 @@ export const TeamManagement: React.FC = () => {
                   placeholder="Ví dụ: Đội ngũ Frontend"
                 />
               </div>
+              {!isManager && (
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Phòng ban</label>
+                  <select
+                    required
+                    value={newTeam.departmentId}
+                    onChange={e => setNewTeam({...newTeam, departmentId: e.target.value})}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+                  >
+                    <option value="">-- Chọn phòng ban --</option>
+                    {departments.map(d => (
+                      <option key={d.id} value={d.id}>{d.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {isManager && (
+                <p className="text-xs text-slate-500 font-medium bg-blue-50 rounded-2xl px-4 py-3">
+                  Nhóm sẽ được tạo trong phòng ban của bạn.
+                </p>
+              )}
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Mô tả nhóm</label>
-                <textarea 
+                <textarea
                   required
                   value={newTeam.description}
                   onChange={e => setNewTeam({...newTeam, description: e.target.value})}
