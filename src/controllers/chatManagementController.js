@@ -2,6 +2,7 @@ import { Message } from "../models/Message.js";
 import { ChatRoom } from "../models/ChatRoom.js";
 import { ChatPolicy } from "../models/ChatPolicy.js";
 import { AuditLog } from "../models/AuditLog.js";
+import { User } from "../models/User.js";
 import { getClientIP, parseDeviceFromUserAgent } from "../middleware/securityMiddleware.js";
 
 // Helper: Transform to client format
@@ -14,17 +15,25 @@ function toClientMessage(msg) {
     attachments: msg.attachments || [],
     roomId: msg.roomId?.toString(),
     room: msg.room,
+    timestamp: msg.createdAt ? new Date(msg.createdAt).toISOString() : new Date().toISOString(),
+    reactions: msg.reactions || [],
+    isEdited: msg.isEdited || false,
+    editedAt: msg.editedAt ? new Date(msg.editedAt).toISOString() : null,
+    parentMessageId: msg.parentMessageId?.toString() || null,
+    replyCount: msg.replyCount || 0,
+    isRead: false,
+    readCount: msg.readBy?.length || 0,
+    hasAttachments: msg.hasAttachments || false,
+    mentions: [],
+    // Keep original fields for compatibility
     isDeleted: msg.isDeleted || false,
     isHidden: msg.isHidden || false,
     isSystemMessage: msg.isSystemMessage || false,
     deletionReason: msg.deletionReason || '',
     deletedAt: msg.deletedAt,
     deletedBy: msg.deletedBy?.toString(),
-    editedAt: msg.editedAt,
-    isEdited: msg.isEdited || false,
-    reactions: msg.reactions || [],
-    createdAt: msg.createdAt,
-    updatedAt: msg.updatedAt
+    createdAt: msg.createdAt ? new Date(msg.createdAt).toISOString() : null,
+    updatedAt: msg.updatedAt ? new Date(msg.updatedAt).toISOString() : null
   };
 }
 
@@ -164,7 +173,7 @@ export const getRoomMessages = async (req, res, next) => {
       userId
     } = req.query;
 
-    const query = { roomId: id, isDeleted: { $ne: true } };
+    const query = { room: id, isDeleted: { $ne: true } };
 
     if (startDate || endDate) {
       query.createdAt = {};
@@ -217,7 +226,7 @@ export const searchMessages = async (req, res, next) => {
     if (keyword) {
       query.$text = { $search: keyword };
     }
-    if (roomId) query.roomId = roomId;
+    if (roomId) query.room = roomId;
     if (userId) query.userId = userId;
     if (startDate || endDate) {
       query.createdAt = {};
@@ -431,8 +440,8 @@ export const sendSystemMessage = async (req, res, next) => {
       userId: req.user.id,
       userName: 'System',
       text,
+      room: id,
       roomId: id,
-      room: room.name,
       attachments: attachments || [],
       isSystemMessage: true
     });
@@ -523,7 +532,7 @@ export const exportChatLogs = async (req, res, next) => {
     const { roomId, startDate, endDate, format = 'json' } = req.query;
 
     const query = { isDeleted: { $ne: true } };
-    if (roomId) query.roomId = roomId;
+    if (roomId) query.room = roomId;
     if (startDate || endDate) {
       query.createdAt = {};
       if (startDate) query.createdAt.$gte = new Date(startDate);
@@ -882,6 +891,152 @@ export const regenerateJoinCode = async (req, res, next) => {
       success: true,
       joinCode: room.joinCode
     });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Get chat messages between admin and specific user
+export const getAdminChatMessages = async (req, res, next) => {
+  try {
+    const mongoose = await import('mongoose');
+    const { userId } = req.params;
+    const adminUserId = new mongoose.default.Types.ObjectId(req.user.id);
+    const targetUserId = new mongoose.default.Types.ObjectId(userId);
+
+    // Find the DM conversation between admin and user
+    const conversation = await ChatRoom.findOne({
+      isDirectMessage: true,
+      participants: { $all: [adminUserId, targetUserId] },
+      isDeleted: { $ne: true }
+    }).lean();
+
+    let messages = [];
+    if (conversation) {
+      messages = await Message.find({
+        room: conversation._id.toString(),
+        isDeleted: { $ne: true }
+      })
+      .sort({ createdAt: 1 })
+      .lean();
+    }
+
+    // Also get any legacy admin room messages
+    const legacyMessages = await Message.find({
+      $or: [
+        { room: `admin-${adminUserId}-${userId}` },
+        { room: `user-${adminUserId}-${userId}` }
+      ],
+      isDeleted: { $ne: true }
+    })
+    .sort({ createdAt: 1 })
+    .lean();
+
+    // Merge and dedupe
+    const allMessages = [...messages, ...legacyMessages];
+    const seen = new Set();
+    const uniqueMessages = allMessages.filter(m => {
+      const key = m._id.toString();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
+    res.json({ messages: uniqueMessages.map(toClientMessage), conversationId: conversation?._id?.toString() });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Send chat message to specific user
+export const sendAdminChatMessage = async (req, res, next) => {
+  try {
+    const mongoose = await import('mongoose');
+    const { userId } = req.params;
+    const { text } = req.body;
+    const adminUserId = new mongoose.default.Types.ObjectId(req.user.id);
+    const targetUserId = new mongoose.default.Types.ObjectId(userId);
+
+    if (!text?.trim()) {
+      return res.status(400).json({ message: 'Tin nhan khong duoc de trong' });
+    }
+
+    // Find or create DM conversation between admin and user
+    let conversation = await ChatRoom.findOne({
+      isDirectMessage: true,
+      participants: { $all: [adminUserId, targetUserId] },
+      isDeleted: { $ne: true }
+    });
+
+    const otherUser = await User.findById(userId).lean();
+    const adminUser = await User.findById(req.user.id).lean();
+
+    if (!conversation) {
+      conversation = await ChatRoom.create({
+        name: `DM-${req.user.id}-${userId}`,
+        description: `Chat rieng voi ${otherUser?.name || 'Unknown'}`,
+        type: 'PRIVATE',
+        isPrivate: true,
+        isDirectMessage: true,
+        participants: [adminUserId, targetUserId],
+        participantNames: [adminUser?.name || 'Unknown', otherUser?.name || 'Unknown'],
+        relatedUserId: targetUserId,
+        members: [
+          { userId: adminUserId, role: 'MEMBER' },
+          { userId: targetUserId, role: 'MEMBER' }
+        ],
+        memberCount: 2
+      });
+    }
+
+    const message = await Message.create({
+      userId: adminUserId,
+      userName: req.user.name,
+      text: text.trim(),
+      room: conversation._id.toString(),
+      roomId: conversation._id.toString(),
+      attachments: [],
+      isSystemMessage: false
+    });
+
+    // Update conversation activity
+    await ChatRoom.findByIdAndUpdate(conversation._id, {
+      lastMessageAt: new Date(),
+      $inc: { messageCount: 1 }
+    });
+
+    // Emit via socket if available
+    const io = req.app.get('io');
+    if (io) {
+      io.to(conversation._id.toString()).emit('receive_message', {
+        id: message._id.toString(),
+        userId: req.user.id,
+        userName: req.user.name,
+        userAvatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(req.user.name || 'default')}`,
+        text: text.trim(),
+        room: conversation._id.toString(),
+        timestamp: message.createdAt ? new Date(message.createdAt).toISOString() : new Date().toISOString(),
+        reactions: [],
+        isEdited: false,
+        parentMessageId: null,
+        replyCount: 0,
+        isRead: true,
+        readCount: 1,
+        attachments: [],
+        hasAttachments: false,
+        mentions: []
+      });
+
+      // Also emit to the other user's personal room for notifications
+      io.to(`user_${userId}`).emit('new_admin_message', {
+        conversationId: conversation._id.toString(),
+        fromUserId: req.user.id,
+        fromUserName: req.user.name,
+        messageId: message._id.toString()
+      });
+    }
+
+    res.status(201).json(toClientMessage(message));
   } catch (err) {
     next(err);
   }

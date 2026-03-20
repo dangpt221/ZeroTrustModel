@@ -48,6 +48,7 @@ export function registerSocketHandlers(io) {
           userName,
           text,
           room: room || 'general',
+          roomId: room || null,
           parentMessageId: parentMessageId || null,
           attachments: attachments || [],
           hasAttachments: (attachments && attachments.length > 0) || false

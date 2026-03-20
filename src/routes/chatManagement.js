@@ -60,4 +60,8 @@ router.post("/rooms/join-by-code", chatController.joinRoomByCode);
 // Regenerate join code - ADMIN/MANAGER (room owner)
 router.post("/rooms/:id/regenerate-code", requireRole(["ADMIN", "MANAGER"]), chatController.regenerateJoinCode);
 
+// Admin chat with users - ADMIN/MANAGER
+router.get("/chat/messages/:userId", requireRole(["ADMIN", "MANAGER"]), chatController.getAdminChatMessages);
+router.post("/chat/messages/:userId", requireRole(["ADMIN", "MANAGER"]), chatController.sendAdminChatMessage);
+
 export default router;

@@ -58,7 +58,7 @@ export async function broadcastNotification(req, res) {
 
     // Nếu gửi cho tất cả
     if (sendToAll) {
-      const allUsers = await User.find({ isActive: true }).select('_id');
+      const allUsers = await User.find({}).select('_id');
       targetUserIds = allUsers.map(u => u._id.toString());
     }
 

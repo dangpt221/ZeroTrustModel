@@ -3,32 +3,41 @@ import { requireAuth } from '../middleware/auth.js';
 import { ChatRoom } from '../models/ChatRoom.js';
 import { Message } from '../models/Message.js';
 import { User } from '../models/User.js';
+import { Notification } from '../models/Notification.js';
 
 // ============ HELPER FUNCTIONS ============
 
 // Find or create 1-on-1 DM room
 async function findOrCreateDMRoom(currentUserId, otherUserId) {
+  // Ensure both IDs are ObjectIds
+  const currentOid = typeof currentUserId === 'string'
+    ? new mongoose.Types.ObjectId(currentUserId)
+    : currentUserId;
+  const otherOid = typeof otherUserId === 'string'
+    ? new mongoose.Types.ObjectId(otherUserId)
+    : otherUserId;
+
   let room = await ChatRoom.findOne({
     isDirectMessage: true,
-    participants: { $all: [currentUserId, otherUserId], $size: 2 }
+    participants: { $all: [currentOid, otherOid], $size: 2 }
   });
 
   if (!room) {
-    const otherUser = await User.findById(otherUserId).lean();
-    const currentUser = await User.findById(currentUserId).lean();
+    const otherUser = await User.findById(otherOid).lean();
+    const currentUser = await User.findById(currentOid).lean();
 
     room = await ChatRoom.create({
-      name: `DM-${currentUserId}-${otherUserId}`,
+      name: `DM-${currentOid}-${otherOid}`,
       description: `Chat riêng với ${otherUser?.name || 'Unknown'}`,
       type: 'PRIVATE',
       isPrivate: true,
       isDirectMessage: true,
-      participants: [currentUserId, otherUserId],
+      participants: [currentOid, otherOid],
       participantNames: [currentUser?.name || 'Unknown', otherUser?.name || 'Unknown'],
-      relatedUserId: otherUserId,
+      relatedUserId: otherOid,
       members: [
-        { userId: currentUserId, role: 'MEMBER' },
-        { userId: otherUserId, role: 'MEMBER' }
+        { userId: currentOid, role: 'MEMBER' },
+        { userId: otherOid, role: 'MEMBER' }
       ],
       memberCount: 2
     });
@@ -46,13 +55,16 @@ const DEFAULT_ROOMS = [
 ];
 
 async function ensureDefaultRooms() {
-  const count = await ChatRoom.countDocuments({ isDeleted: { $ne: true } });
-  if (count === 0) {
-    await ChatRoom.insertMany(DEFAULT_ROOMS.map(r => ({
-      ...r,
-      memberCount: 0,
-      members: [],
-    })));
+  // Ensure each default room exists (create if not)
+  for (const roomDef of DEFAULT_ROOMS) {
+    const exists = await ChatRoom.findOne({ name: roomDef.name, isDeleted: { $ne: true } });
+    if (!exists) {
+      await ChatRoom.create({
+        ...roomDef,
+        memberCount: 0,
+        members: [],
+      });
+    }
   }
 }
 
@@ -162,7 +174,7 @@ export function registerMessageRoutes(router) {
         }
         // Check if user is a member or room has no security code
         const isMember = chatRoom.members?.some(m => m.userId.toString() === currentUser.id);
-        const isAdmin = currentUser.role === 'MANAGER';
+        const isAdmin = currentUser.role === 'ADMIN' || currentUser.role === 'MANAGER';
         if (chatRoom.joinCode && !isMember && !isAdmin) {
           return res.status(403).json({ error: 'Bạn cần nhập mã bảo mật để tham gia phòng này' });
         }
@@ -230,6 +242,7 @@ export function registerMessageRoutes(router) {
         userName: req.user.name,
         text: text.trim(),
         room: room || 'general',
+        roomId: room || null,
         parentMessageId: parentMessageId || null,
         ipAddress: req.ip,
         userAgent: req.get('user-agent')
@@ -280,6 +293,96 @@ export function registerMessageRoutes(router) {
               mentionedBy: req.user.name
             });
           });
+        }
+
+        // Send notification for DM messages
+        if (chatRoom && chatRoom.isDirectMessage) {
+          // Find the other participant
+          const otherParticipantId = chatRoom.participants.find(
+            p => p.toString() !== req.user.id
+          );
+
+          if (otherParticipantId) {
+            // Create notification in database
+            const notification = await Notification.create({
+              userId: otherParticipantId,
+              title: `Tin nhắn mới từ ${req.user.name}`,
+              message: text.trim().substring(0, 100),
+              type: 'INFO',
+              priority: 'NORMAL'
+            });
+
+            // Emit real-time notification to recipient
+            io.to(`user_${otherParticipantId.toString()}`).emit('new_notification', {
+              id: notification._id.toString(),
+              title: notification.title,
+              message: notification.message,
+              type: notification.type,
+              priority: notification.priority,
+              createdAt: notification.createdAt
+            });
+
+            // Also notify admins when staff or manager sends a DM
+            if (req.user.role !== 'ADMIN') {
+              const admins = await User.find({ role: 'ADMIN' }).select('_id').lean();
+              for (const admin of admins) {
+                const adminNotif = await Notification.create({
+                  userId: admin._id,
+                  title: `Tin nhắn từ ${req.user.role === 'MANAGER' ? 'Quản lý' : 'Nhân viên'}: ${req.user.name}`,
+                  message: text.trim().substring(0, 100),
+                  type: 'INFO',
+                  priority: 'NORMAL'
+                });
+
+                io.to(`user_${admin._id.toString()}`).emit('new_notification', {
+                  id: adminNotif._id.toString(),
+                  title: adminNotif.title,
+                  message: adminNotif.message,
+                  type: adminNotif.type,
+                  priority: adminNotif.priority,
+                  createdAt: adminNotif.createdAt
+                });
+
+                io.to(`user_${admin._id.toString()}`).emit('new_admin_message_notification', {
+                  fromUserId: req.user.id,
+                  fromUserName: req.user.name,
+                  fromUserRole: req.user.role,
+                  messageId: msg._id.toString(),
+                  conversationId: room,
+                  preview: text.trim().substring(0, 50)
+                });
+              }
+
+              // Also notify manager if staff sends message to admin
+              if (req.user.role === 'MANAGER') {
+                const staffUser = await User.findById(req.user.id).lean();
+                if (staffUser?.departmentId) {
+                  const managers = await User.find({
+                    role: 'MANAGER',
+                    departmentId: staffUser.departmentId,
+                    _id: { $ne: req.user.id }
+                  }).select('_id').lean();
+                  for (const mgr of managers) {
+                    const mgrNotif = await Notification.create({
+                      userId: mgr._id,
+                      title: `Quản lý ${req.user.name} đã nhắn tin`,
+                      message: text.trim().substring(0, 100),
+                      type: 'INFO',
+                      priority: 'NORMAL'
+                    });
+                    io.to(`user_${mgr._id.toString()}`).emit('new_notification', {
+                      id: mgrNotif._id.toString(),
+                      title: mgrNotif.title,
+                      message: mgrNotif.message,
+                      type: mgrNotif.type,
+                      priority: mgrNotif.priority,
+                      createdAt: mgrNotif.createdAt
+                    });
+                  }
+                }
+              }
+            }
+          }
         }
       }
 

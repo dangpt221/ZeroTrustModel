@@ -1,12 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { Bell, Check, CheckCheck, AlertTriangle, Info, CheckCircle, X } from 'lucide-react';
+import { io, Socket } from 'socket.io-client';
+import { Bell, Check, CheckCheck, AlertTriangle, Info, CheckCircle, X, MessageSquare } from 'lucide-react';
 import { notificationsApi } from '../api';
 import { Notification } from '../types';
+import { useAuth } from '../context/AuthContext';
 
 export const NotificationDropdown: React.FC = () => {
+  const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [chatUnreadCount, setChatUnreadCount] = useState(0);
+  const [latestChatNotif, setLatestChatNotif] = useState<any>(null);
 
   useEffect(() => {
     const fetchNotifications = async () => {
@@ -19,11 +24,66 @@ export const NotificationDropdown: React.FC = () => {
       }
     };
 
+    // Load chat notification count from localStorage (set by other components)
+    const savedCount = localStorage.getItem('chatUnreadCount');
+    if (savedCount) {
+      setChatUnreadCount(parseInt(savedCount) || 0);
+    }
+    const savedNotif = localStorage.getItem('latestChatNotif');
+    if (savedNotif) {
+      try {
+        setLatestChatNotif(JSON.parse(savedNotif));
+      } catch {}
+    }
+
     fetchNotifications();
     // Poll every 30 seconds
     const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  // Real-time socket connection
+  useEffect(() => {
+    if (!user) return;
+
+    const socket = io('', {
+      withCredentials: true,
+      transports: ['websocket', 'polling'],
+      auth: { userId: user.id },
+      query: { userId: user.id }
+    });
+
+    socket.on('new_notification', (notif: any) => {
+      setNotifications(prev => [notif, ...prev]);
+      setUnreadCount(prev => prev + 1);
+    });
+
+    // Listen for chat message notifications (from staff/manager)
+    socket.on('new_admin_message_notification', (data: any) => {
+      if (user.role === 'ADMIN') {
+        setChatUnreadCount(prev => {
+          const newCount = prev + 1;
+          // Store in localStorage for cross-page sync
+          localStorage.setItem('chatUnreadCount', newCount.toString());
+          localStorage.setItem('latestChatNotif', JSON.stringify({
+            fromUserName: data.fromUserName,
+            fromUserRole: data.fromUserRole,
+            preview: data.preview
+          }));
+          return newCount;
+        });
+        setLatestChatNotif({
+          fromUserName: data.fromUserName,
+          fromUserRole: data.fromUserRole,
+          preview: data.preview
+        });
+      }
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [user]);
 
   const handleMarkAsRead = async (id: string) => {
     try {
@@ -57,9 +117,30 @@ export const NotificationDropdown: React.FC = () => {
   };
 
   return (
-    <div className="relative">
-      <button 
-        onClick={() => setIsOpen(!isOpen)} 
+    <div className="relative flex items-center gap-1">
+      {/* Chat notification badge - visible on all pages */}
+      {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && chatUnreadCount > 0 && (
+        <button
+          onClick={() => {
+            setIsOpen(false);
+            setChatUnreadCount(0);
+            // Clear localStorage
+            localStorage.removeItem('chatUnreadCount');
+            localStorage.removeItem('latestChatNotif');
+            // Navigate to ChatManagement
+            window.location.href = '/admin/chat-management';
+          }}
+          className="relative p-3 bg-red-50 text-red-500 hover:bg-red-100 rounded-2xl transition-all animate-pulse"
+          title={`Tin nhắn từ ${latestChatNotif?.fromUserName || 'Manager/Nhân viên'}`}
+        >
+          <MessageSquare size={20} />
+          <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+            {chatUnreadCount > 9 ? '9+' : chatUnreadCount}
+          </span>
+        </button>
+      )}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
         className={`relative p-3 bg-slate-50 text-slate-400 hover:bg-slate-100 rounded-2xl transition-all hover:text-blue-600`}
       >
         <Bell size={20} />

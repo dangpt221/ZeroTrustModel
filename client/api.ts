@@ -403,20 +403,6 @@ export const notificationsApi = {
   markAllAsRead: () =>
     apiRequest<void>('/notifications/read-all', { method: 'PUT' }),
 
-<<<<<<< HEAD
-  broadcast: (data: { userIds: string[]; title: string; message: string; type?: string; priority?: string }) =>
-    apiRequest<{ message: string; count: number }>('/notifications/broadcast', {
-=======
-  // Admin notifications
-  getAllAdmin: () => apiRequest<Notification[]>('/notifications/all'),
-
-  create: (data: { userId: string; title: string; message: string; type?: string; priority?: string }) =>
-    apiRequest<Notification>('/notifications', {
->>>>>>> c401b77824b0eaff96dde1e3fba4e47fb1c9fee9
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
-
   broadcast: (data: { userIds: string[]; title: string; message: string; type?: string; priority?: string; sendToAll?: boolean }) =>
     apiRequest<{ message: string; count: number }>('/notifications/broadcast', {
       method: 'POST',
@@ -591,5 +577,15 @@ export const chatManagementApi = {
   regenerateJoinCode: (roomId: string) =>
     apiRequest<{ success: boolean; joinCode: string }>(`/chat/rooms/${roomId}/regenerate-code`, {
       method: 'POST',
+    }),
+
+  // Admin chat with users
+  getAdminChatMessages: (userId: string) =>
+    apiRequest<{ messages: any[]; conversationId?: string }>(`/chat/chat/messages/${userId}`),
+
+  sendAdminChatMessage: (userId: string, text: string) =>
+    apiRequest<any>(`/chat/chat/messages/${userId}`, {
+      method: 'POST',
+      body: JSON.stringify({ text }),
     }),
 };

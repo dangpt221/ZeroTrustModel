@@ -311,7 +311,15 @@ export function useChat() {
       const res = await fetch('/api/messaging/conversations', { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
-        setConversations(data.conversations || []);
+        const convs = data.conversations || [];
+        // Deduplicate by userId - keep the most recent one
+        const seen = new Map();
+        convs.forEach((c: Conversation) => {
+          if (!seen.has(c.userId)) {
+            seen.set(c.userId, c);
+          }
+        });
+        setConversations(Array.from(seen.values()));
       }
     } catch (err) {
       console.error('Failed to fetch conversations', err);

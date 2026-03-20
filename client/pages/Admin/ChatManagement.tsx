@@ -1,8 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import { io, Socket } from 'socket.io-client';
 import { chatManagementApi, usersApi } from '../../api';
 import { usePermission } from '../../hooks/usePermission';
-import { Search, MessageSquare, Users, Lock, Unlock, Trash2, Send, Download, Settings, Filter, Eye, X, Plus, Minus } from 'lucide-react';
+import { Search, MessageSquare, Users, Lock, Unlock, Trash2, Send, Download, Settings, Filter, Eye, X, Plus, Minus, MessageCircle, Mail } from 'lucide-react';
 import { Modal } from '../../components/Admin/Modal';
+import { useAuth } from '../../context/AuthContext';
 
 interface ChatRoom {
   id: string;
@@ -36,7 +38,8 @@ interface ChatStats {
 
 export const ChatManagement: React.FC = () => {
   const { hasPermission, isSuperAdmin, isAdmin } = usePermission();
-  const [activeTab, setActiveTab] = useState<'rooms' | 'messages' | 'policy'>('rooms');
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState<'rooms' | 'messages' | 'policy' | 'adminchat'>('rooms');
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [stats, setStats] = useState<ChatStats | null>(null);
@@ -58,6 +61,139 @@ export const ChatManagement: React.FC = () => {
 
   // User list for adding members
   const [users, setUsers] = useState<any[]>([]);
+
+  // Admin Chat state
+  const [adminChatMessages, setAdminChatMessages] = useState<any[]>([]);
+  const [adminChatInput, setAdminChatInput] = useState('');
+  const [selectedChatUser, setSelectedChatUser] = useState<any>(null);
+  const [adminChatSearch, setAdminChatSearch] = useState('');
+  const [adminChatLoading, setAdminChatLoading] = useState(false);
+  const adminChatScrollRef = useRef<HTMLDivElement>(null);
+  const [adminConversationId, setAdminConversationId] = useState<string | null>(null);
+  const [adminSocket, setAdminSocket] = useState<Socket | null>(null);
+  const [pendingChatNotification, setPendingChatNotification] = useState<Record<string, any>>({});
+
+  // Toast notification state
+  const [toasts, setToasts] = useState<any[]>([]);
+
+  // Add toast notification
+  const addToast = (title: string, message: string, role?: string) => {
+    const id = Date.now().toString();
+    setToasts(prev => [...prev, { id, title, message, role }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 5000);
+  };
+
+  // Filter users for admin chat
+  const filteredChatUsers = users.filter(u =>
+    u.name?.toLowerCase().includes(adminChatSearch.toLowerCase()) ||
+    u.email?.toLowerCase().includes(adminChatSearch.toLowerCase())
+  );
+
+  // Fetch admin chat messages with selected user
+  const fetchAdminChatMessages = async (userId: string) => {
+    setAdminChatLoading(true);
+    try {
+      const res = await chatManagementApi.getAdminChatMessages(userId);
+      setAdminChatMessages(res.messages || []);
+      setAdminConversationId(res.conversationId || null);
+      setTimeout(() => {
+        adminChatScrollRef.current?.scrollTo({ top: adminChatScrollRef.current.scrollHeight, behavior: 'smooth' });
+      }, 100);
+    } catch (error) {
+      console.error('Error fetching admin chat messages:', error);
+    } finally {
+      setAdminChatLoading(false);
+    }
+  };
+
+  // Send admin chat message
+  const handleSendAdminChat = async () => {
+    if (!adminChatInput.trim() || !selectedChatUser) return;
+    const inputText = adminChatInput.trim();
+    setAdminChatInput('');
+    try {
+      const res = await chatManagementApi.sendAdminChatMessage(selectedChatUser.id, inputText);
+      if (res && res.id) {
+        setAdminChatMessages(prev => {
+          // Prevent duplicates
+          if (prev.find(m => m.id === res.id)) return prev;
+          return [...prev, res];
+        });
+        setTimeout(() => {
+          adminChatScrollRef.current?.scrollTo({ top: adminChatScrollRef.current.scrollHeight, behavior: 'smooth' });
+        }, 50);
+      }
+    } catch (error) {
+      console.error('Error sending admin chat message:', error);
+      alert('Không thể gửi tin nhắn');
+      setAdminChatInput(inputText); // Restore input on error
+    }
+  };
+
+  // Connect socket for real-time admin chat
+  useEffect(() => {
+    if (!user) return;
+    const socket = io('', {
+      withCredentials: true,
+      transports: ['websocket', 'polling'],
+      auth: { userId: user.id, userName: user.name },
+      query: { userId: user.id, userName: user.name }
+    });
+    setAdminSocket(socket);
+
+    socket.on('receive_message', (message: any) => {
+      if (message.room === adminConversationId) {
+        setAdminChatMessages(prev => {
+          // Prevent duplicates
+          if (prev.find(m => m.id === message.id)) return prev;
+          return [...prev, message];
+        });
+        setTimeout(() => {
+          adminChatScrollRef.current?.scrollTo({ top: adminChatScrollRef.current.scrollHeight, behavior: 'smooth' });
+        }, 50);
+      }
+    });
+
+    // Listen for new DM message notifications from staff/manager
+    socket.on('new_admin_message_notification', (data: any) => {
+      if (user?.role === 'ADMIN' || user?.role === 'MANAGER') {
+        // Add notification badge
+        setPendingChatNotification((prev: any) => ({
+          ...prev,
+          [data.fromUserId]: {
+            fromUserName: data.fromUserName,
+            fromUserRole: data.fromUserRole,
+            preview: data.preview,
+            conversationId: data.conversationId,
+            messageId: data.messageId
+          }
+        }));
+        // Show toast notification - Manager sent message to Admin
+        const roleLabel = data.fromUserRole === 'MANAGER' ? 'Quản lý' : 'Nhân viên';
+        addToast(
+          `${roleLabel} ${data.fromUserName} đã gửi tin nhắn`,
+          data.preview || 'Nhấn để xem'
+        );
+        // Also refresh messages if we're viewing this user's chat
+        if (data.fromUserId === selectedChatUser?.id) {
+          fetchAdminChatMessages(data.fromUserId);
+        }
+      }
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [user, adminConversationId, selectedChatUser]);
+
+  // Join conversation room when conversation ID changes
+  useEffect(() => {
+    if (adminSocket && adminConversationId) {
+      adminSocket.emit('join_room', adminConversationId);
+    }
+  }, [adminSocket, adminConversationId]);
 
   useEffect(() => {
     fetchData();
@@ -82,7 +218,14 @@ export const ChatManagement: React.FC = () => {
   const fetchUsers = async () => {
     try {
       const usersRes = await usersApi.getAll();
-      setUsers(usersRes || []);
+      // Deduplicate by user ID
+      const seen = new Map();
+      (usersRes || []).forEach((u: any) => {
+        if (!seen.has(u.id)) {
+          seen.set(u.id, u);
+        }
+      });
+      setUsers(Array.from(seen.values()));
     } catch (error) {
       console.error('Error fetching users:', error);
     }
@@ -292,17 +435,39 @@ export const ChatManagement: React.FC = () => {
           Tim tin nhan
         </button>
         {(isSuperAdmin || isAdmin) && (
-          <button
-            onClick={() => setActiveTab('policy')}
-            className={`px-4 py-2 font-bold text-sm border-b-2 transition-colors ${
-              activeTab === 'policy'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            <Settings size={16} className="inline mr-2" />
-            Cau hinh
-          </button>
+          <>
+            <button
+              onClick={() => setActiveTab('policy')}
+              className={`px-4 py-2 font-bold text-sm border-b-2 transition-colors ${
+                activeTab === 'policy'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <Settings size={16} className="inline mr-2" />
+              Cau hinh
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('adminchat');
+                // Clear all notifications when opening tab
+                setPendingChatNotification({});
+              }}
+              className={`px-4 py-2 font-bold text-sm border-b-2 transition-colors ${
+                activeTab === 'adminchat'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <MessageCircle size={16} className="inline mr-2" />
+              Nhan tin Admin
+              {Object.keys(pendingChatNotification).length > 0 && (
+                <span className="ml-1.5 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                  {Object.keys(pendingChatNotification).length}
+                </span>
+              )}
+            </button>
+          </>
         )}
       </div>
 
@@ -741,6 +906,185 @@ export const ChatManagement: React.FC = () => {
           </div>
         )}
       </Modal>
+
+      {/* Admin Chat Tab */}
+      {activeTab === 'adminchat' && (
+        <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+          <div className="flex h-[600px]">
+            {/* User list */}
+            <div className="w-80 border-r border-slate-100 flex flex-col">
+              <div className="p-4 border-b border-slate-100">
+                <h3 className="font-bold text-slate-700 mb-3">Danh sach nguoi dung</h3>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <input
+                    type="text"
+                    placeholder="Tim nguoi dung..."
+                    value={adminChatSearch}
+                    onChange={(e) => setAdminChatSearch(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm"
+                  />
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto">
+                {filteredChatUsers.map(u => (
+                  <button
+                    key={u.id}
+                    onClick={() => {
+                      setSelectedChatUser(u);
+                      fetchAdminChatMessages(u.id);
+                      // Clear notification for this user
+                      setPendingChatNotification((prev: any) => {
+                        const next = { ...prev };
+                        delete next[u.id];
+                        return next;
+                      });
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors relative ${
+                      selectedChatUser?.id === u.id ? 'bg-blue-50 border-r-2 border-blue-500' : ''
+                    }`}
+                  >
+                    <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm">
+                      {u.name?.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1 text-left">
+                      <p className="font-bold text-slate-700 text-sm">{u.name}</p>
+                      <p className="text-xs text-slate-400">{u.email}</p>
+                      {pendingChatNotification[u.id] && (
+                        <p className="text-xs text-blue-600 mt-0.5 truncate">
+                          {pendingChatNotification[u.id].preview || 'Tin nhắn mới...'}
+                        </p>
+                      )}
+                    </div>
+                    {u.role && (
+                      <span className="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded">
+                        {u.role}
+                      </span>
+                    )}
+                    {pendingChatNotification[u.id] && (
+                      <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Chat area */}
+            <div className="flex-1 flex flex-col">
+              {selectedChatUser ? (
+                <>
+                  {/* Chat header */}
+                  <div className="p-4 border-b border-slate-100 bg-slate-50">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
+                        {selectedChatUser.name?.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="font-bold text-slate-700">{selectedChatUser.name}</p>
+                        <p className="text-xs text-slate-400">{selectedChatUser.email}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Messages */}
+                  <div ref={adminChatScrollRef} className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50">
+                    {adminChatLoading ? (
+                      <div className="text-center text-slate-400 py-8">Dang tai tin nhan...</div>
+                    ) : adminChatMessages.length === 0 ? (
+                      <div className="text-center text-slate-400 py-8">
+                        <MessageCircle size={40} className="mx-auto mb-2 opacity-40" />
+                        <p>Chua co tin nhan nao</p>
+                        <p className="text-xs mt-1">Bat dau cuoc tro chuyen voi {selectedChatUser.name}</p>
+                      </div>
+                    ) : (
+                      adminChatMessages.map(msg => {
+                        const isMe = msg.userId === user?.id;
+                        const timeValue = msg.timestamp || msg.createdAt;
+                        const displayTime = timeValue
+                          ? new Date(timeValue).toLocaleString('vi-VN')
+                          : 'Vừa xong';
+                        return (
+                          <div
+                            key={msg.id}
+                            className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
+                          >
+                            <div
+                              className={`max-w-[70%] px-4 py-2.5 rounded-2xl text-sm ${
+                                isMe
+                                  ? 'bg-blue-600 text-white rounded-br-sm'
+                                  : 'bg-white text-slate-700 rounded-bl-sm shadow-sm border border-slate-100'
+                              }`}
+                            >
+                              <p>{msg.text}</p>
+                              <p className={`text-[10px] mt-1 ${isMe ? 'text-blue-100' : 'text-slate-400'}`}>
+                                {displayTime}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  {/* Input */}
+                  <div className="p-4 border-t border-slate-200 bg-white">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder={`Nhan tin cho ${selectedChatUser.name}...`}
+                        value={adminChatInput}
+                        onChange={(e) => setAdminChatInput(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleSendAdminChat()}
+                        className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-200"
+                      />
+                      <button
+                        onClick={handleSendAdminChat}
+                        disabled={!adminChatInput.trim()}
+                        className="bg-blue-600 text-white px-4 py-2.5 rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                      >
+                        <Send size={18} />
+                      </button>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="flex-1 flex flex-col items-center justify-center text-slate-400">
+                  <MessageCircle size={60} className="mb-4 opacity-30" />
+                  <p className="font-medium">Chon nguoi dung de bat dau chat</p>
+                  <p className="text-sm mt-1">Chon mot nguoi tu danh sach ben trai</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notifications */}
+      <div className="fixed top-4 right-4 z-50 space-y-2 max-w-sm">
+        {toasts.map((toast, idx) => (
+          <div
+            key={toast.id}
+            className="bg-white border border-blue-100 rounded-xl shadow-2xl p-4 animate-in slide-in-from-right fade-in duration-300"
+            style={{ animationDelay: `${idx * 50}ms` }}
+          >
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg shrink-0">
+                <Mail size={16} className="text-blue-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-sm text-slate-800">{toast.title}</p>
+                <p className="text-xs text-slate-500 mt-0.5 truncate">{toast.message}</p>
+              </div>
+              <button
+                onClick={() => setToasts(prev => prev.filter(t => t.id !== toast.id))}
+                className="text-slate-400 hover:text-slate-600 p-1"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
