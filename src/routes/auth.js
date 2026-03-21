@@ -280,7 +280,7 @@ export function registerAuthRoutes(router) {
   // Update current user profile
   router.put('/auth/profile', requireAuth, async (req, res) => {
     try {
-      const { name, currentPassword, newPassword } = req.body;
+      const { name, avatar, currentPassword, newPassword } = req.body;
       const user = await User.findById(req.user.id);
 
       if (currentPassword && newPassword) {
@@ -292,6 +292,7 @@ export function registerAuthRoutes(router) {
       }
 
       if (name) user.name = name;
+      if (avatar !== undefined) user.avatar = avatar;
       await user.save();
 
       res.json(toClientUser(user));

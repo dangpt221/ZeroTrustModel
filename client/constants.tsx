@@ -19,7 +19,8 @@ import {
   MessageSquare,
   Clock,
   LayoutGrid,
-  Bell
+  Bell,
+  Shield
 } from 'lucide-react';
 
 export const COLORS = {
@@ -52,6 +53,7 @@ export const MANAGER_NAVIGATION = [
   { name: 'Quản lý Đội ngũ', icon: <LayoutGrid size={20} />, path: '/manager/teams' },
   { name: 'Tài liệu bộ phận', icon: <FolderLock size={20} />, path: '/manager/documents' },
   { name: 'Nhắn tin nội bộ', icon: <MessageSquare size={20} />, path: '/messaging' },
+  { name: 'Hồ sơ & Bảo mật', icon: <User size={20} />, path: '/manager/profile' },
 ];
 
 export const STAFF_NAVIGATION = [

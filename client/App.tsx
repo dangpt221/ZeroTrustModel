@@ -11,6 +11,7 @@ import { DepartmentManagement } from './pages/Admin/DepartmentManagement';
 import { DocumentManagement } from './pages/Admin/DocumentManagement';
 import { ZeroTrustSettings } from './pages/Admin/ZeroTrustSettings';
 import { ManagerDashboard } from './pages/Manager/ManagerDashboard';
+import { ManagerProfile } from './pages/Manager/ManagerProfile';
 import { StaffManagement } from './pages/Manager/StaffManagement';
 import { DepartmentDocuments } from './pages/Manager/DepartmentDocuments';
 import { TeamManagement } from './pages/TeamManagement';
@@ -104,6 +105,12 @@ const App: React.FC = () => {
           <Route path="/manager/staff" element={
             <PrivateRoute roles={[UserRole.ADMIN, UserRole.MANAGER]}>
               <Layout><StaffManagement /></Layout>
+            </PrivateRoute>
+          } />
+
+          <Route path="/manager/profile" element={
+            <PrivateRoute roles={[UserRole.MANAGER]}>
+              <Layout><ManagerProfile /></Layout>
             </PrivateRoute>
           } />
 

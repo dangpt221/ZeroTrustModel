@@ -1,4 +1,35 @@
 import { Team } from "../models/Team.js";
+import { User } from "../models/User.js";
+
+// Staff & Manager: Lấy team của user hiện tại
+export const getMyTeams = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const teams = await Team.find({ members: userId })
+      .populate("members", "name email role")
+      .populate("managerId", "name email")
+      .lean();
+
+    const manager = await User.findById(req.user.departmentId).lean();
+
+    res.json(teams.map((t) => ({
+      id: t._id.toString(),
+      name: t.name,
+      description: t.description,
+      departmentId: t.departmentId ? t.departmentId.toString() : null,
+      managerId: t.managerId ? (typeof t.managerId === 'object' ? t.managerId._id.toString() : t.managerId.toString()) : null,
+      managerName: t.managerId && typeof t.managerId === 'object' ? t.managerId.name : null,
+      memberIds: (t.members || []).map((m) => m._id ? m._id.toString() : m.toString()),
+      members: (t.members || []).map((m) => ({
+        id: m._id ? m._id.toString() : m.toString(),
+        name: m.name || '',
+        email: m.email || '',
+        role: m.role || '',
+      })),
+      createdAt: t.createdAt,
+    })));
+  } catch (err) { next(err); }
+};
 
 export const getAllTeams = async (req, res, next) => {
   try {

@@ -32,8 +32,12 @@ async function apiRequest<T>(
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'Request failed' }));
-    throw new Error(error.message || 'Request failed');
+    let msg = `HTTP ${response.status}`;
+    try {
+      const data = await response.json();
+      msg = data.message || msg;
+    } catch (_) { /* ignore parse error */ }
+    throw new Error(msg);
   }
 
   return response.json();
@@ -136,6 +140,19 @@ export const usersApi = {
       method: 'POST',
       body: JSON.stringify({ status }),
     }),
+
+  // Profile management
+  updateProfile: (data: { name?: string; avatar?: string }) =>
+    apiRequest<User>('/auth/profile', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  changePassword: (data: { currentPassword: string; newPassword: string }) =>
+    apiRequest<User>('/auth/profile', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
 };
 
 // ==================== Departments API ====================
@@ -179,6 +196,8 @@ export const departmentsApi = {
 // ==================== Teams API ====================
 export const teamsApi = {
   getAll: () => apiRequest<Team[]>('/teams'),
+
+  getMyTeams: () => apiRequest<Team[]>('/teams/me'),
 
   getById: (id: string) => apiRequest<Team>(`/teams/${id}`),
 

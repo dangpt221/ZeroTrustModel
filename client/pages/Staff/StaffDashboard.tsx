@@ -2,9 +2,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { projectsApi, documentsApi } from '../../api';
+import { projectsApi, documentsApi, teamsApi } from '../../api';
 import { Document } from '../../types';
-import { ShieldCheck, FileText, Zap, Clock, CheckCircle2, LayoutGrid, ArrowRight, Lock, Key } from 'lucide-react';
+import { ShieldCheck, FileText, Zap, Clock, CheckCircle2, LayoutGrid, ArrowRight, Lock, Key, Users } from 'lucide-react';
 import { DocumentContent } from '../../components/Staff/DocumentContent';
 import { Modal } from '../../components/Admin/Modal';
 
@@ -12,6 +12,7 @@ export const StaffDashboard: React.FC = () => {
   const { user } = useAuth();
   const [projects, setProjects] = useState<any[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
+  const [teams, setTeams] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewingDoc, setViewingDoc] = useState<Document | null>(null);
   const [requestModalDoc, setRequestModalDoc] = useState<Document | null>(null);
@@ -22,9 +23,10 @@ export const StaffDashboard: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [projectsData, docsData] = await Promise.all([
+        const [projectsData, docsData, teamsData] = await Promise.all([
           projectsApi.getAll(),
-          documentsApi.getAll()
+          documentsApi.getAll(),
+          teamsApi.getMyTeams()
         ]);
         setProjects(projectsData || []);
         // Handle both array and { documents: [] } response
@@ -35,6 +37,7 @@ export const StaffDashboard: React.FC = () => {
         } else {
           setDocuments([]);
         }
+        setTeams(teamsData || []);
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -262,6 +265,62 @@ export const StaffDashboard: React.FC = () => {
 
         {/* Sidebar */}
         <div className="space-y-6">
+          {/* Teams */}
+          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+            <div className="flex items-center gap-2 mb-4">
+              <Users size={18} className="text-blue-500" />
+              <h3 className="font-bold text-slate-800">Đội ngũ của tôi</h3>
+            </div>
+            {teams.length === 0 ? (
+              <p className="text-sm text-slate-400 italic">Bạn chưa thuộc đội ngũ nào</p>
+            ) : (
+              <div className="space-y-4">
+                {teams.map(team => (
+                  <div key={team.id} className="space-y-2">
+                    <div className="p-3 bg-blue-50 rounded-xl border border-blue-100">
+                      <p className="font-semibold text-slate-700 text-sm">{team.name}</p>
+                      {team.description && (
+                        <p className="text-xs text-slate-500 mt-1">{team.description}</p>
+                      )}
+                      {team.managerName && (
+                        <p className="text-xs text-blue-600 mt-1 font-medium">
+                          Trưởng nhóm: {team.managerName}
+                        </p>
+                      )}
+                    </div>
+                    {/* Thành viên */}
+                    {(team.members || []).length > 0 && (
+                      <div className="pl-2 space-y-1.5">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">Thành viên</p>
+                        {(team.members || []).map((member: any) => (
+                          <div key={member.id} className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-lg">
+                            <div className="w-6 h-6 bg-slate-200 rounded-full flex items-center justify-center">
+                              <span className="text-[10px] font-bold text-slate-500">
+                                {member.name?.charAt(0)?.toUpperCase() || '?'}
+                              </span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-medium text-slate-700 truncate">{member.name}</p>
+                              <p className="text-[10px] text-slate-400 truncate">{member.email}</p>
+                            </div>
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                              member.role === 'MANAGER' ? 'bg-amber-100 text-amber-700' :
+                              member.role === 'ADMIN' ? 'bg-red-100 text-red-700' :
+                              'bg-slate-100 text-slate-600'
+                            }`}>
+                              {member.role}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Personal Info */}
           <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
             <h3 className="font-bold text-slate-800 mb-4">Thông tin cá nhân</h3>
             <div className="space-y-3">

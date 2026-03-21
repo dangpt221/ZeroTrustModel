@@ -4,6 +4,7 @@ import * as teamController from "../controllers/teamController.js";
 
 const router = express.Router();
 
+router.get("/teams/me", requireAuth, teamController.getMyTeams);
 router.get("/teams", requireAuth, teamController.getAllTeams);
 router.get("/teams/:id", requireAuth, teamController.getTeamById);
 router.post("/teams", requireAuth, requireRole(["ADMIN", "MANAGER"]), teamController.createTeam);
