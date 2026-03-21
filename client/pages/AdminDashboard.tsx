@@ -363,8 +363,10 @@ export const AdminDashboard: React.FC = () => {
                     <span className="text-xs font-semibold text-slate-300">{log.action}</span>
                   </td>
                   <td className="px-8 py-5">
-                    <div className="text-xs font-mono text-blue-300/80">{log.ipAddress}</div>
-                    <div className="text-[10px] text-slate-600 font-medium">Verified Device: Yes</div>
+                    <div className="flex flex-col gap-1">
+                      <div className="text-xs font-mono text-blue-300/80">{log.ipAddress}</div>
+                      <div className="text-[10px] text-slate-400 font-medium line-clamp-1" title={log.device}>{log.device || 'Unknown Device'}</div>
+                    </div>
                   </td>
                   <td className="px-8 py-5 text-right">
                     <span className={`text-[10px] font-bold px-3 py-1 rounded-full border ${log.status === 'SUCCESS'
