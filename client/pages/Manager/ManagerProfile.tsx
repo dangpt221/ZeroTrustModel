@@ -1,60 +1,61 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { usersApi } from '../../api';
-import { ShieldCheck, History, Smartphone, Lock, Eye, EyeOff, Save, UserCircle } from 'lucide-react';
+import { ShieldCheck, Smartphone, Save, UserCircle, Upload } from 'lucide-react';
 
 export const ManagerProfile: React.FC = () => {
   const { user, checkSession } = useAuth();
 
   const [name, setName] = useState(user?.name || '');
   const [avatar, setAvatar] = useState(user?.avatar || '');
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string>(user?.avatar || '');
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-
-  // Password change state
-  const [showPassword, setShowPassword] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [passwordMsg, setPasswordMsg] = useState<string | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   if (!user) return null;
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAvatarFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setAvatarPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     setMessage(null);
     try {
-      await usersApi.updateProfile({ name, avatar });
+      let finalAvatar = avatar;
+      if (avatarFile) {
+        const formData = new FormData();
+        formData.append('avatar', avatarFile);
+        const res = await fetch('/api/users/upload-avatar', {
+          method: 'POST',
+          credentials: 'include',
+          body: formData,
+        });
+        if (res.ok) {
+          const data = await res.json();
+          finalAvatar = data.url;
+          setAvatar(finalAvatar);
+        }
+      }
+      await usersApi.updateProfile({ name, avatar: finalAvatar });
       await checkSession();
+      setAvatarFile(null);
       setMessage({ type: 'success', text: 'Cập nhật hồ sơ thành công!' });
     } catch (err: any) {
       setMessage({ type: 'error', text: err.message || 'Lỗi khi cập nhật hồ sơ' });
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleChangePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setPasswordMsg(null);
-    if (newPassword !== confirmPassword) {
-      setPasswordMsg('Mật khẩu mới không khớp!');
-      return;
-    }
-    if (newPassword.length < 6) {
-      setPasswordMsg('Mật khẩu mới phải có ít nhất 6 ký tự.');
-      return;
-    }
-    try {
-      await usersApi.changePassword({ currentPassword, newPassword });
-      setPasswordMsg('Đổi mật khẩu thành công!');
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-    } catch (err: any) {
-      setPasswordMsg(err.message || 'Lỗi khi đổi mật khẩu');
     }
   };
 
@@ -104,7 +105,22 @@ export const ManagerProfile: React.FC = () => {
 
             <div className="flex items-center gap-6">
               <div className="relative">
-                <img src={avatar} className="w-24 h-24 rounded-3xl object-cover ring-4 ring-blue-50" />
+                <img src={avatarPreview || avatar} className="w-24 h-24 rounded-3xl object-cover ring-4 ring-blue-50" />
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarChange}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => avatarInputRef.current?.click()}
+                  className="absolute bottom-0 right-0 w-8 h-8 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg transition-colors"
+                  title="Đổi ảnh đại diện"
+                >
+                  <Upload size={14} />
+                </button>
               </div>
               <div className="flex-1 space-y-3">
                 <div>
@@ -176,82 +192,6 @@ export const ManagerProfile: React.FC = () => {
               {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
             </button>
           </form>
-
-          {/* Change Password */}
-          <form onSubmit={handleChangePassword} className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm space-y-6">
-            <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
-              <Lock size={20} className="text-amber-500" />
-              Đổi mật khẩu
-            </h3>
-
-            {passwordMsg && (
-              <p className={`text-sm font-semibold ${passwordMsg.includes('thành công') ? 'text-emerald-600' : 'text-red-600'}`}>
-                {passwordMsg}
-              </p>
-            )}
-
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Mật khẩu hiện tại</label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500 pr-12"
-                    placeholder="Nhập mật khẩu hiện tại"
-                  />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Mật khẩu mới</label>
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                    placeholder="Ít nhất 6 ký tự"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Xác nhận mật khẩu</label>
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                    placeholder="Nhập lại mật khẩu mới"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-2xl transition-colors flex items-center justify-center gap-2"
-            >
-              <Lock size={16} />
-              Đổi mật khẩu
-            </button>
-          </form>
-
-          {/* Security Info Banner */}
-          <div className="bg-slate-900 p-8 rounded-[40px] text-white flex items-center gap-8 shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-8 opacity-10">
-              <History size={100} />
-            </div>
-            <div className="relative z-10 flex-1">
-              <h4 className="text-lg font-black uppercase italic tracking-tight mb-1">Dữ liệu nhạy cảm</h4>
-              <p className="text-xs text-slate-300 leading-relaxed font-medium">
-                Tất cả các thay đổi về hồ sơ và bảo mật sẽ được ghi lại trong nhật ký hệ thống. Hãy chắc chắn rằng bạn đang thao tác trong môi trường an toàn.
-              </p>
-            </div>
-          </div>
         </div>
 
         {/* Right Sidebar */}
