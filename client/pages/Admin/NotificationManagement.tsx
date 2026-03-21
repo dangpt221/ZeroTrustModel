@@ -153,7 +153,7 @@ export const NotificationManagement: React.FC = () => {
     }
   };
 
-  const getPriorityBadge = (priority: string) => {
+  const getPriorityBadge = (priority?: string) => {
     switch (priority) {
       case 'HIGH': return 'bg-red-100 text-red-700';
       case 'LOW': return 'bg-slate-100 text-slate-600';
@@ -334,7 +334,7 @@ export const NotificationManagement: React.FC = () => {
                     </div>
                   </div>
                   <button
-                    onClick={() => handleDeleteNotification(notif.id)}
+                    onClick={() => handleDeleteNotification(notif._id || notif.id)}
                     className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
                     title="Xóa thông báo"
                   >

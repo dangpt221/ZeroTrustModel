@@ -33,14 +33,19 @@ export async function createApp() {
 
   // 3. Socket.io
   const io = new Server(httpServer, {
-    cors: { origin: '*', methods: ['GET', 'POST'] },
+    cors: {
+      origin: '*',
+      methods: ['GET', 'POST'],
+      credentials: false
+    },
   });
+  app.set('io', io); // Store io so routes can access via req.app.get('io')
 
   // 4. Global middleware
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true }));
   app.use(cookieParser());
-  app.use(cors({ origin: '*', credentials: true }));
+  app.use(cors({ origin: '*', credentials: false }));
   app.use(passport.initialize());
 
   // Serve uploaded files

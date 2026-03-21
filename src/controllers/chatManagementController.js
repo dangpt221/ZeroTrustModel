@@ -948,6 +948,39 @@ export const getAdminChatMessages = async (req, res, next) => {
   }
 };
 
+// Delete admin chat message
+export const deleteAdminChatMessage = async (req, res, next) => {
+  try {
+    const mongoose = await import('mongoose');
+    const { messageId } = req.params;
+
+    const message = await Message.findById(messageId);
+    if (!message) {
+      return res.status(404).json({ message: 'Message not found' });
+    }
+
+    // Soft delete
+    message.isDeleted = true;
+    message.isHidden = true;
+    message.deletedAt = new Date();
+    message.deletedBy = req.user.id;
+    message.deletionReason = 'Admin deleted from chat';
+    await message.save();
+
+    // Emit via socket
+    const io = req.app.get('io');
+    if (io && message.room) {
+      io.to(message.room.toString()).emit('message_deleted', {
+        messageId: message._id.toString()
+      });
+    }
+
+    res.json({ success: true, message: 'Message deleted successfully' });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // Send chat message to specific user
 export const sendAdminChatMessage = async (req, res, next) => {
   try {
@@ -1032,7 +1065,19 @@ export const sendAdminChatMessage = async (req, res, next) => {
         conversationId: conversation._id.toString(),
         fromUserId: req.user.id,
         fromUserName: req.user.name,
+        fromUserRole: req.user.role,
         messageId: message._id.toString()
+      });
+
+      // Emit new_admin_message_notification so notification badge shows on all pages
+      console.log('[sendAdminChatMessage] Emitting to user_', userId, 'role:', req.user.role);
+      io.to(`user_${userId}`).emit('new_admin_message_notification', {
+        fromUserId: req.user.id,
+        fromUserName: req.user.name,
+        fromUserRole: req.user.role,
+        messageId: message._id.toString(),
+        conversationId: conversation._id.toString(),
+        preview: text.trim().substring(0, 50)
       });
     }
 

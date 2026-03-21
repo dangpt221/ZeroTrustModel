@@ -1,95 +1,51 @@
-import React, { useEffect, useState } from 'react';
-import { io, Socket } from 'socket.io-client';
-import { Bell, Check, CheckCheck, AlertTriangle, Info, CheckCircle, X, MessageSquare } from 'lucide-react';
+import React, { useEffect, useState, useRef } from 'react';
+import { Bell, Check, CheckCheck, AlertTriangle, Info, CheckCircle } from 'lucide-react';
 import { notificationsApi } from '../api';
 import { Notification } from '../types';
-import { useAuth } from '../context/AuthContext';
 
 export const NotificationDropdown: React.FC = () => {
-  const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [chatUnreadCount, setChatUnreadCount] = useState(0);
-  const [latestChatNotif, setLatestChatNotif] = useState<any>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
         const data = await notificationsApi.getAll();
         setNotifications(data || []);
-        setUnreadCount((data || []).filter((n: Notification) => !n.isRead).length);
+        const unread = (data || []).filter((n: Notification) => !n.isRead);
+        setUnreadCount(unread.length);
       } catch (err) {
         console.error('Fetch notifications error:', err);
       }
     };
 
-    // Load chat notification count from localStorage (set by other components)
-    const savedCount = localStorage.getItem('chatUnreadCount');
-    if (savedCount) {
-      setChatUnreadCount(parseInt(savedCount) || 0);
-    }
-    const savedNotif = localStorage.getItem('latestChatNotif');
-    if (savedNotif) {
-      try {
-        setLatestChatNotif(JSON.parse(savedNotif));
-      } catch {}
-    }
-
     fetchNotifications();
-    // Poll every 30 seconds
-    const interval = setInterval(fetchNotifications, 30000);
+    const interval = setInterval(fetchNotifications, 5000);
     return () => clearInterval(interval);
   }, []);
 
-  // Real-time socket connection
+  // Close when clicking outside
   useEffect(() => {
-    if (!user) return;
-
-    const socket = io('', {
-      withCredentials: true,
-      transports: ['websocket', 'polling'],
-      auth: { userId: user.id },
-      query: { userId: user.id }
-    });
-
-    socket.on('new_notification', (notif: any) => {
-      setNotifications(prev => [notif, ...prev]);
-      setUnreadCount(prev => prev + 1);
-    });
-
-    // Listen for chat message notifications (from staff/manager)
-    socket.on('new_admin_message_notification', (data: any) => {
-      if (user.role === 'ADMIN') {
-        setChatUnreadCount(prev => {
-          const newCount = prev + 1;
-          // Store in localStorage for cross-page sync
-          localStorage.setItem('chatUnreadCount', newCount.toString());
-          localStorage.setItem('latestChatNotif', JSON.stringify({
-            fromUserName: data.fromUserName,
-            fromUserRole: data.fromUserRole,
-            preview: data.preview
-          }));
-          return newCount;
-        });
-        setLatestChatNotif({
-          fromUserName: data.fromUserName,
-          fromUserRole: data.fromUserRole,
-          preview: data.preview
-        });
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
       }
-    });
-
-    return () => {
-      socket.disconnect();
     };
-  }, [user]);
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen]);
 
   const handleMarkAsRead = async (id: string) => {
+    if (!id) return;
     try {
       await notificationsApi.markAsRead(id);
-      setNotifications(prev => 
-        prev.map(n => n.id === id ? { ...n, isRead: true } : n)
+      setNotifications(prev =>
+        prev.map(n => ((n._id || n.id) === id ? { ...n, isRead: true } : n))
       );
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (err) {
@@ -117,31 +73,10 @@ export const NotificationDropdown: React.FC = () => {
   };
 
   return (
-    <div className="relative flex items-center gap-1">
-      {/* Chat notification badge - visible on all pages */}
-      {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && chatUnreadCount > 0 && (
-        <button
-          onClick={() => {
-            setIsOpen(false);
-            setChatUnreadCount(0);
-            // Clear localStorage
-            localStorage.removeItem('chatUnreadCount');
-            localStorage.removeItem('latestChatNotif');
-            // Navigate to ChatManagement
-            window.location.href = '/admin/chat-management';
-          }}
-          className="relative p-3 bg-red-50 text-red-500 hover:bg-red-100 rounded-2xl transition-all animate-pulse"
-          title={`Tin nhắn từ ${latestChatNotif?.fromUserName || 'Manager/Nhân viên'}`}
-        >
-          <MessageSquare size={20} />
-          <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-            {chatUnreadCount > 9 ? '9+' : chatUnreadCount}
-          </span>
-        </button>
-      )}
+    <div ref={dropdownRef} className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`relative p-3 bg-slate-50 text-slate-400 hover:bg-slate-100 rounded-2xl transition-all hover:text-blue-600`}
+        className="relative p-3 bg-slate-50 text-slate-400 hover:bg-slate-100 rounded-2xl transition-all hover:text-blue-600"
       >
         <Bell size={20} />
         {unreadCount > 0 && (
@@ -152,11 +87,11 @@ export const NotificationDropdown: React.FC = () => {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-white border border-slate-100 rounded-3xl shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute right-0 top-full mt-2 w-80 bg-white border border-slate-100 rounded-3xl shadow-2xl z-[100] overflow-hidden">
           <div className="p-4 border-b border-slate-100 flex items-center justify-between">
             <h4 className="font-bold text-slate-800">Thông báo</h4>
             {unreadCount > 0 && (
-              <button 
+              <button
                 onClick={handleMarkAllAsRead}
                 className="text-xs text-blue-600 hover:underline flex items-center gap-1"
               >
@@ -164,7 +99,7 @@ export const NotificationDropdown: React.FC = () => {
               </button>
             )}
           </div>
-          
+
           <div className="max-h-80 overflow-y-auto">
             {notifications.length === 0 ? (
               <div className="p-8 text-center text-slate-400 text-sm">
@@ -172,8 +107,8 @@ export const NotificationDropdown: React.FC = () => {
               </div>
             ) : (
               notifications.slice(0, 10).map((notif) => (
-                <div 
-                  key={notif.id} 
+                <div
+                  key={notif._id || notif.id}
                   className={`p-4 border-b border-slate-50 hover:bg-slate-50 transition-colors ${
                     !notif.isRead ? 'bg-blue-50/50' : ''
                   }`}
@@ -194,9 +129,12 @@ export const NotificationDropdown: React.FC = () => {
                             month: '2-digit'
                           })}
                         </span>
-                        {!notif.isRead && (
+                        {!notif.isRead && (notif._id || notif.id) && (
                           <button
-                            onClick={() => handleMarkAsRead(notif.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleMarkAsRead(notif._id || notif.id);
+                            }}
                             className="text-[10px] text-blue-600 hover:underline flex items-center gap-1"
                           >
                             <Check size={10} /> Đánh dấu đã đọc
@@ -209,25 +147,8 @@ export const NotificationDropdown: React.FC = () => {
               ))
             )}
           </div>
-
-          {notifications.length > 0 && (
-            <div className="p-3 border-t border-slate-100">
-              <button className="w-full text-center text-xs text-blue-600 font-semibold py-2 hover:bg-blue-50 rounded-xl transition-colors">
-                Xem tất cả thông báo
-              </button>
-            </div>
-          )}
         </div>
-      )}
-
-      {/* Backdrop */}
-      {isOpen && (
-        <div 
-          className="fixed inset-0 z-40" 
-          onClick={() => setIsOpen(false)}
-        />
       )}
     </div>
   );
 };
-

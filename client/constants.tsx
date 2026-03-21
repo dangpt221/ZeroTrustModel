@@ -51,17 +51,13 @@ export const MANAGER_NAVIGATION = [
   { name: 'Quản lý Staff', icon: <Users size={20} />, path: '/manager/staff' },
   { name: 'Quản lý Đội ngũ', icon: <LayoutGrid size={20} />, path: '/manager/teams' },
   { name: 'Tài liệu bộ phận', icon: <FolderLock size={20} />, path: '/manager/documents' },
-  { name: 'Phê duyệt truy cập', icon: <FileCheck size={20} />, path: '/manager/approvals' },
-  { name: 'Báo cáo & thống kê', icon: <BarChart3 size={20} />, path: '/manager/reports' },
   { name: 'Nhắn tin nội bộ', icon: <MessageSquare size={20} />, path: '/messaging' },
-  { name: 'Chấm công', icon: <Clock size={20} />, path: '/attendance' },
 ];
 
 export const STAFF_NAVIGATION = [
   { name: 'Tài liệu của tôi', icon: <FolderLock size={20} />, path: '/' },
   { name: 'Lịch sử hoạt động', icon: <History size={20} />, path: '/member/activity' },
   { name: 'Nhắn tin nội bộ', icon: <MessageSquare size={20} />, path: '/messaging' },
-  { name: 'Chấm công', icon: <Clock size={20} />, path: '/attendance' },
   { name: 'Hồ sơ & Bảo mật', icon: <User size={20} />, path: '/profile' },
 ];
 

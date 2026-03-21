@@ -1,5 +1,6 @@
 import { Message } from '../models/Message.js';
 import { User } from '../models/User.js';
+import { ChatRoom } from '../models/ChatRoom.js';
 
 export function registerSocketHandlers(io) {
   io.on('connection', (socket) => {
@@ -9,6 +10,9 @@ export function registerSocketHandlers(io) {
     // User joins their personal room for notifications
     if (userId) {
       socket.join(`user_${userId}`);
+      console.log('[Socket] User connected:', userId, 'joined room user_', userId);
+    } else {
+      console.log('[Socket] Connection without userId, socket.id:', socket.id);
     }
 
     socket.on('join_room', (room) => {
@@ -33,7 +37,8 @@ export function registerSocketHandlers(io) {
     // ===== SEND MESSAGE (with attachments support) =====
     socket.on('send_message', async (payload) => {
       try {
-        const { userId, userName, text, room, parentMessageId, attachments } = payload;
+        const { userId, userName, userRole, text, room, parentMessageId, attachments } = payload;
+        console.log('[Socket] send_message received - userId:', userId, 'userRole:', userRole, 'room:', room, 'text:', text.substring(0, 30));
 
         // Parse @mentions
         const mentionRegex = /@(\w+\s\w+)/g;
@@ -93,6 +98,42 @@ export function registerSocketHandlers(io) {
               mentionedBy: userName
             });
           });
+        }
+
+        // ===== ADMIN NOTIFICATION: If sender is not ADMIN and it's a DM, notify the other user =====
+        if (userRole && userRole !== 'ADMIN') {
+          // Check if this is a direct message room
+          const chatRoom = await ChatRoom.findById(room).lean();
+          if (chatRoom && chatRoom.isDirectMessage) {
+            // Find the other participant
+            const otherParticipant = chatRoom.participants.find(p => p.toString() !== userId);
+            if (otherParticipant) {
+              const otherUserId = otherParticipant.toString();
+
+              // Emit to the other user via socket only
+              io.to(`user_${otherUserId}`).emit('new_admin_message_notification', {
+                fromUserId: userId,
+                fromUserName: userName,
+                fromUserRole: userRole,
+                messageId: msg._id.toString(),
+                conversationId: room,
+                preview: text.trim().substring(0, 50)
+              });
+            }
+
+            // Also notify all ADMINs via socket only
+            const admins = await User.find({ role: 'ADMIN' }).select('_id').lean();
+            for (const admin of admins) {
+              io.to(`user_${admin._id.toString()}`).emit('new_admin_message_notification', {
+                fromUserId: userId,
+                fromUserName: userName,
+                fromUserRole: userRole,
+                messageId: msg._id.toString(),
+                conversationId: room,
+                preview: text.trim().substring(0, 50)
+              });
+            }
+          }
         }
       } catch (err) {
         console.error('Socket message error', err);

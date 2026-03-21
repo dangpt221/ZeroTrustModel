@@ -3,7 +3,6 @@ import { requireAuth } from '../middleware/auth.js';
 import { ChatRoom } from '../models/ChatRoom.js';
 import { Message } from '../models/Message.js';
 import { User } from '../models/User.js';
-import { Notification } from '../models/Notification.js';
 
 // ============ HELPER FUNCTIONS ============
 
@@ -295,7 +294,7 @@ export function registerMessageRoutes(router) {
           });
         }
 
-        // Send notification for DM messages
+        // Send notification for DM messages - notify recipient via socket
         if (chatRoom && chatRoom.isDirectMessage) {
           // Find the other participant
           const otherParticipantId = chatRoom.participants.find(
@@ -303,46 +302,20 @@ export function registerMessageRoutes(router) {
           );
 
           if (otherParticipantId) {
-            // Create notification in database
-            const notification = await Notification.create({
-              userId: otherParticipantId,
-              title: `Tin nhắn mới từ ${req.user.name}`,
-              message: text.trim().substring(0, 100),
-              type: 'INFO',
-              priority: 'NORMAL'
+            // Notify the recipient via socket
+            io.to(`user_${otherParticipantId.toString()}`).emit('new_admin_message_notification', {
+              fromUserId: req.user.id,
+              fromUserName: req.user.name,
+              fromUserRole: req.user.role,
+              messageId: msg._id.toString(),
+              conversationId: room,
+              preview: text.trim().substring(0, 50)
             });
 
-            // Emit real-time notification to recipient
-            io.to(`user_${otherParticipantId.toString()}`).emit('new_notification', {
-              id: notification._id.toString(),
-              title: notification.title,
-              message: notification.message,
-              type: notification.type,
-              priority: notification.priority,
-              createdAt: notification.createdAt
-            });
-
-            // Also notify admins when staff or manager sends a DM
+            // Also notify admins when staff or manager sends a DM (socket only, no DB notification)
             if (req.user.role !== 'ADMIN') {
               const admins = await User.find({ role: 'ADMIN' }).select('_id').lean();
               for (const admin of admins) {
-                const adminNotif = await Notification.create({
-                  userId: admin._id,
-                  title: `Tin nhắn từ ${req.user.role === 'MANAGER' ? 'Quản lý' : 'Nhân viên'}: ${req.user.name}`,
-                  message: text.trim().substring(0, 100),
-                  type: 'INFO',
-                  priority: 'NORMAL'
-                });
-
-                io.to(`user_${admin._id.toString()}`).emit('new_notification', {
-                  id: adminNotif._id.toString(),
-                  title: adminNotif.title,
-                  message: adminNotif.message,
-                  type: adminNotif.type,
-                  priority: adminNotif.priority,
-                  createdAt: adminNotif.createdAt
-                });
-
                 io.to(`user_${admin._id.toString()}`).emit('new_admin_message_notification', {
                   fromUserId: req.user.id,
                   fromUserName: req.user.name,
@@ -351,35 +324,6 @@ export function registerMessageRoutes(router) {
                   conversationId: room,
                   preview: text.trim().substring(0, 50)
                 });
-              }
-
-              // Also notify manager if staff sends message to admin
-              if (req.user.role === 'MANAGER') {
-                const staffUser = await User.findById(req.user.id).lean();
-                if (staffUser?.departmentId) {
-                  const managers = await User.find({
-                    role: 'MANAGER',
-                    departmentId: staffUser.departmentId,
-                    _id: { $ne: req.user.id }
-                  }).select('_id').lean();
-                  for (const mgr of managers) {
-                    const mgrNotif = await Notification.create({
-                      userId: mgr._id,
-                      title: `Quản lý ${req.user.name} đã nhắn tin`,
-                      message: text.trim().substring(0, 100),
-                      type: 'INFO',
-                      priority: 'NORMAL'
-                    });
-                    io.to(`user_${mgr._id.toString()}`).emit('new_notification', {
-                      id: mgrNotif._id.toString(),
-                      title: mgrNotif.title,
-                      message: mgrNotif.message,
-                      type: mgrNotif.type,
-                      priority: mgrNotif.priority,
-                      createdAt: mgrNotif.createdAt
-                    });
-                  }
-                }
               }
             }
           }

@@ -221,6 +221,7 @@ export enum NotificationType {
 }
 
 export interface Notification {
+  _id?: string;
   id: string;
   title: string;
   message: string;

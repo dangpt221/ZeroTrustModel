@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { chatManagementApi, usersApi } from '../../api';
 import { usePermission } from '../../hooks/usePermission';
-import { Search, MessageSquare, Users, Lock, Unlock, Trash2, Send, Download, Settings, Filter, Eye, X, Plus, Minus, MessageCircle, Mail } from 'lucide-react';
+import { Search, MessageSquare, Users, Lock, Unlock, Trash2, Send, Download, Settings, Filter, Eye, X, Plus, Minus, MessageCircle, Mail, Smile } from 'lucide-react';
 import { Modal } from '../../components/Admin/Modal';
 import { useAuth } from '../../context/AuthContext';
 
@@ -69,12 +69,26 @@ export const ChatManagement: React.FC = () => {
   const [adminChatSearch, setAdminChatSearch] = useState('');
   const [adminChatLoading, setAdminChatLoading] = useState(false);
   const adminChatScrollRef = useRef<HTMLDivElement>(null);
+  const adminChatInputRef = useRef<HTMLInputElement>(null);
+  const [showAdminStickerPanel, setShowAdminStickerPanel] = useState(false);
+  const [showAdminEmojiPicker, setShowAdminEmojiPicker] = useState<string | null>(null);
+  const [adminReactions, setAdminReactions] = useState<Record<string, { emoji: string; userId: string }[]>>({});
   const [adminConversationId, setAdminConversationId] = useState<string | null>(null);
   const [adminSocket, setAdminSocket] = useState<Socket | null>(null);
   const [pendingChatNotification, setPendingChatNotification] = useState<Record<string, any>>({});
 
   // Toast notification state
   const [toasts, setToasts] = useState<any[]>([]);
+
+// Sticker categories
+const ADMIN_STICKER_CATEGORIES = [
+  { name: 'Cảm xúc', stickers: ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😋', '😛', '😜', '🤪', '😝', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '😮‍💨', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '🥸', '😎', '🤓', '🧐', '😕', '😟', '🙁', '😮', '😯', '😲', '😳', '🥺', '😦', '😧', '😨', '😰', '😥', '😢', '😭', '😱', '😖', '😣', '😞', '😓', '😩', '😫', '🥱', '😤', '😡', '😠', '🤬', '😈', '👿', '💀', '☠️', '💩', '🤡', '👹', '👺', '👻', '👽', '👾', '🤖'] },
+  { name: 'Hand', stickers: ['👍', '👎', '👊', '✊', '🤛', '🤜', '🤝', '👏', '🙌', '👐', '🤲', '🤞', '✌️', '🤟', '🤘', '👌', '🤌', '👈', '👉', '👆', '👇', '☝️', '✋', '🤚', '🖐', '🖖', '👋', '🤙', '💪', '🦾', '🖕', '✍️', '🙏'] },
+  { name: 'Symbols', stickers: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '♥️', '♦️', '♣️', '♠️', '🃏', '🎴', '🀄', '🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '⚫', '⚪', '🟤', '🔺', '🔻', '🔸', '🔹', '🔶', '🔷', '💎', '🏆', '🥇', '🥈', '🥉', '🏅', '🎖', '🎗', '🎪', '🎫', '🎟', '🎭', '🎨', '🎬', '🎤', '🎧', '🎼', '🎹', '🥁', '🎷', '🎺', '🎸', '🪕', '🎻', '🎲', '♟️', '🎯', '🎳', '🎮', '🎰'] },
+  { name: 'Con vật', stickers: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐻‍❄️', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🙈', '🙉', '🙊', '🐒', '🐔', '🐧', '🐦', '🐤', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗', '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐞', '🐜', '🦟', '🦗', '🕷️', '🦂', '🐢', '🐍', '🦎', '🦖', '🦕', '🐙', '🦑', '🦐', '🦞', '🦀', '🐡', '🐠', '🐟', '🐬', '🐳', '🐋', '🦈', '🐊', '🐅', '🐆', '🦓', '🦍', '🦧', '🦣', '🐘', '🦛', '🦏', '🐪', '🐫', '🦒', '🦘', '🦬', '🐃', '🐂', '🐄', '🐎', '🐖', '🐏', '🐑', '🦙', '🐐', '🦌', '🐕', '🐩', '🦮', '🐈', '🐓', '🦃', '🦚', '🦜', '🦢', '🦩', '🕊️', '🐇', '🦝', '🦨', '🦡', '🦫', '🦦', '🦥', '🐁', '🐀', '🐿️', '🦔'] },
+  { name: 'Food', stickers: ['🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🫐', '🍈', '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅', '🍆', '🥑', '🥦', '🥬', '🥒', '🌶️', '🫑', '🌽', '🥕', '🧄', '🧅', '🥔', '🍠', '🥐', '🥯', '🍞', '🥖', '🥨', '🧀', '🥚', '🍳', '🧈', '🥞', '🧇', '🥓', '🥩', '🍗', '🍖', '🦴', '🌭', '🍔', '🍟', '🍕', '🫓', '🥪', '🥙', '🧆', '🌮', '🌯', '🫔', '🥗', '🥘', '🫕', '🍝', '🍜', '🍲', '🍛', '🍣', '🍱', '🥟', '🦪', '🍤', '🍙', '🍚', '🍘', '🍥', '🥠', '🥮', '🍢', '🍡', '🍧', '🍨', '🍦', '🥧', '🧁', '🍰', '🎂', '🍮', '🍭', '🍬', '🍫', '🍿', '🍩', '🍪', '🌰', '🥜', '🍯', '🥛', '🍼', '☕', '🫖', '🍵', '🧃', '🥤', '🧋', '🍶', '🍺', '🍻', '🥂', '🍷', '🥃', '🍸', '🍹', '🧉', '🍾', '🧊'] },
+  { name: 'Đồ vật', stickers: ['⌚', '📱', '💻', '⌨️', '🖥️', '🖨️', '🖱️', '🖲️', '💽', '💾', '💿', '📀', '📼', '📷', '📸', '📹', '🎥', '📽️', '🎞️', '📞', '☎️', '📟', '📠', '📺', '📻', '🎙️', '🎚️', '🎛️', '🧭', '⏱️', '⏲️', '⏰', '🕰️', '⌛', '⏳', '📡', '🔋', '🔌', '💡', '🔦', '🕯️', '🪔', '🧯', '🛢️', '💸', '💵', '💴', '💶', '💷', '🪙', '💰', '💳', '💎', '⚖️', '🪜', '🧰', '🪛', '🔧', '🔨', '⚒️', '🛠️', '⛏️', '🪚', '🔩', '⚙️', '🪤', '🧱', '⛓️', '🧲', '🔫', '💣', '🧨', '🪓', '🔪', '🗡️', '⚔️', '🛡️', '🚬', '⚰️', '🪦', '⚱️', '🏺', '🔮', '📿', '🧿', '💈', '⚗️', '🔭', '🔬', '🕳️', '🩹', '🩺', '💊', '💉', '🩸', '🧬', '🦠', '🧫', '🧪', '🌡️', '🧹', '🪠', '🧺', '🧻', '🚽', '🚿', '🛁', '🛀', '🧼', '🪥', '🪒', '🧽', '🪣', '🧴', '🛎️', '🔑', '🗝️', '🚪', '🪑', '🛋️', '🛏️', '🛌', '🧸', '🪆', '🖼️', '🪞', '🪟', '🛒', '🎁', '🎈', '🎏', '🎀', '🪄', '🪅', '🎊', '🎉', '🎎', '🏮', '🎐', '🧧', '✉️', '📩', '📨', '📧', '💌', '📥', '📤', '📦', '🏷️', '🧳', '📪', '📫', '📬', '📭', '📮', '📯', '📜', '📃', '📄', '📑', '🧾', '📊', '📈', '📉', '🗒️', '🗓️', '📆', '📅', '🗑️', '📇', '🗃️', '🗳️', '🗄️', '📋', '📁', '📂', '🗂️', '🗞️', '📰', '📓', '📔', '📒', '📕', '📗', '📘', '📙', '📚', '📖', '🔖', '🧷', '🔗', '📎', '🖇️', '📐', '📏', '🧮', '📌', '📍', '✂️', '🖊️', '🖋️', '✒️', '🖌️', '🖍️', '📝', '✏️', '🔍', '🔎', '🔏', '🔐', '🔒', '🔓'] },
+];
 
   // Add toast notification
   const addToast = (title: string, message: string, role?: string) => {
@@ -112,12 +126,12 @@ export const ChatManagement: React.FC = () => {
   const handleSendAdminChat = async () => {
     if (!adminChatInput.trim() || !selectedChatUser) return;
     const inputText = adminChatInput.trim();
+    adminChatInputRef.current && (adminChatInputRef.current.value = '');
     setAdminChatInput('');
     try {
       const res = await chatManagementApi.sendAdminChatMessage(selectedChatUser.id, inputText);
       if (res && res.id) {
         setAdminChatMessages(prev => {
-          // Prevent duplicates
           if (prev.find(m => m.id === res.id)) return prev;
           return [...prev, res];
         });
@@ -127,19 +141,19 @@ export const ChatManagement: React.FC = () => {
       }
     } catch (error) {
       console.error('Error sending admin chat message:', error);
+      setAdminChatInput(inputText);
       alert('Không thể gửi tin nhắn');
-      setAdminChatInput(inputText); // Restore input on error
     }
   };
 
   // Connect socket for real-time admin chat
   useEffect(() => {
     if (!user) return;
-    const socket = io('', {
-      withCredentials: true,
-      transports: ['websocket', 'polling'],
+    const socket = io(window.location.origin, {
+      transports: ['polling', 'websocket'],
       auth: { userId: user.id, userName: user.name },
-      query: { userId: user.id, userName: user.name }
+      query: { userId: user.id, userName: user.name },
+      withCredentials: false
     });
     setAdminSocket(socket);
 
@@ -1006,19 +1020,85 @@ export const ChatManagement: React.FC = () => {
                         return (
                           <div
                             key={msg.id}
-                            className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
+                            className={`flex ${isMe ? 'justify-end' : 'justify-start'} group`}
                           >
-                            <div
-                              className={`max-w-[70%] px-4 py-2.5 rounded-2xl text-sm ${
-                                isMe
-                                  ? 'bg-blue-600 text-white rounded-br-sm'
-                                  : 'bg-white text-slate-700 rounded-bl-sm shadow-sm border border-slate-100'
-                              }`}
-                            >
-                              <p>{msg.text}</p>
-                              <p className={`text-[10px] mt-1 ${isMe ? 'text-blue-100' : 'text-slate-400'}`}>
-                                {displayTime}
-                              </p>
+                            <div className={`relative max-w-[70%] ${isMe ? 'order-2' : 'order-1'}`}>
+                              <div
+                                className={`px-4 py-2.5 rounded-2xl text-sm ${
+                                  isMe
+                                    ? 'bg-blue-600 text-white rounded-br-sm'
+                                    : 'bg-white text-slate-700 rounded-bl-sm shadow-sm border border-slate-100'
+                                }`}
+                              >
+                                <p>{msg.text}</p>
+                                <p className={`text-[10px] mt-1 ${isMe ? 'text-blue-100' : 'text-slate-400'}`}>
+                                  {displayTime}
+                                </p>
+                              </div>
+                              {/* Action buttons */}
+                              <div className={`absolute top-1/2 ${isMe ? '-left-12' : '-right-12'} flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity`}>
+                                <button
+                                  onClick={() => {
+                                    if (showAdminEmojiPicker === msg.id) {
+                                      setShowAdminEmojiPicker(null);
+                                    } else {
+                                      setShowAdminEmojiPicker(msg.id);
+                                    }
+                                  }}
+                                  className="p-1.5 bg-white rounded-full shadow border border-slate-200 hover:bg-slate-50 transition-colors"
+                                >
+                                  <Smile size={14} className="text-slate-400" />
+                                </button>
+                                {(isSuperAdmin || isAdmin) && (
+                                  <button
+                                    onClick={async () => {
+                                      if (!confirm('Xóa tin nhắn này?')) return;
+                                      try {
+                                        await chatManagementApi.deleteAdminChatMessage(msg.id);
+                                        setAdminChatMessages(prev => prev.filter(m => m.id !== msg.id));
+                                      } catch (error) {
+                                        console.error('Error deleting message:', error);
+                                        alert('Không thể xóa tin nhắn');
+                                      }
+                                    }}
+                                    className="p-1.5 bg-white rounded-full shadow border border-slate-200 hover:bg-red-50 transition-colors"
+                                  >
+                                    <Trash2 size={14} className="text-red-400" />
+                                  </button>
+                                )}
+                              </div>
+                              {/* Emoji picker */}
+                              {showAdminEmojiPicker === msg.id && (
+                                <div className={`absolute ${isMe ? 'left-0' : 'right-0'} -bottom-10 bg-white rounded-lg shadow-lg border border-slate-200 p-2 flex gap-1 z-20`}>
+                                  {['👍', '❤️', '😮', '😢', '😠', '😂'].map(emoji => (
+                                    <button
+                                      key={emoji}
+                                      onClick={() => {
+                                        setAdminReactions(prev => {
+                                          const current = prev[msg.id] || [];
+                                          const existing = current.find(r => r.emoji === emoji && r.userId === user?.id);
+                                          if (existing) {
+                                            return { ...prev, [msg.id]: current.filter(r => !(r.emoji === emoji && r.userId === user?.id)) };
+                                          }
+                                          return { ...prev, [msg.id]: [...current, { emoji, userId: user?.id || '' }] };
+                                        });
+                                        setShowAdminEmojiPicker(null);
+                                      }}
+                                      className="p-1 hover:bg-slate-100 rounded text-sm transition-all hover:scale-125"
+                                    >
+                                      {emoji}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                              {/* Reactions display */}
+                              {adminReactions[msg.id] && adminReactions[msg.id].length > 0 && (
+                                <div className={`flex gap-1 flex-wrap ${isMe ? 'justify-end' : 'justify-start'} mt-1`}>
+                                  {adminReactions[msg.id].map((reaction, i) => (
+                                    <span key={i} className="px-1.5 py-0.5 bg-slate-100 rounded-full text-xs">{reaction.emoji}</span>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           </div>
                         );
@@ -1028,8 +1108,51 @@ export const ChatManagement: React.FC = () => {
 
                   {/* Input */}
                   <div className="p-4 border-t border-slate-200 bg-white">
+                    {showAdminStickerPanel && (
+                      <div className="mb-3 bg-white border border-slate-200 rounded-xl shadow-lg p-3">
+                        <div className="flex gap-1 mb-2 overflow-x-auto pb-1">
+                          {ADMIN_STICKER_CATEGORIES.map((cat, i) => (
+                            <button
+                              key={i}
+                              onClick={() => {
+                                const el = document.getElementById(`admin-sticker-cat-${i}`);
+                                if (el) el.scrollIntoView({ block: 'nearest', inline: 'center' });
+                              }}
+                              className="px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg whitespace-nowrap"
+                            >
+                              {cat.name}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="max-h-44 overflow-y-auto">
+                          {ADMIN_STICKER_CATEGORIES.map((cat, i) => (
+                            <div key={i} id={`admin-sticker-cat-${i}`} className="grid grid-cols-10 gap-1 mb-2">
+                              {cat.stickers.map((s, j) => (
+                                <button
+                                  key={j}
+                                  onClick={() => {
+                                    setAdminChatInput(prev => prev + s);
+                                    setShowAdminStickerPanel(false);
+                                  }}
+                                  className="p-1.5 text-xl hover:bg-slate-100 rounded-lg transition-colors"
+                                >
+                                  {s}
+                                </button>
+                              ))}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     <div className="flex gap-2">
+                      <button
+                        onClick={() => setShowAdminStickerPanel(!showAdminStickerPanel)}
+                        className="p-2.5 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
+                      >
+                        <Smile size={18} className="text-slate-500" />
+                      </button>
                       <input
+                        ref={adminChatInputRef}
                         type="text"
                         placeholder={`Nhan tin cho ${selectedChatUser.name}...`}
                         value={adminChatInput}

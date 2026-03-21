@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  ChevronRight, Hash, Key, Lock, MessageCircle, MessageSquare,
+  ChevronRight, Hash, Lock, MessageCircle, MessageSquare,
   MoreVertical, Pin, Plus, Search, Send, Shield, Smile,
   Trash2, Users, Wifi, WifiOff, X
 } from 'lucide-react';
@@ -20,7 +20,7 @@ const formatTime = (timestamp: string) => {
   return date.toLocaleDateString('vi-VN', { day: 'numeric', month: 'numeric' });
 };
 
-const COMMON_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🎉', '🔥', '👀'];
+const COMMON_EMOJIS = ['👍', '❤️', '😮', '😢', '😠', '😂'];
 
 const STICKER_CATEGORIES = [
   { name: 'Cảm xúc', stickers: ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😋', '😛', '😜', '🤪', '😝', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '😮‍💨', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '🥸', '😎', '🤓', '🧐', '😕', '😟', '🙁', '😮', '😯', '😲', '😳', '🥺', '😦', '😧', '😨', '😰', '😥', '😢', '😭', '😱', '😖', '😣', '😞', '😓', '😩', '😫', '🥱', '😤', '😡', '😠', '🤬', '😈', '👿', '💀', '☠️', '💩', '🤡', '👹', '👺', '👻', '👽', '👾', '🤖'] },
@@ -67,14 +67,8 @@ export const Messaging: React.FC = () => {
   const [newRoomCode, setNewRoomCode] = useState('');
   const [creatingRoom, setCreatingRoom] = useState(false);
 
-  // Join room form
-  const [joinRoomCode, setJoinRoomCode] = useState('');
-  const [joinRoomId, setJoinRoomId] = useState('');
-  const [joiningRoom, setJoiningRoom] = useState(false);
-
   // Modal states
   const [showCreateRoomModal, setShowCreateRoomModal] = useState(false);
-  const [showJoinRoomModal, setShowJoinRoomModal] = useState(false);
   const [showDeleteRoomModal, setShowDeleteRoomModal] = useState(false);
   const [pendingRoomId, setPendingRoomId] = useState('');
   const [pendingRoomName, setPendingRoomName] = useState('');
@@ -118,7 +112,29 @@ export const Messaging: React.FC = () => {
         if (res.ok) {
           const data = await res.json();
           setRooms(data.rooms || []);
-          if (data.rooms && data.rooms.length > 0 && !activeRoom) {
+
+          // Check if we need to open a specific DM from notification click
+          const openDMWithUserId = localStorage.getItem('openDMWithUserId');
+          const openDMWith = localStorage.getItem('openDMWith');
+          console.log('[Messaging] Mount - openDMWithUserId:', openDMWithUserId, 'openDMWith:', openDMWith);
+
+          if (openDMWithUserId) {
+            // Direct open using userId - no search needed
+            localStorage.removeItem('openDMWithUserId');
+            setActiveTab('dms');
+            console.log('[Messaging] Opening DM with userId:', openDMWithUserId);
+            const conv = await createConversation(openDMWithUserId);
+            console.log('[Messaging] createConversation result:', conv);
+            if (conv) {
+              joinRoom(conv.id);
+            }
+          } else if (openDMWith) {
+            // Fallback: search by name
+            localStorage.removeItem('openDMWith');
+            setActiveTab('dms');
+            setShowNewChat(true);
+            setUserSearch(openDMWith);
+          } else if (data.rooms && data.rooms.length > 0 && !activeRoom) {
             joinRoom(data.rooms[0].id);
           }
         }
@@ -143,8 +159,6 @@ export const Messaging: React.FC = () => {
         if (res.status === 403) {
           const data = await res.json();
           alert(data.error || 'Bạn cần nhập mã bảo mật để tham gia');
-          setShowJoinRoomModal(true);
-          setJoinRoomId(activeRoom);
           setMessages([]);
           setLoadingMessages(false);
           return;
@@ -257,12 +271,15 @@ export const Messaging: React.FC = () => {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputText.trim() || !user || !activeRoom) return;
+    const text = inputText.trim();
+    if (!text || !user || !activeRoom) return;
 
-    sendMessage(inputText.trim(), activeRoom, replyingTo?.id || undefined);
+    if (inputRef.current) inputRef.current.value = '';
+    const savedText = text;
     setInputText('');
     setReplyingTo(null);
     stopTyping(activeRoom);
+    sendMessage(savedText, activeRoom, replyingTo?.id || undefined);
   };
 
   const handleRecall = async (msgId: string) => {
@@ -330,6 +347,29 @@ export const Messaging: React.FC = () => {
     }, 300);
     return () => clearTimeout(timer);
   }, [userSearch]);
+
+  // Auto-select user when search results come back from notification click
+  useEffect(() => {
+    const openDMWith = localStorage.getItem('openDMWith');
+    if (userSearchResults.length > 0 && openDMWith) {
+      const targetUser = userSearchResults.find((u: any) =>
+        u.name?.toLowerCase().includes(openDMWith.toLowerCase()) ||
+        u.email?.toLowerCase().includes(openDMWith.toLowerCase())
+      );
+      if (targetUser) {
+        // Directly call createConversation and joinRoom
+        createConversation(targetUser.id).then((conv: any) => {
+          if (conv) {
+            joinRoom(conv.id);
+            setShowNewChat(false);
+            setUserSearch('');
+            setUserSearchResults([]);
+          }
+        });
+      }
+      localStorage.removeItem('openDMWith');
+    }
+  }, [userSearchResults]);
 
   const handleViewThread = async (message: ChatMessage) => {
     setReplyingTo(message);
@@ -407,41 +447,6 @@ export const Messaging: React.FC = () => {
       alert('Không thể tạo phòng');
     } finally {
       setCreatingRoom(false);
-    }
-  };
-
-  const handleJoinRoom = async () => {
-    if (!joinRoomId.trim() || !joinRoomCode.trim()) {
-      alert('Vui lòng nhập đầy đủ thông tin');
-      return;
-    }
-    setJoiningRoom(true);
-    try {
-      const res = await fetch(`/api/messaging/rooms/${joinRoomId}/join`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ securityCode: joinRoomCode.trim() })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (!rooms.find(r => r.id === joinRoomId)) {
-          setRooms(prev => [...prev, data.room]);
-        }
-        setShowJoinRoomModal(false);
-        setJoinRoomId('');
-        setJoinRoomCode('');
-        joinRoom(joinRoomId);
-        alert('Tham gia phòng thành công!');
-      } else {
-        const data = await res.json();
-        alert(data.message || 'Không thể tham gia phòng');
-      }
-    } catch (err) {
-      console.error('Join room failed:', err);
-      alert('Không thể tham gia phòng');
-    } finally {
-      setJoiningRoom(false);
     }
   };
 
@@ -523,14 +528,6 @@ export const Messaging: React.FC = () => {
               className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold ${themeBg} text-white ${themeHover} transition-colors`}
             >
               <Plus size={14} /> Tạo phòng
-            </button>
-          )}
-          {isMember && (
-            <button
-              onClick={() => setShowJoinRoomModal(true)}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
-            >
-              <Key size={14} /> Vào phòng
             </button>
           )}
         </div>
@@ -858,57 +855,6 @@ export const Messaging: React.FC = () => {
                   className="flex-1 px-3 py-2 rounded-lg text-sm font-medium bg-red-500 text-white hover:bg-red-600 transition-colors"
                 >
                   Xóa
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Join Room Modal */}
-        {showJoinRoomModal && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50">
-            <div className="bg-white rounded-xl shadow-2xl w-96 p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-slate-800">Tham gia phòng</h3>
-                <button onClick={() => setShowJoinRoomModal(false)} className="text-slate-400 hover:text-slate-600">
-                  <X size={18} />
-                </button>
-              </div>
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">ID Phòng</label>
-                  <input
-                    type="text"
-                    value={joinRoomId}
-                    onChange={(e) => setJoinRoomId(e.target.value)}
-                    placeholder="Dán ID phòng cần tham gia"
-                    className="w-full bg-slate-100 border-none rounded-lg py-2.5 px-3 text-sm text-slate-700 placeholder-slate-400 outline-none focus:ring-2 focus:ring-blue-200"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">Mã bảo mật</label>
-                  <input
-                    type="password"
-                    value={joinRoomCode}
-                    onChange={(e) => setJoinRoomCode(e.target.value)}
-                    placeholder="Nhập mã bảo mật"
-                    className="w-full bg-slate-100 border-none rounded-lg py-2.5 px-3 text-sm text-slate-700 placeholder-slate-400 outline-none focus:ring-2 focus:ring-blue-200"
-                  />
-                </div>
-              </div>
-              <div className="flex gap-2 mt-4">
-                <button
-                  onClick={() => setShowJoinRoomModal(false)}
-                  className="flex-1 px-3 py-2 rounded-lg text-sm font-medium bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
-                >
-                  Hủy
-                </button>
-                <button
-                  onClick={handleJoinRoom}
-                  disabled={joiningRoom}
-                  className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium ${themeBg} text-white ${themeHover} transition-colors disabled:opacity-50`}
-                >
-                  {joiningRoom ? 'Đang tham gia...' : 'Tham gia'}
                 </button>
               </div>
             </div>

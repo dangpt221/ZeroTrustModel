@@ -1,20 +1,21 @@
 import mongoose from 'mongoose';
 
 const NotificationSchema = new mongoose.Schema({
-  userId: { 
-    type: mongoose.Schema.Types.ObjectId, 
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true 
+    required: true
   },
   title: { type: String, required: true },
   message: { type: String, required: true },
-  type: { 
-    type: String, 
+  type: {
+    type: String,
     enum: ['INFO', 'WARNING', 'ALERT', 'SUCCESS'],
-    default: 'INFO' 
+    default: 'INFO'
   },
   isRead: { type: Boolean, default: false },
-  priority: { type: String, enum: ['LOW', 'NORMAL', 'HIGH'], default: 'NORMAL' }
+  priority: { type: String, enum: ['LOW', 'NORMAL', 'HIGH'], default: 'NORMAL' },
+  isChatNotification: { type: Boolean, default: false }
 }, { timestamps: true });
 
 export const Notification = mongoose.model('Notification', NotificationSchema);

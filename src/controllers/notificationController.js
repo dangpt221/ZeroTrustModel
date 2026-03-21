@@ -6,6 +6,10 @@ export async function deleteNotification(req, res) {
   try {
     const { notificationId } = req.params;
 
+    if (!notificationId || notificationId === 'undefined') {
+      return res.status(400).json({ message: 'ID thông báo không hợp lệ' });
+    }
+
     const notification = await Notification.findByIdAndDelete(notificationId);
 
     if (!notification) {
@@ -95,27 +99,31 @@ export async function broadcastNotification(req, res) {
   }
 }
 
-// Admin: Lấy tất cả thông báo đã gửi
-export async function getAllNotifications(req, res) {
+// Admin: Lấy tất cả thông báo đã gửi (chỉ thông báo admin, không lấy chat)
+export async function getAllNotifications(_req, res) {
   try {
-    const notifications = await Notification.find()
+    const notifications = await Notification.find({ isChatNotification: { $ne: true } })
       .populate('userId', 'name email')
       .sort({ createdAt: -1 })
       .limit(100);
-    
+
     res.json(notifications);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 }
 
-// User: Lấy thông báo của mình
+// User: Lấy thông báo của mình (chỉ từ Admin, không lấy chat)
 export async function getMyNotifications(req, res) {
   try {
-    const notifications = await Notification.find({ userId: req.user.id })
+    const notifications = await Notification.find({
+      userId: req.user.id,
+      isChatNotification: { $ne: true }
+    })
+      .lean()
       .sort({ createdAt: -1 })
       .limit(50);
-    
+
     res.json(notifications);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -126,7 +134,7 @@ export async function getMyNotifications(req, res) {
 export async function markAsRead(req, res) {
   try {
     const { notificationId } = req.params;
-    
+
     await Notification.findOneAndUpdate(
       { _id: notificationId, userId: req.user.id },
       { isRead: true }
@@ -155,11 +163,12 @@ export async function markAllAsRead(req, res) {
 // User: Lấy số thông báo chưa đọc
 export async function getUnreadCount(req, res) {
   try {
-    const count = await Notification.countDocuments({ 
-      userId: req.user.id, 
-      isRead: false 
+    const count = await Notification.countDocuments({
+      userId: req.user.id,
+      isRead: false,
+      isChatNotification: { $ne: true }
     });
-    
+
     res.json({ unreadCount: count });
   } catch (err) {
     res.status(500).json({ message: err.message });

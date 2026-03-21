@@ -1,22 +1,21 @@
 
-import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '../context/AuthContext';
-import { ADMIN_NAVIGATION, MANAGER_NAVIGATION, STAFF_NAVIGATION, COLORS } from '../constants';
-import { NotificationDropdown } from './NotificationDropdown';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
-  Bell,
-  Search,
   ChevronDown,
-  Shield,
   LogOut,
-  User,
+  Search,
   Settings,
-  Activity,
+  Shield,
+  User,
   UserCheck
 } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { io } from 'socket.io-client';
+import { ADMIN_NAVIGATION, MANAGER_NAVIGATION, STAFF_NAVIGATION } from '../constants';
+import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types';
+import { NotificationDropdown } from './NotificationDropdown';
 
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
@@ -166,6 +165,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
           {/* Right - Profile & Notifications */}
           <div className="flex-1 flex items-center justify-end gap-6 min-w-0">
+            <ChatBadge />
             <NotificationDropdown />
 
             <div className="h-8 w-px bg-slate-200"></div>
@@ -236,6 +236,168 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           </motion.div>
         </main>
       </div>
+    </div>
+  );
+};
+
+// Chat notification badge - direct unread conversations with sender names + preview
+const ChatBadge: React.FC = () => {
+  const { user } = useAuth();
+  const [unreadChats, setUnreadChats] = useState<any[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Socket for real-time notifications
+  useEffect(() => {
+    if (!user) return;
+
+    const socket = io(window.location.origin, {
+      transports: ['polling', 'websocket'],
+      auth: { userId: user.id, userName: user.name },
+      query: { userId: user.id, userName: user.name },
+      withCredentials: false
+    });
+
+    socket.on('new_admin_message_notification', (data: any) => {
+      // Add to unread chats
+      setUnreadChats(prev => {
+        const existing = prev.find(c => c.userId === data.fromUserId);
+        if (existing) {
+          return prev.map(c =>
+            c.userId === data.fromUserId
+              ? { ...c, unreadCount: (c.unreadCount || 0) + 1, lastMessage: { ...c.lastMessage, text: data.preview } }
+              : c
+          );
+        }
+        return [{
+          userId: data.fromUserId,
+          id: data.conversationId,
+          name: data.fromUserName,
+          role: data.fromUserRole,
+          unreadCount: 1,
+          lastMessage: { text: data.preview, timestamp: new Date().toISOString() }
+        }, ...prev].slice(0, 5);
+      });
+    });
+
+    return () => { socket.disconnect(); };
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchUnreadConversations = async () => {
+      try {
+        const res = await fetch('/api/messaging/conversations', {
+          credentials: 'include'
+        });
+        if (!res.ok) throw new Error('Failed to fetch conversations');
+        const data = await res.json();
+        const chats = data.conversations || [];
+        // Filter unread only, dedup by userId, sort recent
+        const unread = chats
+          .filter((c: any) => c.unreadCount > 0)
+          .sort((a: any, b: any) => new Date(b.lastMessage?.timestamp || 0).getTime() - new Date(a.lastMessage?.timestamp || 0).getTime())
+          .slice(0, 5);
+        setUnreadChats(unread);
+      } catch (err) {
+        console.error('[ChatBadge] fetchConversations error:', err);
+      }
+    };
+
+    fetchUnreadConversations();
+    const interval = setInterval(fetchUnreadConversations, 5000);
+    return () => clearInterval(interval);
+  }, [user]);
+
+  // Close dropdown outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen]);
+
+  const handleOpenChat = (userId: string) => {
+    localStorage.setItem('openDMWithUserId', userId);
+    setIsOpen(false);
+    window.location.href = '/messaging';
+  };
+
+  if (unreadChats.length === 0) return null;
+
+  const totalUnread = unreadChats.reduce((sum: number, c: any) => sum + (c.unreadCount || 0), 0);
+  const sendersPreview = unreadChats.slice(0, 3).map((c: any) => c.name).join(', ');
+
+  return (
+    <div ref={dropdownRef} className="relative">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="relative p-3 bg-red-50 text-red-500 hover:bg-red-100 rounded-2xl transition-all animate-pulse shadow-lg"
+        title={`Tin nhắn mới (${totalUnread}): ${sendersPreview}`}
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
+        <span className="absolute -top-1 -right-1 min-w-[20px] h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+          {totalUnread > 9 ? '9+' : totalUnread}
+        </span>
+      </button>
+
+      {isOpen && (
+        <div className="absolute right-0 top-full mt-2 w-96 bg-white/95 backdrop-blur-xl border border-slate-100/50 rounded-3xl shadow-2xl z-[100] overflow-hidden">
+          <div className="p-4 border-b border-slate-100 bg-gradient-to-r from-red-50 to-orange-50">
+            <h4 className="font-bold text-slate-800 text-sm">💬 Tin nhắn chưa đọc ({totalUnread})</h4>
+            <p className="text-xs text-slate-500 mt-1">Nhấn để mở chat trực tiếp</p>
+          </div>
+          <div className="max-h-96 overflow-y-auto">
+            {unreadChats.map((chat: any) => (
+              <button
+                key={chat.userId || chat.id}
+                onClick={() => handleOpenChat(chat.userId)}
+                className="w-full p-4 border-b border-slate-50 last:border-b-0 hover:bg-gradient-to-r hover:from-red-50 hover:to-orange-50 transition-all text-left flex items-start gap-3 group"
+              >
+                <div className="w-11 h-11 bg-gradient-to-br from-red-100 to-orange-100 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                  </svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="text-sm font-bold text-slate-900 truncate max-w-[200px]">{chat.name}</p>
+                    <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-medium">
+                      {chat.unreadCount || 0}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-600 line-clamp-1 mb-1">
+                    {chat.lastMessage?.text?.substring(0, 60) || 'Tin nhắn mới'}…
+                  </p>
+                  <span className="text-[10px] text-slate-400">
+                    {new Date(chat.lastMessage?.timestamp || chat.updatedAt).toLocaleString('vi-VN', {
+                      hour: '2-digit', minute: '2-digit'
+                    })}
+                  </span>
+                </div>
+                <div className="flex flex-col items-end gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </div>
+              </button>
+            ))}
+            {unreadChats.length === 0 && (
+              <div className="p-8 text-center text-slate-400 text-sm py-12">
+                Không có tin nhắn mới
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

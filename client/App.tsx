@@ -13,14 +13,11 @@ import { ZeroTrustSettings } from './pages/Admin/ZeroTrustSettings';
 import { ManagerDashboard } from './pages/Manager/ManagerDashboard';
 import { StaffManagement } from './pages/Manager/StaffManagement';
 import { DepartmentDocuments } from './pages/Manager/DepartmentDocuments';
-import { ManagerReports } from './pages/Manager/ManagerReports';
-import { ManagerApprovals } from './pages/Manager/ManagerApprovals';
 import { TeamManagement } from './pages/TeamManagement';
 import { StaffDashboard } from './pages/Staff/StaffDashboard';
 import { StaffActivity } from './pages/Staff/StaffActivity';
 import { StaffProfile } from './pages/Staff/StaffProfile';
 import { Messaging } from './pages/Messaging';
-import { Attendance } from './pages/Attendance';
 import { ProjectDetail } from './pages/ProjectDetail';
 import { AuditLogs } from './pages/AuditLogs';
 import { UserRole } from './types';
@@ -116,18 +113,6 @@ const App: React.FC = () => {
             </PrivateRoute>
           } />
 
-          <Route path="/manager/reports" element={
-            <PrivateRoute roles={[UserRole.ADMIN, UserRole.MANAGER]}>
-              <Layout><ManagerReports /></Layout>
-            </PrivateRoute>
-          } />
-
-          <Route path="/manager/approvals" element={
-            <PrivateRoute roles={[UserRole.ADMIN, UserRole.MANAGER]}>
-              <Layout><ManagerApprovals /></Layout>
-            </PrivateRoute>
-          } />
-
           <Route path="/manager/teams" element={
             <PrivateRoute roles={[UserRole.ADMIN, UserRole.MANAGER]}>
               <Layout><TeamManagement /></Layout>
@@ -154,13 +139,6 @@ const App: React.FC = () => {
               <Layout><Messaging /></Layout>
             </PrivateRoute>
           } />
-
-          <Route path="/attendance" element={
-            <PrivateRoute>
-              <Layout><Attendance /></Layout>
-            </PrivateRoute>
-          } />
-
           <Route path="/projects/:id" element={
             <PrivateRoute>
               <Layout><ProjectDetail /></Layout>

@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from '../context/AuthContext';
+import { notificationsApi } from '../api';
 
 export interface ChatAttachment {
   url: string;
@@ -58,8 +59,6 @@ export interface Conversation {
   userId: string;
 }
 
-const SOCKET_URL = '';
-
 export function useChat() {
   const { user } = useAuth();
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -113,9 +112,8 @@ export function useChat() {
   useEffect(() => {
     if (!user) return;
 
-    const newSocket = io(SOCKET_URL, {
-      withCredentials: true,
-      transports: ['websocket', 'polling'],
+    const newSocket = io(window.location.origin, {
+      transports: ['polling', 'websocket'],
       auth: { userId: user.id, userName: user.name },
       query: { userId: user.id, userName: user.name }
     });
@@ -184,7 +182,7 @@ export function useChat() {
     });
 
     // Mentioned notification
-    newSocket.on('mentioned', ({ message, mentionedBy }) => {
+    newSocket.on('mentioned', ({ mentionedBy }) => {
       console.log(`${mentionedBy} mentioned you in a message`);
     });
 
@@ -233,13 +231,23 @@ export function useChat() {
       socketRef.current.emit('send_message', {
         userId: currentUser.id,
         userName: currentUser.name,
+        userRole: currentUser.role,
         text,
         room: roomId,
         parentMessageId,
         attachments
       });
+      // Create chat notification for admin if sender is MANAGER or STAFF
+      if (currentUser.role === 'MANAGER' || currentUser.role === 'STAFF') {
+        console.log('[useChat] Creating chat notification for admin, role:', currentUser.role, 'roomId:', roomId);
+        notificationsApi.createChatNotification({
+          roomId,
+          messagePreview: text.substring(0, 50)
+        }).then(res => console.log('[useChat] createChatNotification success:', res))
+          .catch(err => console.error('Failed to create chat notification:', err));
+      }
     } else {
-      // Fallback: send via REST API
+      // Fallback: send via REST API (only when socket is disconnected)
       fetch(`/api/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

@@ -63,5 +63,6 @@ router.post("/rooms/:id/regenerate-code", requireRole(["ADMIN", "MANAGER"]), cha
 // Admin chat with users - ADMIN/MANAGER
 router.get("/chat/messages/:userId", requireRole(["ADMIN", "MANAGER"]), chatController.getAdminChatMessages);
 router.post("/chat/messages/:userId", requireRole(["ADMIN", "MANAGER"]), chatController.sendAdminChatMessage);
+router.delete("/chat/messages/:messageId", requireRole(["ADMIN", "MANAGER"]), chatController.deleteAdminChatMessage);
 
 export default router;

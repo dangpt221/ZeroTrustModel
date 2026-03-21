@@ -588,4 +588,9 @@ export const chatManagementApi = {
       method: 'POST',
       body: JSON.stringify({ text }),
     }),
+
+  deleteAdminChatMessage: (messageId: string) =>
+    apiRequest<{ success: boolean }>(`/chat/chat/messages/${messageId}`, {
+      method: 'DELETE',
+    }),
 };
