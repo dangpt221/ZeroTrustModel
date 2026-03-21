@@ -227,6 +227,7 @@ export interface Notification {
   message: string;
   type: NotificationType | string;
   priority?: 'LOW' | 'NORMAL' | 'HIGH';
+  link?: string;
   read?: boolean;
   isRead?: boolean;
   userId?: string | { _id: string; name: string; email: string };

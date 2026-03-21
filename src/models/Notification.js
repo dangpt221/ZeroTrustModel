@@ -15,6 +15,7 @@ const NotificationSchema = new mongoose.Schema({
   },
   isRead: { type: Boolean, default: false },
   priority: { type: String, enum: ['LOW', 'NORMAL', 'HIGH'], default: 'NORMAL' },
+  link: { type: String, default: '' },
   isChatNotification: { type: Boolean, default: false }
 }, { timestamps: true });
 

@@ -183,6 +183,7 @@ export function registerMessageRoutes(router) {
       if (roomId) filter.room = roomId;
 
       const msgs = await Message.find(filter)
+        .populate('parentMessageId', 'text userName')
         .sort({ createdAt: -1 })
         .limit(100)
         .lean();
@@ -193,16 +194,18 @@ export function registerMessageRoutes(router) {
           const isRead = m.readBy?.some(r => r.userId.toString() === currentUserId);
           return {
             id: m._id.toString(),
-            userId: m.userId?.toString?.() || m.userId,
+            userId: m.userId?._id ? m.userId._id.toString() : (m.userId?.toString?.() || m.userId),
             userName: m.userName || 'Ẩn danh',
-            userAvatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(m.userName || 'default')}`,
+            userAvatar: m.userId?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(m.userName || 'default')}`,
             text: m.text || '',
             room: m.room || 'general',
             timestamp: m.createdAt ? new Date(m.createdAt).toISOString() : new Date().toISOString(),
             reactions: m.reactions || [],
             isEdited: m.isEdited || false,
             editedAt: m.editedAt ? new Date(m.editedAt).toISOString() : null,
-            parentMessageId: m.parentMessageId?.toString() || null,
+            parentMessageId: m.parentMessageId ? m.parentMessageId._id.toString() : null,
+            parentMessageText: m.parentMessageId?.text || null,
+            parentMessageUserName: m.parentMessageId?.userName || null,
             replyCount: m.replyCount || 0,
             isRead: isRead || m.userId?.toString() === currentUserId,
             readCount: m.readBy?.length || 0,
@@ -260,7 +263,8 @@ export function registerMessageRoutes(router) {
         });
       }
 
-      const userAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(req.user.name || 'default')}`;
+      const sender = await User.findById(req.user.id).select('avatar').lean();
+      const userAvatar = sender?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(req.user.name || 'default')}`;
 
       const messageData = {
         id: msg._id.toString(),
@@ -343,15 +347,18 @@ export function registerMessageRoutes(router) {
       const replies = await Message.find({
         parentMessageId: messageId,
         isDeleted: { $ne: true }
-      }).sort({ createdAt: 1 }).lean();
+      })
+        .populate('userId', 'avatar')
+        .sort({ createdAt: 1 })
+        .lean();
 
       const currentUserId = req.user.id;
       res.json(
         replies.map((m) => ({
           id: m._id.toString(),
-          userId: m.userId?.toString?.() || m.userId,
+          userId: m.userId?._id ? m.userId._id.toString() : (m.userId?.toString?.() || m.userId),
           userName: m.userName || 'Ẩn danh',
-          userAvatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(m.userName || 'default')}`,
+          userAvatar: m.userId?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(m.userName || 'default')}`,
           text: m.text || '',
           timestamp: m.createdAt ? new Date(m.createdAt).toISOString() : new Date().toISOString(),
           reactions: m.reactions || [],
@@ -569,6 +576,7 @@ export function registerMessageRoutes(router) {
       }
 
       const messages = await Message.find(query)
+        .populate('userId', 'avatar')
         .sort({ createdAt: -1 })
         .limit(50)
         .lean();
@@ -577,9 +585,9 @@ export function registerMessageRoutes(router) {
       res.json({
         messages: messages.map((m) => ({
           id: m._id.toString(),
-          userId: m.userId?.toString?.() || m.userId,
+          userId: m.userId?._id ? m.userId._id.toString() : (m.userId?.toString?.() || m.userId),
           userName: m.userName || 'Ẩn danh',
-          userAvatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(m.userName || 'default')}`,
+          userAvatar: m.userId?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(m.userName || 'default')}`,
           text: m.text || '',
           room: m.room || 'general',
           timestamp: m.createdAt ? new Date(m.createdAt).toISOString() : new Date().toISOString(),

@@ -59,14 +59,23 @@ export function registerSocketHandlers(io) {
           hasAttachments: (attachments && attachments.length > 0) || false
         });
 
+        let parentMessageText = null;
+        let parentMessageUserName = null;
+
         // Update parent message reply count
         if (parentMessageId) {
-          await Message.findByIdAndUpdate(parentMessageId, {
+          const parentMsg = await Message.findByIdAndUpdate(parentMessageId, {
             $inc: { replyCount: 1 }
-          });
-        }
+          }).select('text userName').lean();
 
-        const userAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(userName || 'default')}`;
+          if (parentMsg) {
+            parentMessageText = parentMsg.text;
+            parentMessageUserName = parentMsg.userName;
+          }
+        }
+        
+        const sender = await User.findById(userId).select('avatar').lean();
+        const userAvatar = sender?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(userName || 'default')}`;
 
         const data = {
           id: msg._id.toString(),
@@ -79,6 +88,8 @@ export function registerSocketHandlers(io) {
           reactions: [],
           isEdited: false,
           parentMessageId: parentMessageId || null,
+          parentMessageText,
+          parentMessageUserName,
           replyCount: 0,
           isRead: false,
           readCount: 0,

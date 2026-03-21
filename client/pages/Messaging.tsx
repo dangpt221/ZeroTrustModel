@@ -148,6 +148,23 @@ export const Messaging: React.FC = () => {
     fetchData();
   }, []);
 
+  // Listen for custom SPA navigation events from ChatBadge
+  useEffect(() => {
+    const handleOpenChatEvent = async (e: any) => {
+      const { userId } = e.detail;
+      if (userId) {
+        console.log('[Messaging] open_chat event received for userId:', userId);
+        setActiveTab('dms');
+        const conv = await createConversation(userId);
+        if (conv) {
+          joinRoom(conv.id);
+        }
+      }
+    };
+    window.addEventListener('open_chat', handleOpenChatEvent);
+    return () => window.removeEventListener('open_chat', handleOpenChatEvent);
+  }, [createConversation, joinRoom]);
+
   // Fetch Messages when Active Room changes
   useEffect(() => {
     if (!activeRoom) return;
@@ -904,29 +921,38 @@ export const Messaging: React.FC = () => {
                       transition={{ duration: 0.2 }}
                       className={`flex gap-3 group ${isMe ? 'flex-row-reverse' : ''}`}
                     >
-                      {!isMe && (
-                        <div className="shrink-0">
-                          {showAvatar ? (
-                            <img src={avatarUrl} alt={msg.userName} className="w-8 h-8 rounded-lg bg-slate-200 object-cover" />
-                          ) : (
-                            <div className="w-8" />
-                          )}
-                        </div>
-                      )}
+                      <div className="shrink-0">
+                        {showAvatar ? (
+                          <img src={avatarUrl} alt={msg.userName} className="w-8 h-8 rounded-lg bg-slate-200 object-cover" />
+                        ) : (
+                          <div className="w-8" />
+                        )}
+                      </div>
                       <div className={`max-w-[70%] space-y-1 ${isMe ? 'items-end' : 'items-start'}`}>
-                        {showAvatar && !isMe && (
-                          <div className="flex items-center gap-2 ml-1">
+                        {showAvatar && (
+                          <div className={`flex items-center gap-2 ${isMe ? 'flex-row-reverse mr-1' : 'ml-1'}`}>
                             <p className="text-xs font-semibold text-slate-600">{msg.userName}</p>
                             <p className="text-[10px] text-slate-400">{formatTime(msg.timestamp)}</p>
                           </div>
                         )}
                         <div className="relative group/menu">
+                          {/* Replied Message Block */}
+                          {msg.parentMessageText && (
+                            <div className={`mb-1 flex ${isMe ? 'justify-end pr-2' : 'justify-start pl-2'}`}>
+                              <div className={`text-xs px-3 py-1.5 rounded-xl opacity-80 cursor-pointer hover:opacity-100 transition-opacity ${
+                                isMe ? 'bg-black/10 text-slate-700' : 'bg-slate-200/80 text-slate-600'
+                              }`}>
+                                <p className="font-semibold truncate max-w-[200px] mb-0.5">{msg.parentMessageUserName || 'Người dùng'}</p>
+                                <p className="truncate max-w-[200px]">{msg.parentMessageText}</p>
+                              </div>
+                            </div>
+                          )}
                           <motion.div
                             whileHover={{ scale: 1.01 }}
-                            className={`px-4 py-2.5 rounded-2xl text-sm ${
+                            className={`px-4 py-2.5 text-sm ${
                               isMe
-                                ? `${themeBg} text-white rounded-br-sm`
-                                : 'bg-white text-slate-700 rounded-bl-sm shadow-sm border border-slate-100'
+                                ? `${themeBg} text-white rounded-2xl rounded-tr-sm`
+                                : 'bg-white text-slate-700 rounded-2xl rounded-tl-sm shadow-sm border border-slate-100'
                             }`}
                           >
                             {msg.text}
