@@ -10,7 +10,7 @@ import {
   UserCheck
 } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { ADMIN_NAVIGATION, MANAGER_NAVIGATION, STAFF_NAVIGATION } from '../constants';
 import { useAuth } from '../context/AuthContext';
@@ -224,13 +224,13 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         </header>
 
         {/* Page Content */}
-        <main className={`flex-1 overflow-y-auto bg-[#fbfcfd] flex flex-col ${location.pathname.includes('/messaging') ? '' : 'p-8 lg:p-10'}`}>
+        <main className={`flex-1 bg-[#fbfcfd] flex flex-col ${location.pathname.includes('/messaging') ? 'overflow-hidden' : 'overflow-y-auto p-8 lg:p-10'}`}>
           <motion.div
             key={location.pathname}
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
-            className="flex-1 flex flex-col"
+            className={`flex-1 flex flex-col ${location.pathname.includes('/messaging') ? 'min-h-0 overflow-hidden' : ''}`}
           >
             {children}
           </motion.div>
@@ -243,6 +243,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 // Chat notification badge - direct unread conversations with sender names + preview
 const ChatBadge: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [unreadChats, setUnreadChats] = useState<any[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -326,7 +327,8 @@ const ChatBadge: React.FC = () => {
   const handleOpenChat = (userId: string) => {
     localStorage.setItem('openDMWithUserId', userId);
     setIsOpen(false);
-    window.location.href = '/messaging';
+    window.dispatchEvent(new CustomEvent('open_chat', { detail: { userId } }));
+    navigate('/messaging');
   };
 
   if (unreadChats.length === 0) return null;

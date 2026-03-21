@@ -1,8 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { io, Socket } from 'socket.io-client';
 import { chatManagementApi, usersApi } from '../../api';
 import { usePermission } from '../../hooks/usePermission';
-import { Search, MessageSquare, Users, Lock, Unlock, Trash2, Send, Download, Settings, Filter, Eye, X, Plus, Minus, MessageCircle, Mail, Smile } from 'lucide-react';
+import { Search, MessageSquare, Users, Lock, Unlock, Trash2, Send, Download, Settings, Filter, Eye, X, Plus, Minus, Mail } from 'lucide-react';
 import { Modal } from '../../components/Admin/Modal';
 import { useAuth } from '../../context/AuthContext';
 
@@ -62,23 +61,22 @@ export const ChatManagement: React.FC = () => {
   // User list for adding members
   const [users, setUsers] = useState<any[]>([]);
 
-  // Admin Chat state
-  const [adminChatMessages, setAdminChatMessages] = useState<any[]>([]);
-  const [adminChatInput, setAdminChatInput] = useState('');
-  const [selectedChatUser, setSelectedChatUser] = useState<any>(null);
-  const [adminChatSearch, setAdminChatSearch] = useState('');
-  const [adminChatLoading, setAdminChatLoading] = useState(false);
-  const adminChatScrollRef = useRef<HTMLDivElement>(null);
-  const adminChatInputRef = useRef<HTMLInputElement>(null);
-  const [showAdminStickerPanel, setShowAdminStickerPanel] = useState(false);
-  const [showAdminEmojiPicker, setShowAdminEmojiPicker] = useState<string | null>(null);
-  const [adminReactions, setAdminReactions] = useState<Record<string, { emoji: string; userId: string }[]>>({});
-  const [adminConversationId, setAdminConversationId] = useState<string | null>(null);
-  const [adminSocket, setAdminSocket] = useState<Socket | null>(null);
-  const [pendingChatNotification, setPendingChatNotification] = useState<Record<string, any>>({});
-
   // Toast notification state
   const [toasts, setToasts] = useState<any[]>([]);
+
+  // Admin chat state
+  const [adminChatSearch, setAdminChatSearch] = useState('');
+  const [selectedChatUser, setSelectedChatUser] = useState<any>(null);
+  const [adminChatMessages, setAdminChatMessages] = useState<any[]>([]);
+  const [adminChatInput, setAdminChatInput] = useState('');
+  const [adminChatLoading, setAdminChatLoading] = useState(false);
+  const [adminConversationId, setAdminConversationId] = useState<string | null>(null);
+  const [adminSocket, setAdminSocket] = useState<any>(null);
+  const [pendingChatNotification, setPendingChatNotification] = useState<Record<string, any>>({});
+  const [showAdminStickerPanel, setShowAdminStickerPanel] = useState(false);
+  const [adminReactions, setAdminReactions] = useState<Record<string, any[]>>({});
+  const adminChatScrollRef = useRef<HTMLDivElement>(null);
+  const adminChatInputRef = useRef<HTMLInputElement>(null);
 
 // Sticker categories
 const ADMIN_COMMON_EMOJIS = ['👍', '❤️', '😮', '😢', '😠', '😂'];
@@ -453,26 +451,6 @@ const ADMIN_COMMON_EMOJIS = ['👍', '❤️', '😮', '😢', '😠', '😂'];
             >
               <Settings size={16} className="inline mr-2" />
               Cau hinh
-            </button>
-            <button
-              onClick={() => {
-                setActiveTab('adminchat');
-                // Clear all notifications when opening tab
-                setPendingChatNotification({});
-              }}
-              className={`px-4 py-2 font-bold text-sm border-b-2 transition-colors ${
-                activeTab === 'adminchat'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              <MessageCircle size={16} className="inline mr-2" />
-              Nhan tin Admin
-              {Object.keys(pendingChatNotification).length > 0 && (
-                <span className="ml-1.5 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                  {Object.keys(pendingChatNotification).length}
-                </span>
-              )}
             </button>
           </>
         )}
@@ -977,180 +955,92 @@ const ADMIN_COMMON_EMOJIS = ['👍', '❤️', '😮', '😢', '😠', '😂'];
             </div>
 
             {/* Chat area */}
-            <div className="flex-1 flex flex-col">
-              {selectedChatUser ? (
-                <>
-                  {/* Chat header */}
-                  <div className="p-4 border-b border-slate-100 bg-slate-50">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
-                        {selectedChatUser.name?.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <p className="font-bold text-slate-700">{selectedChatUser.name}</p>
-                        <p className="text-xs text-slate-400">{selectedChatUser.email}</p>
-                      </div>
+            {selectedChatUser ? (
+              <div className="flex-1 flex flex-col">
+                {/* Messages */}
+                <div ref={adminChatScrollRef} className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50">
+                  {adminChatLoading ? (
+                    <div className="text-center text-slate-400 py-8">Dang tai tin nhan...</div>
+                  ) : adminChatMessages.length === 0 ? (
+                    <div className="text-center text-slate-400 py-8">
+                      <MessageCircle size={40} className="mx-auto mb-2 opacity-40" />
+                      <p>Chua co tin nhan nao</p>
+                      <p className="text-xs mt-1">Bat dau cuoc tro chuyen voi {selectedChatUser.name}</p>
                     </div>
-                  </div>
-
-                  {/* Messages */}
-                  <div ref={adminChatScrollRef} className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50">
-                    {adminChatLoading ? (
-                      <div className="text-center text-slate-400 py-8">Dang tai tin nhan...</div>
-                    ) : adminChatMessages.length === 0 ? (
-                      <div className="text-center text-slate-400 py-8">
-                        <MessageCircle size={40} className="mx-auto mb-2 opacity-40" />
-                        <p>Chua co tin nhan nao</p>
-                        <p className="text-xs mt-1">Bat dau cuoc tro chuyen voi {selectedChatUser.name}</p>
-                      </div>
-                    ) : (
-                      adminChatMessages.map(msg => {
-                        const isMe = msg.userId === user?.id;
-                        const timeValue = msg.timestamp || msg.createdAt;
-                        const displayTime = timeValue
-                          ? new Date(timeValue).toLocaleString('vi-VN')
-                          : 'Vừa xong';
-                        return (
-                          <div
-                            key={msg.id}
-                            className={`flex ${isMe ? 'justify-end' : 'justify-start'} group`}
-                          >
-                            <div className={`relative max-w-[70%] ${isMe ? 'order-2' : 'order-1'}`}>
-                              <div
-                                className={`px-4 py-2.5 rounded-2xl text-sm ${
-                                  isMe
-                                    ? 'bg-blue-600 text-white rounded-br-sm'
-                                    : 'bg-white text-slate-700 rounded-bl-sm shadow-sm border border-slate-100'
-                                }`}
-                              >
-                                <p>{msg.text}</p>
-                                <p className={`text-[10px] mt-1 ${isMe ? 'text-blue-100' : 'text-slate-400'}`}>
-                                  {displayTime}
-                                </p>
-                              </div>
-                              {/* Action buttons */}
-                              <div className={`absolute top-1/2 ${isMe ? '-left-12' : '-right-12'} flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity`}>
-                                <button
-                                  onClick={() => {
-                                    if (showAdminEmojiPicker === msg.id) {
-                                      setShowAdminEmojiPicker(null);
-                                    } else {
-                                      setShowAdminEmojiPicker(msg.id);
-                                    }
-                                  }}
-                                  className="p-1.5 bg-white rounded-full shadow border border-slate-200 hover:bg-slate-50 transition-colors"
-                                >
-                                  <Smile size={14} className="text-slate-400" />
-                                </button>
-                                {(isSuperAdmin || isAdmin) && (
-                                  <button
-                                    onClick={async () => {
-                                      if (!confirm('Xóa tin nhắn này?')) return;
-                                      try {
-                                        await chatManagementApi.deleteAdminChatMessage(msg.id);
-                                        setAdminChatMessages(prev => prev.filter(m => m.id !== msg.id));
-                                      } catch (error) {
-                                        console.error('Error deleting message:', error);
-                                        alert('Không thể xóa tin nhắn');
-                                      }
-                                    }}
-                                    className="p-1.5 bg-white rounded-full shadow border border-slate-200 hover:bg-red-50 transition-colors"
-                                  >
-                                    <Trash2 size={14} className="text-red-400" />
-                                  </button>
-                                )}
-                              </div>
-                              {/* Emoji picker */}
-                              {showAdminEmojiPicker === msg.id && (
-                                <div className={`absolute ${isMe ? 'left-0' : 'right-0'} -bottom-10 bg-white rounded-lg shadow-lg border border-slate-200 p-2 flex gap-1 z-20`}>
-                                  {['👍', '❤️', '😮', '😢', '😠', '😂'].map(emoji => (
-                                    <button
-                                      key={emoji}
-                                      onClick={() => {
-                                        setAdminReactions(prev => {
-                                          const current = prev[msg.id] || [];
-                                          const existing = current.find(r => r.emoji === emoji && r.userId === user?.id);
-                                          if (existing) {
-                                            return { ...prev, [msg.id]: current.filter(r => !(r.emoji === emoji && r.userId === user?.id)) };
-                                          }
-                                          return { ...prev, [msg.id]: [...current, { emoji, userId: user?.id || '' }] };
-                                        });
-                                        setShowAdminEmojiPicker(null);
-                                      }}
-                                      className="p-1 hover:bg-slate-100 rounded text-sm transition-all hover:scale-125"
-                                    >
-                                      {emoji}
-                                    </button>
-                                  ))}
-                                </div>
-                              )}
-                              {/* Reactions display */}
-                              {adminReactions[msg.id] && adminReactions[msg.id].length > 0 && (
-                                <div className={`flex gap-1 flex-wrap ${isMe ? 'justify-end' : 'justify-start'} mt-1`}>
-                                  {adminReactions[msg.id].map((reaction, i) => (
-                                    <span key={i} className="px-1.5 py-0.5 bg-slate-100 rounded-full text-xs">{reaction.emoji}</span>
-                                  ))}
-                                </div>
-                              )}
+                  ) : (
+                    adminChatMessages.map((msg: any, idx: number) => {
+                      const isMe = msg.userId === user?.id;
+                      return (
+                        <div key={msg.id || idx} className={`flex gap-3 ${isMe ? 'flex-row-reverse' : ''}`}>
+                          <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs shrink-0">
+                            {msg.userName?.charAt(0).toUpperCase() || '?'}
+                          </div>
+                          <div className={`max-w-[70%] space-y-1 ${isMe ? 'items-end' : 'items-start'}`}>
+                            <div className={`flex items-center gap-2 ${isMe ? 'flex-row-reverse mr-1' : 'ml-1'}`}>
+                              <p className="text-xs font-semibold text-slate-600">{msg.userName}</p>
+                              <p className="text-[10px] text-slate-400">{msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : ''}</p>
+                            </div>
+                            <div className={`px-4 py-2.5 text-sm ${isMe ? 'bg-blue-500 text-white rounded-2xl rounded-tr-sm' : 'bg-white text-slate-700 rounded-2xl rounded-tl-sm shadow-sm border border-slate-100'}`}>
+                              {msg.text}
                             </div>
                           </div>
-                        );
-                      })
-                    )}
-                  </div>
-
-                  {/* Input */}
-                  <div className="p-4 border-t border-slate-200 bg-white">
-                    {showAdminStickerPanel && (
-                      <div className="mb-3 bg-white border border-slate-200 rounded-xl shadow-lg p-3 flex gap-2 flex-wrap">
-                        {ADMIN_COMMON_EMOJIS.map((emoji) => (
-                          <button
-                            key={emoji}
-                            onClick={() => {
-                              setAdminChatInput(prev => prev + emoji);
-                              setShowAdminStickerPanel(false);
-                            }}
-                            className="w-10 h-10 flex items-center justify-center text-2xl hover:bg-slate-100 rounded-lg transition-all hover:scale-110"
-                          >
-                            {emoji}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setShowAdminStickerPanel(!showAdminStickerPanel)}
-                        className="p-2.5 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
-                      >
-                        <Smile size={18} className="text-slate-500" />
-                      </button>
-                      <input
-                        ref={adminChatInputRef}
-                        type="text"
-                        placeholder={`Nhan tin cho ${selectedChatUser.name}...`}
-                        value={adminChatInput}
-                        onChange={(e) => setAdminChatInput(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleSendAdminChat()}
-                        className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-200"
-                      />
-                      <button
-                        onClick={handleSendAdminChat}
-                        disabled={!adminChatInput.trim()}
-                        className="bg-blue-600 text-white px-4 py-2.5 rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-colors"
-                      >
-                        <Send size={18} />
-                      </button>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div className="flex-1 flex flex-col items-center justify-center text-slate-400">
-                  <MessageCircle size={60} className="mb-4 opacity-30" />
-                  <p className="font-medium">Chon nguoi dung de bat dau chat</p>
-                  <p className="text-sm mt-1">Chon mot nguoi tu danh sach ben trai</p>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
-              )}
-            </div>
+
+                {/* Input */}
+                <div className="p-4 border-t border-slate-200 bg-white">
+                  {showAdminStickerPanel && (
+                    <div className="mb-3 bg-white border border-slate-200 rounded-xl shadow-lg p-3 flex gap-2 flex-wrap">
+                      {ADMIN_COMMON_EMOJIS.map((emoji) => (
+                        <button
+                          key={emoji}
+                          onClick={() => {
+                            setAdminChatInput(prev => prev + emoji);
+                            setShowAdminStickerPanel(false);
+                          }}
+                          className="w-10 h-10 flex items-center justify-center text-2xl hover:bg-slate-100 rounded-lg transition-all hover:scale-110"
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setShowAdminStickerPanel(!showAdminStickerPanel)}
+                      className="p-2.5 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
+                    >
+                      <Smile size={18} className="text-slate-500" />
+                    </button>
+                    <input
+                      ref={adminChatInputRef}
+                      type="text"
+                      placeholder={`Nhan tin cho ${selectedChatUser.name}...`}
+                      value={adminChatInput}
+                      onChange={(e) => setAdminChatInput(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleSendAdminChat()}
+                      className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-200"
+                    />
+                    <button
+                      onClick={handleSendAdminChat}
+                      disabled={!adminChatInput.trim()}
+                      className="bg-blue-600 text-white px-4 py-2.5 rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                    >
+                      <Send size={18} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center text-slate-400">
+                <MessageCircle size={60} className="mb-4 opacity-30" />
+                <p className="font-medium">Chon nguoi dung de bat dau chat</p>
+                <p className="text-sm mt-1">Chon mot nguoi tu danh sach ben trai</p>
+              </div>
+            )}
           </div>
         </div>
       )}

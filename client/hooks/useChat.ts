@@ -22,6 +22,8 @@ export interface ChatMessage {
   isEdited?: boolean;
   editedAt?: string;
   parentMessageId?: string | null;
+  parentMessageText?: string | null;
+  parentMessageUserName?: string | null;
   replyCount?: number;
   isRead?: boolean;
   readCount?: number;

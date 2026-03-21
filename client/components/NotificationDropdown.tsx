@@ -1,9 +1,11 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Bell, Check, CheckCheck, AlertTriangle, Info, CheckCircle } from 'lucide-react';
 import { notificationsApi } from '../api';
 import { Notification } from '../types';
 
 export const NotificationDropdown: React.FC = () => {
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -109,9 +111,18 @@ export const NotificationDropdown: React.FC = () => {
               notifications.slice(0, 10).map((notif) => (
                 <div
                   key={notif._id || notif.id}
+                  onClick={() => {
+                    if (!notif.isRead) {
+                      handleMarkAsRead(notif._id || notif.id);
+                    }
+                    if (notif.link) {
+                      navigate(notif.link);
+                      setIsOpen(false);
+                    }
+                  }}
                   className={`p-4 border-b border-slate-50 hover:bg-slate-50 transition-colors ${
                     !notif.isRead ? 'bg-blue-50/50' : ''
-                  }`}
+                  } ${notif.link ? 'cursor-pointer' : ''}`}
                 >
                   <div className="flex items-start gap-3">
                     <div className="mt-0.5">{getTypeIcon(notif.type)}</div>

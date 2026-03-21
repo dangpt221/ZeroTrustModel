@@ -25,7 +25,7 @@ export async function deleteNotification(req, res) {
 // Admin: Gửi thông báo cho user
 export async function createNotification(req, res) {
   try {
-    const { userId, title, message, type, priority } = req.body;
+    const { userId, title, message, type, priority, link } = req.body;
     
     // Validate user exists
     const user = await User.findById(userId);
@@ -38,7 +38,8 @@ export async function createNotification(req, res) {
       title,
       message,
       type: type || 'INFO',
-      priority: priority || 'NORMAL'
+      priority: priority || 'NORMAL',
+      link: link || ''
     });
 
     // Emit socket event for real-time notification
@@ -56,7 +57,7 @@ export async function createNotification(req, res) {
 // Admin: Gửi thông báo cho nhiều user
 export async function broadcastNotification(req, res) {
   try {
-    const { userIds, title, message, type, priority, sendToAll } = req.body;
+    const { userIds, title, message, type, priority, link, sendToAll } = req.body;
 
     let targetUserIds = userIds;
 
@@ -76,7 +77,8 @@ export async function broadcastNotification(req, res) {
         title,
         message,
         type: type || 'INFO',
-        priority: priority || 'NORMAL'
+        priority: priority || 'NORMAL',
+        link: link || ''
       }))
     );
 
@@ -85,7 +87,7 @@ export async function broadcastNotification(req, res) {
     if (io) {
       targetUserIds.forEach(userId => {
         io.to(`user_${userId}`).emit('notification', {
-          title, message, type, priority
+          title, message, type, priority, link: link || ''
         });
       });
     }

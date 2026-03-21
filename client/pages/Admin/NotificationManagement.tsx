@@ -19,7 +19,8 @@ export const NotificationManagement: React.FC = () => {
     title: '',
     message: '',
     type: 'INFO',
-    priority: 'NORMAL'
+    priority: 'NORMAL',
+    link: ''
   });
   const [broadcastData, setBroadcastData] = useState({
     userIds: [] as string[],
@@ -27,6 +28,7 @@ export const NotificationManagement: React.FC = () => {
     message: '',
     type: 'INFO',
     priority: 'NORMAL',
+    link: '',
     sendToAll: false
   });
 
@@ -64,7 +66,7 @@ export const NotificationManagement: React.FC = () => {
       await notificationsApi.create(formData);
       alert('Gửi thông báo thành công!');
       setIsModalOpen(false);
-      setFormData({ userId: '', title: '', message: '', type: 'INFO', priority: 'NORMAL' });
+      setFormData({ userId: '', title: '', message: '', type: 'INFO', priority: 'NORMAL', link: '' });
       fetchData();
     } catch (err) {
       console.error('Send notification error:', err);
@@ -85,7 +87,7 @@ export const NotificationManagement: React.FC = () => {
       const result = await notificationsApi.broadcast(broadcastData);
       alert(result.message);
       setIsBroadcastModalOpen(false);
-      setBroadcastData({ userIds: [], title: '', message: '', type: 'INFO', priority: 'NORMAL', sendToAll: false });
+      setBroadcastData({ userIds: [], title: '', message: '', type: 'INFO', priority: 'NORMAL', link: '', sendToAll: false });
       fetchData();
     } catch (err) {
       console.error('Broadcast error:', err);
@@ -383,6 +385,16 @@ export const NotificationManagement: React.FC = () => {
               placeholder="Nội dung thông báo..."
             />
           </div>
+          <div>
+            <label className="text-xs font-bold text-slate-500 uppercase">Đường dẫn (Tùy chọn)</label>
+            <input
+              type="text"
+              value={formData.link}
+              onChange={(e) => setFormData({ ...formData, link: e.target.value })}
+              className="w-full mt-1 px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+              placeholder="VD: /messages, /dashboard"
+            />
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-xs font-bold text-slate-500 uppercase">Loại</label>
@@ -498,6 +510,16 @@ export const NotificationManagement: React.FC = () => {
               className="w-full mt-1 px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none resize-none"
               rows={3}
               placeholder="Nội dung thông báo..."
+            />
+          </div>
+          <div>
+            <label className="text-xs font-bold text-slate-500 uppercase">Đường dẫn (Tùy chọn)</label>
+            <input
+              type="text"
+              value={broadcastData.link}
+              onChange={(e) => setBroadcastData({ ...broadcastData, link: e.target.value })}
+              className="w-full mt-1 px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+              placeholder="VD: /messages, /dashboard"
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
