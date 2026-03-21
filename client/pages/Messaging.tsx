@@ -1031,41 +1031,21 @@ export const Messaging: React.FC = () => {
 
         {/* Input */}
         <div className="p-4 border-t border-slate-200 shrink-0 bg-white">
-          {/* Sticker Panel */}
+          {/* Emoji Panel */}
           {showStickerPanel && (
-            <div className="mb-3 bg-white border border-slate-200 rounded-xl shadow-lg p-3 max-h-64 overflow-hidden">
-              <div className="flex gap-1 mb-2 overflow-x-auto pb-1">
-                {STICKER_CATEGORIES.map((cat, i) => (
-                  <button
-                    key={i}
-                    onClick={() => {
-                      const el = document.getElementById(`sticker-cat-${i}`);
-                      if (el) el.scrollIntoView({ block: 'nearest', inline: 'center' });
-                    }}
-                    className="px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg whitespace-nowrap"
-                  >
-                    {cat.name}
-                  </button>
-                ))}
-              </div>
-              <div className="max-h-44 overflow-y-auto">
-                {STICKER_CATEGORIES.map((cat, i) => (
-                  <div key={i} id={`sticker-cat-${i}`} className="grid grid-cols-10 gap-1 mb-2">
-                    {cat.stickers.map((s, j) => (
-                      <button
-                        key={j}
-                        onClick={() => {
-                          sendMessage(s, activeRoom);
-                          setShowStickerPanel(false);
-                        }}
-                        className="w-8 h-8 flex items-center justify-center text-xl hover:bg-slate-100 rounded-lg transition-all hover:scale-110"
-                      >
-                        {s}
-                      </button>
-                    ))}
-                  </div>
-                ))}
-              </div>
+            <div className="mb-3 bg-white border border-slate-200 rounded-xl shadow-lg p-3 flex gap-2 flex-wrap">
+              {COMMON_EMOJIS.map((emoji) => (
+                <button
+                  key={emoji}
+                  onClick={() => {
+                    sendMessage(emoji, activeRoom);
+                    setShowStickerPanel(false);
+                  }}
+                  className="w-10 h-10 flex items-center justify-center text-2xl hover:bg-slate-100 rounded-lg transition-all hover:scale-110"
+                >
+                  {emoji}
+                </button>
+              ))}
             </div>
           )}
 

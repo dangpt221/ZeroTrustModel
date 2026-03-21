@@ -3,11 +3,10 @@ import React from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { ProfileForm } from '../../components/Staff/ProfileForm';
 import { DeviceList } from '../../components/Staff/DeviceList';
-import { ShieldCheck, History } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 
 export const StaffProfile: React.FC = () => {
   const { user } = useAuth();
-
   if (!user) return null;
 
   return (
@@ -25,18 +24,6 @@ export const StaffProfile: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
           <ProfileForm user={user} />
-          
-          <div className="bg-slate-900 p-8 rounded-[40px] text-white flex items-center gap-8 shadow-2xl relative overflow-hidden">
-             <div className="absolute top-0 right-0 p-8 opacity-10">
-               <History size={100} />
-             </div>
-             <div className="relative z-10 flex-1">
-               <h4 className="text-lg font-black uppercase italic tracking-tight mb-1">Dữ liệu nhạy cảm</h4>
-               <p className="text-xs text-slate-300 leading-relaxed font-medium">
-                 Tất cả các thay đổi về hồ sơ và bảo mật sẽ được ghi lại trong nhật ký hệ thống. Hãy chắc chắn rằng bạn đang thao tác trong môi trường an toàn.
-               </p>
-             </div>
-          </div>
         </div>
 
         <div className="space-y-8">

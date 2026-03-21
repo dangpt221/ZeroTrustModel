@@ -1,7 +1,31 @@
 import express from "express";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 import * as userController from "../controllers/userController.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { Role } from "../models/Role.js";
+
+// Avatar upload setup
+const avatarsDir = path.join(__dirname, '../../uploads/avatars');
+if (!fs.existsSync(avatarsDir)) {
+  fs.mkdirSync(avatarsDir, { recursive: true });
+}
+const avatarStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, avatarsDir),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `${req.user?._id}-${Date.now()}${ext}`);
+  }
+});
+const avatarUpload = multer({
+  storage: avatarStorage,
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) cb(null, true);
+    else cb(new Error('Only image files are allowed'));
+  },
+  limits: { fileSize: 5 * 1024 * 1024 }
+});
 
 const router = express.Router();
 
@@ -26,6 +50,19 @@ router.post("/manager/users/:id/lock", requireAuth, requireRole(["ADMIN", "MANAG
 // Regular routes (all authenticated users)
 router.get("/users", requireAuth, userController.getUsers);
 router.get("/users/:id", requireAuth, userController.getUserById);
+router.post("/users/upload-avatar", requireAuth, avatarUpload.single('avatar'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+    const url = `/uploads/avatars/${req.file.filename}`;
+    await req.app.locals.db.collection('users').findOneAndUpdate(
+      { _id: require('mongoose').Types.ObjectId.createFromHexString(req.user._id.toString()) },
+      { $set: { avatar: url } }
+    );
+    res.json({ url });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
 
 // ============ ROLE & PERMISSION ROUTES ============
 
