@@ -2,11 +2,14 @@ import express from "express";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import { fileURLToPath } from "url";
 import * as userController from "../controllers/userController.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { Role } from "../models/Role.js";
 
 // Avatar upload setup
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const avatarsDir = path.join(__dirname, '../../uploads/avatars');
 if (!fs.existsSync(avatarsDir)) {
   fs.mkdirSync(avatarsDir, { recursive: true });
