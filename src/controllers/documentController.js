@@ -4,7 +4,20 @@ import { Department } from "../models/Department.js";
 import { AuditLog } from "../models/AuditLog.js";
 import { DocumentRequest } from "../models/DocumentRequest.js";
 import { getClientIP, parseDeviceFromUserAgent } from "../middleware/securityMiddleware.js";
+import { encryptBuffer, decryptBuffer } from "../utils/encryption.js";
+import { checkDRMPermission, logDRMAction, wrapWithDRM, DRM_ACTIONS } from "../utils/drm.js";
+import { checkDownloadRateLimit, recordDownload, getDownloadStats, resetDownloadRateLimit, getAllRateLimitStatus } from "../utils/downloadRateLimiter.js";
+import { verifyMFAForAction } from "../utils/sensitiveActionMFA.js";
+import { generateWatermarkData, logWatermarkedDownload } from "../utils/forensicWatermark.js";
+import { generateDocumentFingerprint, saveFingerprint } from "../utils/documentFingerprint.js";
+import { generateSecureDownloadURL, validateSecureDownloadToken, revokeAllDocumentLinks } from "../utils/secureDownloadLink.js";
+import { streamSecureDocument, streamWatermarkedPDF } from "../utils/secureStreaming.js";
+import { getEmergencyLockStatus } from "../utils/emergencyLock.js";
 import bcrypt from "bcryptjs";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+import crypto from "crypto";
 
 // Helper: Transform document to client format
 function toClientDoc(doc, includeAudit = false) {
@@ -199,7 +212,8 @@ export const getDocumentById = async (req, res, next) => {
         updatedAt: doc.updatedAt,
         isPasswordProtected: true,
         requiresPassword: true,
-        isLocked: false
+        isLocked: false,
+        drm: { enabled: true, requiresPassword: true },
       });
     }
 
@@ -223,7 +237,22 @@ export const getDocumentById = async (req, res, next) => {
       });
     }
 
-    res.json(toClientDoc(doc, true));
+    // === DRM PROTECTION ===
+    const drmDoc = wrapWithDRM(doc, req.user);
+    const drmPermission = checkDRMPermission(doc, req.user, DRM_ACTIONS.VIEW);
+    await logDRMAction(req, doc, DRM_ACTIONS.VIEW, drmPermission.allowed, drmPermission.reason);
+
+    const result = toClientDoc(drmDoc, true);
+    result.drm = {
+      enabled: true,
+      policy: drmPermission.policy,
+      classification: doc.classification,
+      securityLevel: doc.securityLevel,
+      watermark: drmPermission.policy.watermark,
+      expiresAt: drmPermission.policy.expiresAt,
+    };
+
+    res.json(result);
   } catch (err) {
     next(err);
   }
@@ -514,12 +543,37 @@ export const rejectDocument = async (req, res, next) => {
   }
 };
 
-// Download document (track)
+// Download document (track + DRM + Rate Limit + Encryption)
 export const downloadDocument = async (req, res, next) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;
     const userRole = req.user.role;
+    const userIp = getClientIP(req);
+
+    // === RATE LIMIT CHECK ===
+    const rateLimitCheck = checkDownloadRateLimit(userId, userIp);
+    res.setHeader('X-RateLimit-Limit', '10');
+    res.setHeader('X-RateLimit-Remaining', rateLimitCheck.remaining);
+
+    if (rateLimitCheck.blocked) {
+      res.setHeader('Retry-After', rateLimitCheck.retryAfter);
+      await AuditLog.create({
+        userId,
+        userName: req.user.name,
+        action: 'RATE_LIMIT_BLOCKED',
+        details: `Download blocked: rate limit exceeded`,
+        ip: userIp,
+        device: parseDeviceFromUserAgent(req.headers['user-agent']),
+        status: 'BLOCKED',
+        riskLevel: 'HIGH',
+        metadata: { documentId: id },
+      });
+      return res.status(429).json({
+        message: rateLimitCheck.reason,
+        rateLimit: { blocked: true, retryAfter: rateLimitCheck.retryAfter },
+      });
+    }
 
     const doc = await Document.findById(id);
     if (!doc || doc.isDeleted) {
@@ -536,6 +590,17 @@ export const downloadDocument = async (req, res, next) => {
       return res.status(403).json({ message: "Document requires password", requiresPassword: true });
     }
 
+    // === DRM CHECK ===
+    const drmPermission = checkDRMPermission(doc, req.user, DRM_ACTIONS.DOWNLOAD);
+    await logDRMAction(req, doc, DRM_ACTIONS.DOWNLOAD, drmPermission.allowed, drmPermission.reason);
+
+    if (!drmPermission.allowed) {
+      return res.status(403).json({
+        message: drmPermission.reason,
+        drm: { enabled: true, action: DRM_ACTIONS.DOWNLOAD, denied: true },
+      });
+    }
+
     // Track download
     if (!doc.downloadedBy?.includes(userId)) {
       await Document.findByIdAndUpdate(id, {
@@ -550,16 +615,36 @@ export const downloadDocument = async (req, res, next) => {
       userName: req.user.name,
       action: 'DOCUMENT_DOWNLOAD',
       details: `Downloaded document: ${doc.title}`,
-      ip: getClientIP(req),
+      ip: userIp,
       device: parseDeviceFromUserAgent(req.headers['user-agent']),
       status: 'SUCCESS',
-      riskLevel: 'MEDIUM'
+      riskLevel: 'MEDIUM',
+      metadata: {
+        documentId: id,
+        classification: doc.classification,
+        securityLevel: doc.securityLevel,
+        drmPolicy: drmPermission.policy,
+      },
     });
 
-    // Return download URL
+    // === RECORD DOWNLOAD FOR RATE LIMITING ===
+    recordDownload(userId, userIp, id, doc.title);
+
+    // Return download URL with DRM info
     res.json({
       url: doc.url,
-      fileName: `${doc.title}_v${doc.currentVersion}.${doc.fileType}`
+      fileName: `${doc.title}_v${doc.currentVersion}.${doc.fileType}`,
+      drm: {
+        enabled: true,
+        policy: drmPermission.policy,
+        watermark: drmPermission.policy.watermark,
+        printLimit: drmPermission.policy.printLimit,
+        expiresAt: drmPermission.policy.expiresAt,
+      },
+      rateLimit: {
+        remaining: rateLimitCheck.remaining - 1,
+        windowResetsAt: rateLimitCheck.windowResetsAt,
+      },
     });
   } catch (err) {
     next(err);
@@ -896,6 +981,466 @@ export const verifyDocumentPassword = async (req, res, next) => {
     }
 
     res.json({ verified: true });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// === MFA cho hành động nhạy cảm ===
+export const verifySensitiveActionMFA = verifyMFAForAction;
+
+// === Rate Limit Admin ===
+export const getDownloadRateLimitStats = async (req, res, next) => {
+  try {
+    const { userId } = req.query;
+    const userIp = getClientIP(req);
+
+    if (userId) {
+      const stats = getDownloadStats(userId, userIp);
+      return res.json({ userId, ...stats });
+    }
+
+    // Admin: get all rate-limited users
+    const allStatus = getAllRateLimitStatus();
+    res.json({ rateLimitedUsers: allStatus });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const resetDownloadRateLimitAdmin = async (req, res, next) => {
+  try {
+    const { userId, ip } = req.body;
+    const result = resetDownloadRateLimit(userId, ip);
+
+    await AuditLog.create({
+      userId: req.user.id,
+      userName: req.user.name,
+      action: 'RATE_LIMIT_RESET',
+      details: `Admin reset download rate limit for ${userId || ip}`,
+      ip: getClientIP(req),
+      device: parseDeviceFromUserAgent(req.headers['user-agent']),
+      status: 'SUCCESS',
+      riskLevel: 'LOW',
+    });
+
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// === Encryption helpers for file upload ===
+export const encryptUploadedFile = async (req, res, next) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    const { encryptFile } = await import('../utils/encryption.js');
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+    const uploadsDir = path.join(__dirname, '../../uploads/documents');
+
+    const encryptedPath = path.join(uploadsDir, `encrypted_${req.file.filename}`);
+    await encryptFile(req.file.path, encryptedPath);
+
+    // Remove original unencrypted file
+    fs.unlinkSync(req.file.path);
+
+    const result = {
+      filename: `encrypted_${req.file.filename}`,
+      originalName: req.file.originalname,
+      url: `/uploads/documents/encrypted_${req.file.filename}`,
+      fileSize: fs.statSync(encryptedPath).size,
+      fileType: path.extname(req.file.originalname).slice(1).toUpperCase(),
+      encrypted: true,
+      algorithm: 'AES-256-GCM',
+    };
+
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const decryptAndDownload = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+    const userRole = req.user.role;
+    const userIp = getClientIP(req);
+
+    // Rate limit check
+    const rateLimitCheck = checkDownloadRateLimit(userId, userIp);
+    if (rateLimitCheck.blocked) {
+      return res.status(429).json({
+        message: rateLimitCheck.reason,
+        rateLimit: { blocked: true, retryAfter: rateLimitCheck.retryAfter },
+      });
+    }
+
+    const doc = await Document.findById(id);
+    if (!doc || doc.isDeleted) {
+      return res.status(404).json({ message: "Document not found" });
+    }
+
+    // DRM check
+    const drmPermission = checkDRMPermission(doc, req.user, DRM_ACTIONS.DOWNLOAD);
+    if (!drmPermission.allowed) {
+      return res.status(403).json({
+        message: drmPermission.reason,
+        drm: { enabled: true, denied: true },
+      });
+    }
+
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+    const uploadsDir = path.join(__dirname, '../../uploads/documents');
+    const encryptedPath = path.join(uploadsDir, `encrypted_${path.basename(doc.url)}`);
+
+    if (!fs.existsSync(encryptedPath)) {
+      // No encrypted version, return original URL
+      recordDownload(userId, userIp, id, doc.title);
+      return res.json({
+        url: doc.url,
+        fileName: `${doc.title}_v${doc.currentVersion}.${doc.fileType}`,
+        encrypted: false,
+      });
+    }
+
+    // Decrypt file to temp
+    const { decryptFile } = await import('../utils/encryption.js');
+    const tempPath = path.join(uploadsDir, `temp_${Date.now()}_${doc.title}.${doc.fileType}`);
+    await decryptFile(encryptedPath, tempPath);
+
+    // Log and record
+    recordDownload(userId, userIp, id, doc.title);
+    await AuditLog.create({
+      userId,
+      userName: req.user.name,
+      action: 'DOCUMENT_DECRYPTED_DOWNLOAD',
+      details: `Downloaded and decrypted document: ${doc.title}`,
+      ip: userIp,
+      device: parseDeviceFromUserAgent(req.headers['user-agent']),
+      status: 'SUCCESS',
+      riskLevel: 'MEDIUM',
+    });
+
+    // Send decrypted file then cleanup
+    res.download(tempPath, `${doc.title}_v${doc.currentVersion}.${doc.fileType}`, (err) => {
+      if (err) console.error('[decryptAndDownload] Send error:', err);
+      try { fs.unlinkSync(tempPath); } catch (e) { /* ignore */ }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ============ WATERMARKED DOWNLOAD ============
+
+export const downloadWatermarkedDocument = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+    const userIp = getClientIP(req);
+
+    // Rate limit check
+    const rateLimitCheck = checkDownloadRateLimit(userId, userIp);
+    res.setHeader('X-RateLimit-Limit', '10');
+    res.setHeader('X-RateLimit-Remaining', rateLimitCheck.remaining);
+
+    if (rateLimitCheck.blocked) {
+      res.setHeader('Retry-After', rateLimitCheck.retryAfter);
+      return res.status(429).json({
+        message: rateLimitCheck.reason,
+        rateLimit: { blocked: true, retryAfter: rateLimitCheck.retryAfter },
+      });
+    }
+
+    const doc = await Document.findById(id);
+    if (!doc || doc.isDeleted) {
+      return res.status(404).json({ message: "Document not found" });
+    }
+
+    // DRM check
+    const drmPermission = checkDRMPermission(doc, req.user, DRM_ACTIONS.DOWNLOAD);
+    await logDRMAction(req, doc, DRM_ACTIONS.DOWNLOAD, drmPermission.allowed, drmPermission.reason);
+
+    if (!drmPermission.allowed) {
+      return res.status(403).json({
+        message: drmPermission.reason,
+        drm: { enabled: true, denied: true },
+      });
+    }
+
+    // Generate watermark
+    const watermark = generateWatermarkData(req.user, doc, userIp);
+    const downloadId = watermark.downloadId;
+
+    // Generate fingerprint
+    const fingerprint = generateDocumentFingerprint('content', doc._id?.toString(), userId, downloadId);
+
+    // Save fingerprint
+    await saveFingerprint(fingerprint, req.user, doc);
+
+    // Log watermarked download
+    await logWatermarkedDownload(req, doc, watermark);
+
+    // Record download
+    recordDownload(userId, userIp, id, doc.title);
+
+    // Get file
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+    const uploadsDir = path.join(__dirname, '../../uploads/documents');
+    let filePath = path.join(uploadsDir, path.basename(doc.url));
+
+    // Check encrypted version
+    const encryptedPath = path.join(uploadsDir, `encrypted_${path.basename(doc.url)}`);
+    if (fs.existsSync(encryptedPath)) {
+      const { decryptFile } = await import('../utils/encryption.js');
+      const tempPath = path.join(uploadsDir, `temp_wm_${downloadId}.${doc.fileType}`);
+      await decryptFile(encryptedPath, tempPath);
+      filePath = tempPath;
+    }
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ message: "Document file not found" });
+    }
+
+    // Embed watermark into file
+    const fileBuffer = fs.readFileSync(filePath);
+    const watermarkedBuffer = embedWatermarkInPDF(fileBuffer, { watermarkData: watermark.watermarkData });
+
+    // Cleanup temp file
+    if (filePath.includes('temp_wm_')) {
+      try { fs.unlinkSync(filePath); } catch (e) { /* ignore */ }
+    }
+
+    // Set headers
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${doc.title}_v${doc.currentVersion}.${doc.fileType}"`);
+    res.setHeader('X-Watermark-Id', downloadId);
+    res.setHeader('X-Watermark-Visible', watermark.visibleWatermark);
+    res.setHeader('X-Fingerprint', fingerprint.shortFingerprint);
+    res.setHeader('X-Document-Streaming', 'Watermarked');
+    res.setHeader('X-No-Store', 'true');
+
+    res.send(watermarkedBuffer);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ============ SECURE STREAMING ============
+
+export const streamDocumentSecure = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+    const userIp = getClientIP(req);
+
+    // Rate limit check
+    const rateLimitCheck = checkDownloadRateLimit(userId, userIp);
+    if (rateLimitCheck.blocked) {
+      return res.status(429).json({
+        message: rateLimitCheck.reason,
+        rateLimit: { blocked: true },
+      });
+    }
+
+    const doc = await Document.findById(id);
+    if (!doc || doc.isDeleted) {
+      return res.status(404).json({ message: "Document not found" });
+    }
+
+    // DRM check for VIEW
+    const drmPermission = checkDRMPermission(doc, req.user, DRM_ACTIONS.VIEW);
+    await logDRMAction(req, doc, DRM_ACTIONS.VIEW, drmPermission.allowed, drmPermission.reason);
+
+    if (!drmPermission.allowed) {
+      return res.status(403).json({
+        message: drmPermission.reason,
+        drm: { enabled: true, denied: true },
+      });
+    }
+
+    // Stream document with watermark
+    const result = await streamWatermarkedPDF(req, res, doc, req.user);
+
+    if (result?.error) {
+      return res.status(404).json({ message: result.error });
+    }
+
+    // Note: response already sent by streamWatermarkedPDF
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ============ SECURE DOWNLOAD LINK ============
+
+export const createSecureDownloadLink = async (req, res, next) => {
+  try {
+    const { id, expirySeconds, maxDownloads } = req.body;
+
+    if (!id) {
+      return res.status(400).json({ message: 'Missing document ID' });
+    }
+
+    const doc = await Document.findById(id);
+    if (!doc || doc.isDeleted) {
+      return res.status(404).json({ message: "Document not found" });
+    }
+
+    // Generate watermark data for the link
+    const watermark = generateWatermarkData(req.user, doc, getClientIP(req));
+
+    // Generate secure download URL
+    const secureLink = generateSecureDownloadURL(id, req.user, {
+      expirySeconds: expirySeconds || 3600,
+      maxDownloads: maxDownloads || 1,
+      watermarkData: watermark,
+    });
+
+    await AuditLog.create({
+      userId: req.user.id,
+      userName: req.user.name,
+      action: 'SECURE_LINK_CREATED',
+      details: `Created secure download link for: ${doc.title}`,
+      ip: getClientIP(req),
+      device: parseDeviceFromUserAgent(req.headers['user-agent']),
+      status: 'SUCCESS',
+      riskLevel: 'LOW',
+      metadata: { documentId: id, downloadId: secureLink.downloadId },
+    });
+
+    res.json({
+      success: true,
+      downloadUrl: secureLink.downloadUrl,
+      downloadId: secureLink.downloadId,
+      expiresAt: secureLink.expiresAt,
+      maxDownloads: secureLink.maxDownloads,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const secureDownloadWithToken = async (req, res, next) => {
+  try {
+    const { token } = req.query;
+
+    if (!token) {
+      return res.status(400).json({ message: 'Missing download token' });
+    }
+
+    // Validate token
+    const validation = validateSecureDownloadToken(token, getClientIP(req));
+
+    if (!validation.valid) {
+      const statusMap = {
+        TOKEN_EXPIRED: 410,
+        LIMIT_REACHED: 403,
+        LINK_REVOKED: 410,
+        LINK_NOT_FOUND: 404,
+        INVALID_TOKEN: 403,
+      };
+      return res.status(statusMap[validation.code] || 400).json({
+        message: validation.error,
+        code: validation.code,
+      });
+    }
+
+    // Get document
+    const doc = await Document.findById(validation.documentId);
+    if (!doc || doc.isDeleted) {
+      return res.status(404).json({ message: "Document not found" });
+    }
+
+    // DRM check
+    const drmPermission = checkDRMPermission(doc, { ...req.user, id: validation.userId }, DRM_ACTIONS.DOWNLOAD);
+    if (!drmPermission.allowed) {
+      return res.status(403).json({ message: drmPermission.reason });
+    }
+
+    // Get file
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+    const uploadsDir = path.join(__dirname, '../../uploads/documents');
+    let filePath = path.join(uploadsDir, path.basename(doc.url));
+
+    // Check encrypted version
+    const encryptedPath = path.join(uploadsDir, `encrypted_${path.basename(doc.url)}`);
+    if (fs.existsSync(encryptedPath)) {
+      const { decryptFile } = await import('../utils/encryption.js');
+      const tempPath = path.join(uploadsDir, `temp_secure_${validation.downloadId}.${doc.fileType}`);
+      await decryptFile(encryptedPath, tempPath);
+      filePath = tempPath;
+    }
+
+    // Send file then cleanup
+    res.download(filePath, `${doc.title}.${doc.fileType}`, (err) => {
+      if (filePath.includes('temp_secure_')) {
+        try { fs.unlinkSync(filePath); } catch (e) { /* ignore */ }
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ============ VERIFY LEAKED DOCUMENT ============
+
+export const verifyLeakedDocument = async (req, res, next) => {
+  try {
+    const { fingerprint } = req.body;
+
+    if (!fingerprint) {
+      return res.status(400).json({ message: 'Missing fingerprint' });
+    }
+
+    const { verifyLeakedDocument: verifyFP } = await import('../utils/documentFingerprint.js');
+    const result = await verifyFP(fingerprint);
+
+    // Log verification attempt
+    await AuditLog.create({
+      userId: req.user.id,
+      userName: req.user.name,
+      action: 'DOCUMENT_LEAK_VERIFICATION',
+      details: result.found
+        ? `Leaked document verified - Fingerprint matched: ${result.attribution?.userName}`
+        : 'Leaked document verification - No match found',
+      ip: getClientIP(req),
+      device: parseDeviceFromUserAgent(req.headers['user-agent']),
+      status: result.found ? 'ALERT' : 'SUCCESS',
+      riskLevel: result.found ? 'CRITICAL' : 'LOW',
+      metadata: { fingerprint: fingerprint.substring(0, 8), found: result.found },
+    });
+
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ============ EMBED WATERMARK HELPER ============
+
+function embedWatermarkInPDF(originalBuffer, watermark) {
+  const watermarkComment = `%WATERMARK:${Buffer.from(JSON.stringify(watermark.watermarkData)).toString('base64')}\n`;
+  const pdfStart = originalBuffer.indexOf('%PDF-');
+  if (pdfStart === -1) return originalBuffer;
+  const insertPos = pdfStart + 5;
+  return Buffer.concat([Buffer.from(watermarkComment), originalBuffer.subarray(insertPos)]);
+}
+
+// ============ EMERGENCY LOCK STATUS ============
+
+export const getEmergencyStatus = async (req, res, next) => {
+  try {
+    const status = getEmergencyLockStatus();
+    res.json(status);
   } catch (err) {
     next(err);
   }

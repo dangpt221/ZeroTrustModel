@@ -14,6 +14,8 @@ import { registerAuditLogRoutes } from "./auditLogs.js";
 import { registerNotificationRoutes } from "./notificationRoutes.js";
 import rolesRouter from "./roles.js";
 import passport from "../configs/passport.js";
+import honeytokenRouter from "./honeytoken.js";
+import emergencyLockRouter from "./emergencyLock.js";
 
 export function registerRoutes(app, io) {
   const router = express.Router();
@@ -71,6 +73,8 @@ export function registerRoutes(app, io) {
   registerZeroTrustRoutes(router);
   registerAuditLogRoutes(router);
   registerNotificationRoutes(router);
+  router.use(honeytokenRouter);
+  router.use(emergencyLockRouter);
 
   app.use("/api", router);
 }

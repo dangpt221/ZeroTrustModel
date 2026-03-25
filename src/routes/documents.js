@@ -120,4 +120,39 @@ router.post("/documents/:id/reset-access", requireAuth, requireRole(["ADMIN"]), 
 // Verify password for document access
 router.post("/documents/:id/verify", requireAuth, documentController.verifyDocumentPassword);
 
+// === NEW SECURITY FEATURES ===
+
+// MFA for sensitive document actions
+router.post("/documents/sensitive-action/verify", requireAuth, documentController.verifySensitiveActionMFA);
+
+// Rate limit stats (Admin)
+router.get("/documents/rate-limit/stats", requireAuth, requireRole(["ADMIN"]), documentController.getDownloadRateLimitStats);
+router.post("/documents/rate-limit/reset", requireAuth, requireRole(["ADMIN"]), documentController.resetDownloadRateLimitAdmin);
+
+// Encrypted file upload
+router.post("/documents/upload/encrypted", requireAuth, requireRole(["ADMIN", "MANAGER"]), upload.single('file'), documentController.encryptUploadedFile);
+
+// Encrypted download (decrypts on-the-fly)
+router.get("/documents/:id/download/encrypted", requireAuth, documentController.decryptAndDownload);
+
+// === NEW ADVANCED SECURITY ===
+
+// Watermarked download
+router.get("/documents/:id/download/watermarked", requireAuth, documentController.downloadWatermarkedDocument);
+
+// Secure streaming
+router.get("/documents/:id/stream", requireAuth, documentController.streamDocumentSecure);
+
+// Secure download link (create)
+router.post("/documents/secure-link", requireAuth, documentController.createSecureDownloadLink);
+
+// Secure download with token
+router.get("/documents/secure-download", documentController.secureDownloadWithToken);
+
+// Verify leaked document
+router.post("/documents/verify-leak", requireAuth, requireRole(["ADMIN"]), documentController.verifyLeakedDocument);
+
+// Emergency lock status
+router.get("/documents/emergency-status", requireAuth, documentController.getEmergencyStatus);
+
 export default router;
