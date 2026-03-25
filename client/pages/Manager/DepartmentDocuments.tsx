@@ -1,16 +1,14 @@
 
-import { Eye, FileText, Key, Lock, Search, Upload } from 'lucide-react';
+import { Eye, FileText, Search, Upload } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { departmentsApi, documentsApi } from '../../api';
 import { Modal } from '../../components/Admin/Modal';
-import { DocumentContent } from '../../components/Staff/DocumentContent';
+import { DocumentViewerModal } from '../../components/Staff/DocumentViewerModal';
 import { useAuth } from '../../context/AuthContext';
-import { usePermission } from '../../hooks/usePermission';
 import { Document } from '../../types';
 
 export const DepartmentDocuments: React.FC = () => {
   const { user } = useAuth();
-  const { isAdmin, isManager } = usePermission();
   const [docs, setDocs] = useState<Document[]>([]);
   const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
@@ -18,10 +16,6 @@ export const DepartmentDocuments: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [viewingDoc, setViewingDoc] = useState<Document | null>(null);
-  const [requestModalDoc, setRequestModalDoc] = useState<Document | null>(null);
-  const [requestReason, setRequestReason] = useState('');
-  const [requestingAccess, setRequestingAccess] = useState(false);
-  const [myRequests, setMyRequests] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     name: '',
     type: 'PDF',
@@ -31,34 +25,24 @@ export const DepartmentDocuments: React.FC = () => {
     description: '',
   });
 
-  // Load docs on mount
   React.useEffect(() => {
     documentsApi.getAll().then(data => {
-      if (data && data.documents) {
-        setDocs(data.documents);
-      } else if (Array.isArray(data)) {
-        setDocs(data);
-      } else {
-        setDocs([]);
-      }
+      if (data && data.documents) setDocs(data.documents);
+      else if (Array.isArray(data)) setDocs(data);
+      else setDocs([]);
       setLoading(false);
-    }).catch(() => {
-      setLoading(false);
-    });
+    }).catch(() => setLoading(false));
 
     departmentsApi.getAll().then(data => {
       setDepartments(Array.isArray(data) ? data : []);
     }).catch(() => {});
   }, []);
 
-  const displayDocs = docs;
-
   const handleCreateDoc = async () => {
     if (!formData.name.trim()) {
       alert('Vui lòng nhập tên tài liệu.');
       return;
     }
-    // Manager automatically gets their department ID
     const docDepartmentId = user?.departmentId;
     try {
       await documentsApi.create({
@@ -85,52 +69,9 @@ export const DepartmentDocuments: React.FC = () => {
     }
   };
 
-  const handleViewDoc = async (doc: Document) => {
-    // Only require request if document is locked by Admin
-    const isLocked = (doc as any).isLocked;
-
-    if (isLocked) {
-      // Check if user already has an approved request
-      const approvedRequest = myRequests.find(
-        (r: any) => {
-          const reqDocId = typeof r.documentId === 'object' ? r.documentId._id : r.documentId;
-          return reqDocId === doc.id && r.status === 'APPROVED';
-        }
-      );
-      if (approvedRequest) {
-        setViewingDoc(doc);
-        return;
-      }
-      // Show request modal
-      setRequestModalDoc(doc);
-      setRequestReason('');
-      return;
-    }
-    // Document is not locked, allow viewing
+  const handleViewDoc = (doc: Document) => {
     setViewingDoc(doc);
   };
-
-  const handleSendRequest = async () => {
-    if (!requestModalDoc) return;
-    try {
-      setRequestingAccess(true);
-      const result = await documentsApi.requestAccess(requestModalDoc.id, requestReason);
-      alert(result.message || 'Yêu cầu đã được gửi!');
-      setRequestModalDoc(null);
-      // Refresh my requests
-      const requests = await documentsApi.getMyRequests();
-      setMyRequests(requests);
-    } catch (err: any) {
-      alert(err.message || 'Gửi yêu cầu thất bại!');
-    } finally {
-      setRequestingAccess(false);
-    }
-  };
-
-  // Load my requests on mount
-  useEffect(() => {
-    documentsApi.getMyRequests().then(setMyRequests).catch(() => {});
-  }, []);
 
   const getDocDisplay = (doc: Document) => ({
     name: (doc as any).name || (doc as any).title || doc.name || 'Không tên',
@@ -140,6 +81,8 @@ export const DepartmentDocuments: React.FC = () => {
     uploadedAt: (doc as any).uploadedAt || doc.createdAt ? new Date((doc as any).uploadedAt || doc.createdAt!).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-',
     sensitivity: doc.sensitivity || (doc as any).sensitivity || 'LOW',
   });
+
+  const displayDocs = docs;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-700">
@@ -230,24 +173,13 @@ export const DepartmentDocuments: React.FC = () => {
                       <td className="px-6 py-4 text-sm text-slate-600">{d.uploadedBy}</td>
                       <td className="px-6 py-4 text-sm text-slate-500">{d.uploadedAt}</td>
                       <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          {((doc as any).isLocked || (doc as any).isPasswordProtected) && (
-                            <button
-                              onClick={() => handleViewDoc(doc)}
-                              className="px-2 py-1 text-xs bg-red-100 text-red-600 rounded font-medium hover:bg-red-200"
-                              title="Nhập mã để xem"
-                            >
-                              🔒
-                            </button>
-                          )}
-                          <button
-                            onClick={() => handleViewDoc(doc)}
-                            className="p-2 text-sky-600 hover:bg-sky-50 rounded-lg"
-                            title="Xem chi tiết"
-                          >
-                            <Eye size={16} />
-                          </button>
-                        </div>
+                        <button
+                          onClick={() => handleViewDoc(doc)}
+                          className="p-2 text-sky-600 hover:bg-sky-50 rounded-lg"
+                          title="Xem chi tiết"
+                        >
+                          <Eye size={16} />
+                        </button>
                       </td>
                     </tr>
                   );
@@ -343,64 +275,18 @@ export const DepartmentDocuments: React.FC = () => {
         </div>
       </Modal>
 
-      {/* Document Content */}
-      {viewingDoc && (
-        <div className="mt-6">
-          <DocumentContent
-            document={viewingDoc}
-            onClose={() => setViewingDoc(null)}
-          />
-        </div>
-      )}
-
-      {/* Request Access Modal */}
-      <Modal isOpen={!!requestModalDoc} onClose={() => setRequestModalDoc(null)} title="Yêu cầu xem tài liệu">
-        {requestModalDoc && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-xl border border-blue-100">
-              <div className="p-3 bg-blue-100 text-blue-600 rounded-xl">
-                <Lock size={24} />
-              </div>
-              <div>
-                <h4 className="font-bold text-slate-800">{requestModalDoc.title || requestModalDoc.name}</h4>
-                <p className="text-sm text-blue-600">Tài liệu bảo mật cao. Vui lòng gửi yêu cầu để Admin duyệt.</p>
-              </div>
-            </div>
-
-            <div>
-              <label className="text-xs font-bold text-slate-500 uppercase">Lý do</label>
-              <textarea
-                value={requestReason}
-                onChange={(e) => setRequestReason(e.target.value)}
-                placeholder="Nhập lý do bạn cần xem tài liệu này..."
-                className="w-full mt-1 px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                rows={3}
-                autoFocus
-              />
-            </div>
-
-            <div className="flex gap-2">
-              <button
-                onClick={() => setRequestModalDoc(null)}
-                className="flex-1 py-3 border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-50 transition-all"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={handleSendRequest}
-                disabled={requestingAccess}
-                className="flex-1 py-3 bg-blue-500 text-white rounded-xl font-bold hover:bg-blue-600 disabled:bg-slate-300 transition-all flex items-center justify-center gap-2"
-              >
-                {requestingAccess ? 'Đang gửi...' : (
-                  <>
-                    <Key size={18} /> Gửi yêu cầu
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        )}
-      </Modal>
+      {/* Document Viewer Modal - Secure Streaming */}
+      <DocumentViewerModal
+        document={viewingDoc}
+        isOpen={!!viewingDoc}
+        onClose={() => setViewingDoc(null)}
+        onDownload={undefined}
+        onRequestAccess={async (doc: Document, reason: string) => {
+          await documentsApi.requestAccess(doc.id, reason);
+          alert('Yêu cầu đã được gửi! Admin sẽ xem xét sớm.');
+        }}
+        user={user ? { id: user.id, name: user.name, email: user.email, role: user.role } : undefined}
+      />
     </div>
   );
 };

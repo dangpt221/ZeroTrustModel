@@ -45,3 +45,33 @@ export async function sendOTP(email, otp) {
     return false;
   }
 }
+
+/**
+ * Send a generic email (used for emergency alerts, honeytoken triggers, etc.)
+ * @param {{ to: string; subject: string; html: string }} opts
+ */
+export async function sendEmail({ to, subject, html }) {
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+
+  const mailOptions = {
+    from: `"Nexus Zero Trust" <${process.env.EMAIL_USER}>`,
+    to,
+    subject,
+    html,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`[EMAIL] Sent to ${to}: ${subject}`);
+    return true;
+  } catch (error) {
+    console.error(`[EMAIL_ERROR] Failed to send email to ${to}:`, error.message);
+    return false;
+  }
+}

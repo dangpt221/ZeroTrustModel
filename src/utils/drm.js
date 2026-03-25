@@ -50,31 +50,31 @@ export function getDocumentDRMPolicy(document, user) {
   switch (classification) {
     case 'CONFIDENTIAL':
       policy = {
-        view: true,
-        download: securityLevel >= 2,
-        print: securityLevel >= 3 && !isAdmin,
+        view: false,           // Phải có approved request mới xem được
+        download: false,        // Cấm tuyệt đối tải file
+        print: false,
         copy: false,
         edit: isOwner || isAdmin,
         share: isOwner || isAdmin,
         expiresAt: getDefaultExpiry(securityLevel),
-        watermark: securityLevel >= 2,
+        watermark: true,       // Luôn có watermark khi xem
         offlineAccess: false,
-        printLimit: securityLevel >= 3 ? 3 : null,
+        printLimit: 0,
         shareWith: [],
       };
       break;
 
     case 'INTERNAL':
       policy = {
-        view: true,
-        download: true,
-        print: true,
-        copy: true,
+        view: false,           // Phải có approved request mới xem được
+        download: false,        // Cấm tải file
+        print: false,
+        copy: false,
         edit: isOwner || isAdmin,
         share: isOwner || isAdmin,
         expiresAt: null,
         watermark: securityLevel >= 3,
-        offlineAccess: true,
+        offlineAccess: false,
         printLimit: null,
         shareWith: [],
       };
@@ -82,15 +82,15 @@ export function getDocumentDRMPolicy(document, user) {
 
     case 'PUBLIC':
       policy = {
-        view: true,
-        download: true,
+        view: false,           // Phải có approved request mới xem được
+        download: false,         // Cấm tải file — chỉ ADMIN mới được tải
         print: true,
-        copy: true,
+        copy: false,
         edit: isOwner || isAdmin,
         share: true,
         expiresAt: null,
         watermark: false,
-        offlineAccess: true,
+        offlineAccess: false,
         printLimit: null,
         shareWith: [],
       };
@@ -114,24 +114,24 @@ export function getDocumentDRMPolicy(document, user) {
       break;
   }
 
-  // Admin bypasses all restrictions
+  // Admin bypasses all restrictions (but NEVER download — ZeroTrust: never trust, always verify)
   if (isAdmin) {
     policy = {
-      view: true,
-      download: true,
-      print: true,
-      copy: true,
+      view: true,              // Xem qua streaming
+      download: false,          // TUYỆT ĐỐI KHÔNG TẢI — hacker đánh cắp admin cũng không tải được
+      print: false,             // Không in
+      copy: false,             // Không copy
       edit: true,
       share: true,
       expiresAt: null,
-      watermark: false,
-      offlineAccess: true,
-      printLimit: null,
+      watermark: true,          // Luôn watermark khi stream
+      offlineAccess: false,
+      printLimit: 0,
       shareWith: [],
     };
   }
 
-  // Owner has full access
+  // Owner has full access (view only, no download)
   if (isOwner && !isAdmin) {
     policy.edit = true;
     policy.share = true;

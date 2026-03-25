@@ -54,22 +54,36 @@ router.get("/documents/requests/my", requireAuth, documentController.getMyReques
 router.get("/documents", requireAuth, documentController.getAllDocuments);
 router.get("/documents/:id", requireAuth, documentController.getDocumentById);
 
-// Upload file first, then create document
+// Upload file — MẶC ĐỊNH MÃ HÓA AES-256
+// Mọi file upload đều được tự động mã hóa trước khi lưu trữ
 router.post("/documents/upload", requireAuth, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: "No file uploaded" });
     }
 
-    // Return file info for creating document
+    // Tự động mã hóa file sau khi upload
+    const { encryptFile } = await import('../utils/encryption.js');
+    const encryptedFilename = `encrypted_${req.file.filename}`;
+    const encryptedPath = path.join(uploadsDir, encryptedFilename);
+    await encryptFile(req.file.path, encryptedPath);
+
+    // Xóa file gốc (không mã hóa) ngay lập tức — hacker không thể đọc
+    fs.unlinkSync(req.file.path);
+
+    console.log(`[ENCRYPT] File encrypted: ${req.file.originalname} -> ${encryptedFilename}`);
+
     res.json({
-      filename: req.file.filename,
+      filename: encryptedFilename,
       originalName: req.file.originalname,
-      url: `/uploads/documents/${req.file.filename}`,
-      fileSize: req.file.size,
-      fileType: path.extname(req.file.originalname).slice(1).toUpperCase()
+      url: `/uploads/documents/${encryptedFilename}`,
+      fileSize: fs.statSync(encryptedPath).size,
+      fileType: path.extname(req.file.originalname).slice(1).toUpperCase(),
+      encrypted: true,
+      algorithm: 'AES-256-GCM'
     });
   } catch (err) {
+    console.error('[UPLOAD ERROR]', err);
     res.status(500).json({ message: err.message });
   }
 });
@@ -80,21 +94,33 @@ router.post("/documents", requireAuth, requireRole(["ADMIN", "MANAGER", "STAFF"]
 // Update - ADMIN/MANAGER can update any, STAFF can update own draft
 router.put("/documents/:id", requireAuth, documentController.updateDocument);
 
-// Upload new version
+// Upload new version — MẶC ĐỊNH MÃ HÓA
 router.post("/documents/:id/upload", requireAuth, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: "No file uploaded" });
     }
 
+    // Tự động mã hóa file sau khi upload
+    const { encryptFile } = await import('../utils/encryption.js');
+    const encryptedFilename = `encrypted_${req.file.filename}`;
+    const encryptedPath = path.join(uploadsDir, encryptedFilename);
+    await encryptFile(req.file.path, encryptedPath);
+
+    // Xóa file gốc ngay lập tức
+    fs.unlinkSync(req.file.path);
+
     res.json({
-      filename: req.file.filename,
+      filename: encryptedFilename,
       originalName: req.file.originalname,
-      url: `/uploads/documents/${req.file.filename}`,
-      fileSize: req.file.size,
-      fileType: path.extname(req.file.originalname).slice(1).toUpperCase()
+      url: `/uploads/documents/${encryptedFilename}`,
+      fileSize: fs.statSync(encryptedPath).size,
+      fileType: path.extname(req.file.originalname).slice(1).toUpperCase(),
+      encrypted: true,
+      algorithm: 'AES-256-GCM'
     });
   } catch (err) {
+    console.error('[UPLOAD VERSION ERROR]', err);
     res.status(500).json({ message: err.message });
   }
 });

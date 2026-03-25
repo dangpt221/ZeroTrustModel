@@ -29,6 +29,7 @@ export const DocumentManagement: React.FC = () => {
   const [filterSensitivity, setFilterSensitivity] = useState<string>('ALL');
   const [viewingDoc, setViewingDoc] = useState<Document | null>(null);
   const [securityModalDoc, setSecurityModalDoc] = useState<Document | null>(null);
+  const [passwordInput, setPasswordInput] = useState('');
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -374,7 +375,7 @@ export const DocumentManagement: React.FC = () => {
                     {/* Lock Status */}
                     <div className="flex gap-1 ml-1">
                       {(doc as any).isLocked && (
-                        <Lock size={14} className="text-rose-500" title="Bị khóa" />
+                        <span title="Bị khóa"><Lock size={14} className="text-rose-500" /></span>
                       )}
                       {(doc as any).failedAttempts > 0 && (
                         <span className="text-[10px] text-red-500" title={`${(doc as any).failedAttempts} lần nhập sai`}>
@@ -633,10 +634,10 @@ export const DocumentManagement: React.FC = () => {
         )}
       </Modal>
 
-      {/* Security Settings Modal */}
-      <Modal isOpen={!!securityModalDoc} onClose={() => { setSecurityModalDoc(null); setPasswordInput(''); }} title="Cai dat bao mat tai lieu">
+      {/* Security Settings Modal - Enhanced DRM */}
+      <Modal isOpen={!!securityModalDoc} onClose={() => { setSecurityModalDoc(null); setPasswordInput(''); }} title="Cài đặt bảo mật tài liệu" size="lg">
         {securityModalDoc && (
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl">
               <div className="p-4 bg-blue-100 text-blue-600 rounded-xl">
                 <Shield size={32} />
@@ -644,48 +645,132 @@ export const DocumentManagement: React.FC = () => {
               <div>
                 <h4 className="font-bold text-slate-800">{securityModalDoc.title}</h4>
                 <p className="text-sm text-slate-500">
-                  Muc do bao mat: Level {securityModalDoc.securityLevel}
+                  Mức độ bảo mật: Level {securityModalDoc.securityLevel || 1} • {securityModalDoc.classification || 'INTERNAL'}
                 </p>
               </div>
             </div>
 
-            {/* Current Status */}
-            <div className="p-3 bg-slate-50 rounded-xl">
-              <p className="text-xs font-bold text-slate-400 uppercase">Trang thai khoa</p>
-              <p className="font-bold text-slate-700 flex items-center gap-2">
-                {(securityModalDoc as any).isLocked ? (
-                  <>
-                    <Lock size={16} className="text-rose-500" /> Bi khoa
-                  </>
-                ) : (
-                  <>
-                    <Unlock size={16} className="text-emerald-500" /> Mo khoa
-                  </>
-                )}
-              </p>
+            {/* Lock Status */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 bg-slate-50 rounded-xl">
+                <p className="text-xs font-bold text-slate-400 uppercase">Trạng thái khóa</p>
+                <p className="font-bold text-slate-700 flex items-center gap-2 mt-1">
+                  {(securityModalDoc as any).isLocked ? (
+                    <><Lock size={14} className="text-rose-500" /> Bị khóa</>
+                  ) : (
+                    <><Unlock size={14} className="text-emerald-500" /> Mở khóa</>
+                  )}
+                </p>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-xl">
+                <p className="text-xs font-bold text-slate-400 uppercase">DRM</p>
+                <p className="font-bold text-slate-700 flex items-center gap-2 mt-1">
+                  {securityModalDoc.drm?.enabled ? (
+                    <><Shield size={14} className="text-emerald-500" /> Đã bật</>
+                  ) : (
+                    <><Shield size={14} className="text-slate-300" /> Chưa bật</>
+                  )}
+                </p>
+              </div>
             </div>
 
             {/* Lock/Unlock Buttons */}
-            <div className="flex gap-2 pt-2">
+            <div className="flex gap-2">
               {(securityModalDoc as any).isLocked ? (
                 <button
                   onClick={() => { handleToggleLock(securityModalDoc, false); setSecurityModalDoc(null); }}
                   className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2"
                 >
-                  <Unlock size={18} /> Mo khoa tai lieu
+                  <Unlock size={18} /> Mở khóa tài liệu
                 </button>
               ) : (
                 <button
                   onClick={() => { handleToggleLock(securityModalDoc, true); setSecurityModalDoc(null); }}
                   className="flex-1 bg-rose-600 hover:bg-rose-700 text-white py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2"
                 >
-                  <Lock size={18} /> Khoa tai lieu
+                  <Lock size={18} /> Khóa tài liệu
                 </button>
               )}
             </div>
 
+            {/* DRM Policy Info */}
+            {securityModalDoc.drm?.enabled && securityModalDoc.drm.policy && (
+              <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100">
+                <h5 className="text-xs font-black text-emerald-700 uppercase mb-3 flex items-center gap-2">
+                  <Shield size={14} /> Chính sách DRM hiện tại
+                </h5>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    ['Xem', securityModalDoc.drm.policy.view],
+                    ['Tải', securityModalDoc.drm.policy.download],
+                    ['In', securityModalDoc.drm.policy.print],
+                    ['Copy', securityModalDoc.drm.policy.copy],
+                    ['Chỉnh sửa', securityModalDoc.drm.policy.edit],
+                    ['Chia sẻ', securityModalDoc.drm.policy.share],
+                  ].map(([label, allowed]) => (
+                    <div key={label as string} className="flex items-center gap-1.5">
+                      <div className={`w-4 h-4 rounded flex items-center justify-center ${allowed ? 'bg-emerald-500 text-white' : 'bg-rose-100 text-rose-500'}`}>
+                        {allowed ? <span className="text-[8px]">✓</span> : <span className="text-[8px]">✗</span>}
+                      </div>
+                      <span className="text-xs font-medium text-slate-600">{label as string}</span>
+                    </div>
+                  ))}
+                </div>
+                {securityModalDoc.drm.printLimit && (
+                  <p className="text-xs text-emerald-600 mt-2 font-medium">
+                    Giới hạn in: {securityModalDoc.drm.printLimit} trang
+                  </p>
+                )}
+                {securityModalDoc.drm.expiresAt && (
+                  <p className="text-xs text-emerald-600 font-medium">
+                    Hết hạn: {new Date(securityModalDoc.drm.expiresAt).toLocaleDateString('vi-VN')}
+                  </p>
+                )}
+                {securityModalDoc.drm.watermark && (
+                  <p className="text-xs text-emerald-600 font-medium flex items-center gap-1">
+                    <Shield size={10} /> Có watermark bảo mật
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Classification Info */}
+            <div className="p-3 bg-slate-50 rounded-xl">
+              <p className="text-xs font-bold text-slate-400 uppercase">Phân loại tài liệu</p>
+              <div className="flex items-center gap-2 mt-2">
+                <span className={`text-xs font-black px-2 py-1 rounded ${
+                  securityModalDoc.classification === 'CONFIDENTIAL' ? 'bg-rose-100 text-rose-600' :
+                  securityModalDoc.classification === 'INTERNAL' ? 'bg-amber-100 text-amber-600' :
+                  'bg-slate-100 text-slate-600'
+                }`}>
+                  {securityModalDoc.classification}
+                </span>
+                <span className="text-xs text-slate-500">
+                  {securityModalDoc.classification === 'CONFIDENTIAL' && 'Watermark bắt buộc, không copy, không in'}
+                  {securityModalDoc.classification === 'INTERNAL' && 'Watermark nếu level 3, không share'}
+                  {securityModalDoc.classification === 'PUBLIC' && 'Full access'}
+                </span>
+              </div>
+            </div>
+
+            {/* Watermark & Fingerprint Info */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 bg-sky-50 rounded-xl">
+                <p className="text-xs font-bold text-sky-400 uppercase">Watermark</p>
+                <p className="text-xs font-medium text-sky-700 mt-1">
+                  {securityModalDoc.watermarkId ? `ID: ${securityModalDoc.watermarkId.slice(0, 8)}...` : 'Chưa có watermark'}
+                </p>
+              </div>
+              <div className="p-3 bg-purple-50 rounded-xl">
+                <p className="text-xs font-bold text-purple-400 uppercase">Fingerprint</p>
+                <p className="text-xs font-medium text-purple-700 mt-1">
+                  {securityModalDoc.fingerprint ? `${securityModalDoc.fingerprint.slice(0, 8)}...` : 'Chưa có fingerprint'}
+                </p>
+              </div>
+            </div>
+
             <p className="text-xs text-slate-400 text-center">
-              Tai lieu bi khoa se khong the xem hoac tai xuong duoc cho den khi duoc mo khoa
+              Tài liệu bị khóa sẽ không thể xem hoặc tải xuống cho đến khi được mở khóa
             </p>
           </div>
         )}

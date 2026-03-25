@@ -10,6 +10,9 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import helmet from 'helmet';
+import mongoSanitize from 'express-mongo-sanitize';
+import xss from 'xss-clean';
 
 import { connectDB } from './configs/db.js';
 import passport from './configs/passport.js';
@@ -47,6 +50,46 @@ export async function createApp() {
   app.use(cookieParser());
   app.use(cors({ origin: '*', credentials: false }));
   app.use(passport.initialize());
+
+  // 4a. Security headers — Helmet
+  app.use(helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    crossOriginOpenerPolicy: { policy: 'same-origin' },
+    crossOriginEmbedderPolicy: false,
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:", "blob:", "http://localhost:*"],
+        fontSrc: ["'self'", "data:"],
+        connectSrc: ["'self'"],
+        frameSrc: ["'none'"],
+        objectSrc: ["'none'"],
+        upgradeInsecureRequests: [],
+      },
+    },
+    hsts: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true,
+    },
+    noSniff: true,
+    xssFilter: true,
+    hidePoweredBy: true,
+    ieNoOpen: true,
+    frameguard: { action: 'deny' },
+  }));
+
+  // 4b. Sanitization — chống NoSQL injection & XSS
+  app.use(mongoSanitize({
+    replaceWith: '_',
+    onSanitize: (req, res, next) => {
+      console.warn('[SECURITY] MongoDB sanitize blocked potentially dangerous input:', req.path);
+      next();
+    }
+  }));
+  app.use(xss());
 
   // Serve uploaded files
   app.use('/uploads', express.static(path.join(__dirname, '../uploads')));

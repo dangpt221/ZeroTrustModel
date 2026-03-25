@@ -170,6 +170,48 @@ export interface Document {
   // Legacy fields for compatibility
   type?: DocumentType | string;
   uploadedBy?: string;
+  // Advanced security fields
+  drm?: DRMInfo;
+  watermarkId?: string;
+  fingerprint?: string;
+}
+
+export interface DRMInfo {
+  enabled: boolean;
+  policy?: DRMPolicy;
+  watermark?: boolean;
+  expiresAt?: string;
+  printLimit?: number;
+  classification?: string;
+  securityLevel?: number;
+  requiresPassword?: boolean;
+}
+
+export interface DRMPolicy {
+  view: boolean;
+  download: boolean;
+  print: boolean;
+  copy: boolean;
+  edit: boolean;
+  share: boolean;
+  expiresAt?: string;
+  watermark?: boolean;
+  offlineAccess?: boolean;
+  printLimit?: number | null;
+  shareWith?: string[];
+}
+
+export interface SecureDownloadLink {
+  downloadUrl: string;
+  downloadId: string;
+  expiresAt: string;
+  maxDownloads: number;
+}
+
+export interface RateLimitInfo {
+  blocked: boolean;
+  remaining: number;
+  retryAfter?: number;
 }
 
 export interface DocumentRequest {

@@ -21,7 +21,7 @@ import {
   Clock,
   LayoutGrid,
   Bell,
-  Shield
+  Shield,
 } from 'lucide-react';
 
 export const COLORS = {
