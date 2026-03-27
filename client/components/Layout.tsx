@@ -48,9 +48,24 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const isManager = user?.role === UserRole.MANAGER;
   const isMember = user?.role === UserRole.STAFF;
 
-  let navigation = ADMIN_NAVIGATION;
-  if (isManager) navigation = MANAGER_NAVIGATION;
-  if (isMember) navigation = STAFF_NAVIGATION;
+  let navigation: any[] = [...ADMIN_NAVIGATION];
+  if (isManager) navigation = [...MANAGER_NAVIGATION];
+  if (isMember) navigation = [...STAFF_NAVIGATION];
+
+  // Dynamic Navigation Injection
+  // If user has custom permissions, push any allowed admin routes 
+  // that are not already in their default navigation array.
+  if ((isManager || isMember) && user.permissions && user.permissions.length > 0) {
+    ADMIN_NAVIGATION.forEach((adminItem: any) => {
+      // If the admin item requires a permission, and the user has it
+      if (adminItem.permission && user.permissions?.includes(adminItem.permission)) {
+        // Only push if their navigation doesn't already have it
+        if (!navigation.find(n => n.path === adminItem.path)) {
+          navigation.push(adminItem);
+        }
+      }
+    });
+  }
 
   // Theme configuration based on role
   let sidebarBg = 'bg-[#0f172a] border-r border-slate-800';

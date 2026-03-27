@@ -37,16 +37,16 @@ export const COLORS = {
 };
 
 export const ADMIN_NAVIGATION = [
-  { name: 'Tổng quan Dashboard', icon: <LayoutDashboard size={20} />, path: '/' },
-  { name: 'Quản lý người dùng', icon: <Users size={20} />, path: '/admin/users' },
-  { name: 'Vai trò & Phân quyền', icon: <ShieldCheck size={20} />, path: '/admin/roles' },
-  { name: 'Quản lý bộ phận', icon: <Building2 size={20} />, path: '/admin/departments' },
-  { name: 'Quản lý tài liệu', icon: <FolderLock size={20} />, path: '/admin/documents' },
-  { name: 'Nhắn tin nội bộ', icon: <MessageCircle size={20} />, path: '/messaging' },
-  { name: 'Quản lý Chat nội bộ', icon: <MessageSquare size={20} />, path: '/admin/chat' },
-  { name: 'Giám sát SOC Log', icon: <Activity size={20} />, path: '/audit-logs' },
-  { name: 'Cấu hình Zero Trust', icon: <Fingerprint size={20} />, path: '/admin/zero-trust' },
-  { name: 'Quản lý thông báo', icon: <Bell size={20} />, path: '/admin/notifications' },
+  { name: 'Tổng quan Dashboard', icon: <LayoutDashboard size={20} />, path: '/', permission: '' },
+  { name: 'Quản lý người dùng', icon: <Users size={20} />, path: '/admin/users', permission: 'USER_VIEW' },
+  { name: 'Vai trò & Phân quyền', icon: <ShieldCheck size={20} />, path: '/admin/roles', permission: 'ROLE_VIEW' },
+  { name: 'Quản lý bộ phận', icon: <Building2 size={20} />, path: '/admin/departments', permission: 'DEPT_VIEW' },
+  { name: 'Quản lý tài liệu', icon: <FolderLock size={20} />, path: '/admin/documents', permission: 'DOC_VIEW' },
+  { name: 'Nhắn tin nội bộ', icon: <MessageCircle size={20} />, path: '/messaging', permission: '' },
+  { name: 'Quản lý Chat nội bộ', icon: <MessageSquare size={20} />, path: '/admin/chat', permission: 'ROLE_VIEW' }, // using ROLE_VIEW temporarily
+  { name: 'Giám sát SOC Log', icon: <Activity size={20} />, path: '/audit-logs', permission: 'AUDIT_VIEW' },
+  { name: 'Cấu hình Zero Trust', icon: <Fingerprint size={20} />, path: '/admin/zero-trust', permission: 'ZT_VIEW' },
+  { name: 'Quản lý thông báo', icon: <Bell size={20} />, path: '/admin/notifications', permission: 'NOTIF_SEND' },
 ];
 
 export const MANAGER_NAVIGATION = [

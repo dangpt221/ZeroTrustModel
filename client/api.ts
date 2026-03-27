@@ -94,7 +94,7 @@ export const usersApi = {
       body: JSON.stringify(data),
     }),
 
-  update: (id: string, data: Partial<User> & { password?: string }) =>
+  update: (id: string, data: Partial<User> & { password?: string; customRoles?: string[] }) =>
     apiRequest<User>(`/admin/users/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
@@ -453,33 +453,33 @@ export const zeroTrustApi = {
 // ==================== Roles API ====================
 export const rolesApi = {
   // Roles
-  getAll: () => apiRequest<Role[]>('/roles'),
+  getAll: () => apiRequest<Role[]>('/admin/roles'),
 
-  getRoles: () => apiRequest<Role[]>('/roles'),
+  getRoles: () => apiRequest<Role[]>('/admin/roles'),
 
-  getById: (id: string) => apiRequest<Role>(`/roles/${id}`),
+  getById: (id: string) => apiRequest<Role>(`/admin/roles/${id}`),
 
   create: (data: { name: string; description?: string; permissions?: string[]; color?: string }) =>
-    apiRequest<Role>('/roles', {
+    apiRequest<Role>('/admin/roles', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
 
   update: (id: string, data: { name?: string; description?: string; permissions?: string[]; color?: string; isActive?: boolean }) =>
-    apiRequest<Role>(`/roles/${id}`, {
+    apiRequest<Role>(`/admin/roles/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
 
   delete: (id: string) =>
-    apiRequest<void>(`/roles/${id}`, { method: 'DELETE' }),
+    apiRequest<void>(`/admin/roles/${id}`, { method: 'DELETE' }),
 
   // Get users by role
   getUsersByRole: (roleName: string) =>
-    apiRequest<User[]>(`/roles/${encodeURIComponent(roleName)}/users`),
+    apiRequest<User[]>(`/admin/roles/${encodeURIComponent(roleName)}/users`),
 
   // Permissions
-  getPermissions: () => apiRequest<Permission[]>('/permissions'),
+  getPermissions: () => apiRequest<Permission[]>('/admin/permissions'),
 };
 
 // ==================== Chat Management API ====================

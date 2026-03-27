@@ -26,12 +26,21 @@ import { NotificationManagement } from './pages/Admin/NotificationManagement';
 import { PendingApproval } from './pages/PendingApproval';
 import { ChatManagement } from './pages/Admin/ChatManagement';
 
-const PrivateRoute: React.FC<{ children: React.ReactNode; roles?: UserRole[] }> = ({ children, roles }) => {
+const PrivateRoute: React.FC<{ children: React.ReactNode; roles?: UserRole[], permissions?: string[] }> = ({ children, roles, permissions }) => {
   const { isAuthenticated, user } = useAuth();
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (user?.status === 'PENDING') return <Navigate to="/pending-approval" replace />;
-  if (roles && user && !roles.includes(user.role as UserRole)) return <Navigate to="/" replace />;
+  
+  if (user?.role === UserRole.ADMIN) return <>{children}</>;
+
+  if (roles && user && !roles.includes(user.role as UserRole)) {
+    // If the base roles don't match, check if they have specific permissions
+    if (permissions && user.permissions && permissions.some(p => user.permissions?.includes(p))) {
+      return <>{children}</>;
+    }
+    return <Navigate to="/" replace />;
+  }
 
   return <>{children}</>;
 };
@@ -60,43 +69,43 @@ const App: React.FC = () => {
 
           {/* Admin Routes */}
           <Route path="/admin/users" element={
-            <PrivateRoute roles={[UserRole.ADMIN]}>
+            <PrivateRoute roles={[UserRole.ADMIN]} permissions={['USER_VIEW']}>
               <Layout><UserManagement /></Layout>
             </PrivateRoute>
           } />
 
           <Route path="/admin/roles" element={
-            <PrivateRoute roles={[UserRole.ADMIN]}>
+            <PrivateRoute roles={[UserRole.ADMIN]} permissions={['ROLE_VIEW', 'USER_VIEW']}>
               <Layout><RoleManagement /></Layout>
             </PrivateRoute>
           } />
 
           <Route path="/admin/departments" element={
-            <PrivateRoute roles={[UserRole.ADMIN]}>
+            <PrivateRoute roles={[UserRole.ADMIN]} permissions={['DEPT_VIEW']}>
               <Layout><DepartmentManagement /></Layout>
             </PrivateRoute>
           } />
 
           <Route path="/admin/documents" element={
-            <PrivateRoute roles={[UserRole.ADMIN]}>
+            <PrivateRoute roles={[UserRole.ADMIN]} permissions={['DOC_VIEW']}>
               <Layout><DocumentManagement /></Layout>
             </PrivateRoute>
           } />
 
           <Route path="/admin/zero-trust" element={
-            <PrivateRoute roles={[UserRole.ADMIN]}>
+            <PrivateRoute roles={[UserRole.ADMIN]} permissions={['ZT_VIEW']}>
               <Layout><ZeroTrustSettings /></Layout>
             </PrivateRoute>
           } />
 
           <Route path="/admin/notifications" element={
-            <PrivateRoute roles={[UserRole.ADMIN]}>
+            <PrivateRoute roles={[UserRole.ADMIN]} permissions={['NOTIF_SEND']}>
               <Layout><NotificationManagement /></Layout>
             </PrivateRoute>
           } />
 
           <Route path="/admin/chat" element={
-            <PrivateRoute roles={[UserRole.ADMIN]}>
+            <PrivateRoute roles={[UserRole.ADMIN]} permissions={['ROLE_VIEW']}>
               <Layout><ChatManagement /></Layout>
             </PrivateRoute>
           } />
@@ -153,7 +162,7 @@ const App: React.FC = () => {
           } />
 
           <Route path="/audit-logs" element={
-            <PrivateRoute roles={[UserRole.ADMIN]}>
+            <PrivateRoute roles={[UserRole.ADMIN]} permissions={['AUDIT_VIEW']}>
               <Layout><AuditLogs /></Layout>
             </PrivateRoute>
           } />

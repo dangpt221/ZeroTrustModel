@@ -39,6 +39,7 @@ function toClientUser(user) {
     departmentId: user.departmentId?._id?.toString() || user.departmentId || null,
     lastActiveAt: user.lastActiveAt ? new Date(user.lastActiveAt).toISOString() : null,
     isOnline: !!isOnline,
+    permissions: user.customRoles?.flatMap(r => r.permissions || []) || []
   };
 }
 
@@ -77,7 +78,7 @@ export function registerAuthRoutes(router) {
         }
 
         // MFA verified, complete login
-        const user = await User.findById(pending.userId);
+        const user = await User.findById(pending.userId).populate('customRoles');
         if (!user || user.isLocked) {
           mfaPendingLogins.delete(email);
           logSecurityEvent('LOGIN_BLOCKED', { email, ip: clientIP, reason: 'Locked account' });
@@ -122,7 +123,7 @@ export function registerAuthRoutes(router) {
       }
 
       // Step 1: Verify email/password
-      const user = await User.findOne({ email });
+      const user = await User.findOne({ email }).populate('customRoles');
       if (!user) {
         recordFailedAttempt(clientIP, email);
         logSecurityEvent('LOGIN_FAILED', { email, ip: clientIP, reason: 'User not found' });
@@ -242,10 +243,11 @@ export function registerAuthRoutes(router) {
       let user;
       try {
         user = await User.findById(req.user.id)
-          .populate('departmentId', 'name');
+          .populate('departmentId', 'name')
+          .populate('customRoles');
       } catch (popErr) {
         console.error('[auth/me] populate error:', popErr);
-        user = await User.findById(req.user.id);
+        user = await User.findById(req.user.id).populate('customRoles');
       }
 
       console.log('[auth/me] user found:', user ? user.email : 'null');
@@ -269,6 +271,10 @@ export function registerAuthRoutes(router) {
       }
 
       console.log(`[AUTH_CHECK] User: ${user.email}, Status: ${user.status || 'N/A'}`);
+
+      // Refresh JWT token so newly assigned permissions are embedded in the cookie
+      const newToken = signUserToken(user);
+      setAuthCookie(res, newToken);
 
       res.json(toClientUser(user));
     } catch (err) {

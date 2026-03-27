@@ -5,7 +5,7 @@ import fs from "fs";
 import { fileURLToPath } from "url";
 import * as userController from "../controllers/userController.js";
 import { User } from "../models/User.js";
-import { requireAuth, requireRole } from "../middleware/auth.js";
+import { requireAuth, requireRole, requirePermission } from "../middleware/auth.js";
 import { Role } from "../models/Role.js";
 
 // Avatar upload setup
@@ -36,15 +36,15 @@ const router = express.Router();
 // ============ USER ROUTES ============
 
 // Admin: Full user management
-router.get("/admin/users", requireAuth, requireRole(["ADMIN"]), userController.getAllUsers);
-router.post("/admin/users", requireAuth, requireRole(["ADMIN"]), userController.createUser);
-router.put("/admin/users/:id", requireAuth, requireRole(["ADMIN"]), userController.updateUser);
-router.delete("/admin/users/:id", requireAuth, requireRole(["ADMIN"]), userController.deleteUser);
-router.post("/admin/users/:id/lock", requireAuth, requireRole(["ADMIN"]), userController.lockUser);
-router.post("/admin/users/:id/approve", requireAuth, requireRole(["ADMIN"]), userController.approveUser);
-router.post("/admin/users/:id/reject", requireAuth, requireRole(["ADMIN"]), userController.rejectUser);
-router.post("/admin/users/:id/mfa", requireAuth, requireRole(["ADMIN"]), userController.toggleMfa);
-router.post("/admin/users/:id/reset-password", requireAuth, requireRole(["ADMIN"]), userController.resetPassword);
+router.get("/admin/users", requireAuth, requirePermission(["USER_VIEW"]), userController.getAllUsers);
+router.post("/admin/users", requireAuth, requirePermission(["USER_CREATE"]), userController.createUser);
+router.put("/admin/users/:id", requireAuth, requirePermission(["USER_EDIT"]), userController.updateUser);
+router.delete("/admin/users/:id", requireAuth, requirePermission(["USER_DELETE"]), userController.deleteUser);
+router.post("/admin/users/:id/lock", requireAuth, requirePermission(["USER_EDIT"]), userController.lockUser);
+router.post("/admin/users/:id/approve", requireAuth, requirePermission(["USER_APPROVE"]), userController.approveUser);
+router.post("/admin/users/:id/reject", requireAuth, requirePermission(["USER_APPROVE"]), userController.rejectUser);
+router.post("/admin/users/:id/mfa", requireAuth, requirePermission(["USER_EDIT"]), userController.toggleMfa);
+router.post("/admin/users/:id/reset-password", requireAuth, requirePermission(["USER_EDIT"]), userController.resetPassword);
 
 // Manager: Can view and manage their team members only
 router.get("/manager/users", requireAuth, requireRole(["ADMIN", "MANAGER"]), userController.getTeamMembers);
@@ -71,7 +71,7 @@ router.post("/users/upload-avatar", requireAuth, avatarUpload.single('avatar'), 
 // ============ ROLE & PERMISSION ROUTES ============
 
 // Get all roles
-router.get("/admin/roles", requireAuth, requireRole(["ADMIN"]), async (req, res, next) => {
+router.get("/admin/roles", requireAuth, requirePermission(["ROLE_VIEW", "USER_VIEW"]), async (req, res, next) => {
   try {
     const roles = await Role.find().lean();
     res.json(roles.map((r) => ({
@@ -85,7 +85,7 @@ router.get("/admin/roles", requireAuth, requireRole(["ADMIN"]), async (req, res,
 });
 
 // Create new role
-router.post("/admin/roles", requireAuth, requireRole(["ADMIN"]), async (req, res, next) => {
+router.post("/admin/roles", requireAuth, requirePermission(["ROLE_MANAGE"]), async (req, res, next) => {
   try {
     const { name, description, permissions, color } = req.body;
     const role = await Role.create({ name, description, permissions: permissions || [], color });
@@ -105,7 +105,7 @@ router.post("/admin/roles", requireAuth, requireRole(["ADMIN"]), async (req, res
 });
 
 // Update role
-router.put("/admin/roles/:id", requireAuth, requireRole(["ADMIN"]), async (req, res, next) => {
+router.put("/admin/roles/:id", requireAuth, requirePermission(["ROLE_MANAGE"]), async (req, res, next) => {
   try {
     const { name, description, permissions, color } = req.body;
     const role = await Role.findByIdAndUpdate(
@@ -125,7 +125,7 @@ router.put("/admin/roles/:id", requireAuth, requireRole(["ADMIN"]), async (req, 
 });
 
 // Delete role
-router.delete("/admin/roles/:id", requireAuth, requireRole(["ADMIN"]), async (req, res, next) => {
+router.delete("/admin/roles/:id", requireAuth, requirePermission(["ROLE_MANAGE"]), async (req, res, next) => {
   try {
     const role = await Role.findByIdAndDelete(req.params.id);
     if (!role) return res.status(404).json({ message: "Vai trò không tồn tại" });
@@ -134,7 +134,7 @@ router.delete("/admin/roles/:id", requireAuth, requireRole(["ADMIN"]), async (re
 });
 
 // Get all permissions (defined system-wide)
-router.get("/admin/permissions", requireAuth, requireRole(["ADMIN"]), async (req, res) => {
+router.get("/admin/permissions", requireAuth, requirePermission(["ROLE_VIEW", "ROLE_MANAGE", "USER_VIEW"]), async (req, res) => {
   res.json([
     // User Management
     { id: "USER_VIEW", name: "Xem người dùng", code: "USER_VIEW", description: "Xem danh sách người dùng" },

@@ -7,20 +7,21 @@ export default defineConfig(({ mode }) => {
     return {
       root: 'client',
       server: {
-        port: 5173,
+        port: 5000,
+        strictPort: true,
         host: '0.0.0.0',
         proxy: {
           '^/api/.*': {
-            target: 'http://localhost:5000',
+            target: 'http://localhost:5001',
             changeOrigin: true,
             secure: false,
           },
           '/socket.io': {
-            target: 'ws://localhost:5000',
+            target: 'ws://localhost:5001',
             ws: true,
           },
           '^/uploads/.*': {
-            target: 'http://localhost:5000',
+            target: 'http://localhost:5001',
             changeOrigin: true,
             secure: false,
           },

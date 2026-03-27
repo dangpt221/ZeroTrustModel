@@ -30,6 +30,8 @@ export interface User {
   createdAt?: string;
   updatedAt?: string;
   isOnline?: boolean;
+  customRoles?: Role[];
+  permissions?: string[];
 }
 
 // Project types

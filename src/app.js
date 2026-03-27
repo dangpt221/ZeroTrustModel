@@ -13,6 +13,7 @@ import { fileURLToPath } from 'url';
 import helmet from 'helmet';
 import mongoSanitize from 'express-mongo-sanitize';
 import xss from 'xss-clean';
+import rateLimit from 'express-rate-limit';
 
 import { connectDB } from './configs/db.js';
 import passport from './configs/passport.js';
@@ -45,11 +46,38 @@ export async function createApp() {
   app.set('io', io); // Store io so routes can access via req.app.get('io')
 
   // 4. Global middleware
-  app.use(express.json({ limit: '10mb' }));
-  app.use(express.urlencoded({ extended: true }));
+  app.use(express.json({ limit: '1mb' })); // Reduced from 10mb to prevent Memory exhaustion DoS
+  app.use(express.urlencoded({ extended: true, limit: '1mb' }));
   app.use(cookieParser());
-  app.use(cors({ origin: '*', credentials: false }));
+  
+  // CORS Configuration
+  const allowedOrigins = process.env.NODE_ENV === 'production' 
+    ? [process.env.FRONTEND_URL || 'http://localhost:5000']
+    : ['http://localhost:5000', 'http://localhost:5173'];
+    
+  app.use(cors({ 
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.indexOf(origin) === -1) {
+        var msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+        return callback(new Error(msg), false);
+      }
+      return callback(null, true);
+    }, 
+    credentials: true // Allow cookies
+  }));
   app.use(passport.initialize());
+
+  // Global Rate Limiting to prevent API Abuse / DDoS
+  const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 300, // limit each IP to 300 requests per windowMs
+    message: 'Too many requests from this IP, please try again after 15 minutes',
+    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  });
+  app.use('/api/', apiLimiter);
 
   // 4a. Security headers — Helmet
   app.use(helmet({

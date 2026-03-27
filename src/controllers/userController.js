@@ -6,6 +6,7 @@ export const getAllUsers = async (req, res, next) => {
   try {
     const users = await User.find()
       .populate('departmentId', 'name')
+      .populate('customRoles')
       .lean();
     res.json(
       users.map((u) => ({
@@ -21,6 +22,7 @@ export const getAllUsers = async (req, res, next) => {
         device: u.device || "Unknown",
         mfaEnabled: u.mfaEnabled || false,
         isLocked: u.isLocked || false,
+        customRoles: u.customRoles || [],
         createdAt: u.createdAt,
         updatedAt: u.updatedAt,
       }))
@@ -35,6 +37,7 @@ export const getUsers = async (req, res, next) => {
   try {
     const users = await User.find()
       .populate('departmentId', 'name')
+      .populate('customRoles')
       .lean();
     res.json(
       users.map((u) => ({
@@ -46,6 +49,7 @@ export const getUsers = async (req, res, next) => {
         avatar: u.avatar || `https://picsum.photos/seed/${u._id}/200`,
         departmentId: u.departmentId?._id?.toString() || u.departmentId?.toString(),
         department: u.departmentId?.name || '',
+        customRoles: u.customRoles || [],
       }))
     );
   } catch (err) {
@@ -59,6 +63,7 @@ export const getUserById = async (req, res, next) => {
     const { id } = req.params;
     const user = await User.findById(id)
       .populate('departmentId', 'name')
+      .populate('customRoles')
       .lean();
     if (!user) return res.status(404).json({ message: "User not found" });
     res.json({
@@ -74,6 +79,7 @@ export const getUserById = async (req, res, next) => {
       device: user.device || "Unknown",
       mfaEnabled: user.mfaEnabled || false,
       isLocked: user.isLocked || false,
+      customRoles: user.customRoles || [],
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     });
@@ -85,7 +91,7 @@ export const getUserById = async (req, res, next) => {
 // Create user
 export const createUser = async (req, res, next) => {
   try {
-    const { name, email, password, role, departmentId, mfaEnabled } = req.body;
+    const { name, email, password, role, departmentId, mfaEnabled, customRoles } = req.body;
 
     // Check if user exists
     const existingUser = await User.findOne({ email });
@@ -104,11 +110,13 @@ export const createUser = async (req, res, next) => {
       mfaEnabled: mfaEnabled || false,
       status: "ACTIVE",
       trustScore: 95,
+      customRoles: customRoles || [],
     });
 
     // Populate department to get name
     const populatedUser = await User.findById(user._id)
       .populate('departmentId', 'name')
+      .populate('customRoles')
       .lean();
 
     res.status(201).json({
@@ -121,6 +129,7 @@ export const createUser = async (req, res, next) => {
       departmentId: populatedUser.departmentId?._id?.toString() || populatedUser.departmentId?.toString(),
       department: populatedUser.departmentId?.name || '',
       mfaEnabled: populatedUser.mfaEnabled,
+      customRoles: populatedUser.customRoles || [],
     });
   } catch (err) {
     next(err);
@@ -131,19 +140,21 @@ export const createUser = async (req, res, next) => {
 export const updateUser = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { name, role, departmentId, mfaEnabled, password } = req.body;
+    const { name, role, departmentId, mfaEnabled, password, customRoles } = req.body;
 
     const updateData = {};
     if (name) updateData.name = name;
     if (role) updateData.role = role;
     if (departmentId) updateData.departmentId = departmentId;
     if (mfaEnabled !== undefined) updateData.mfaEnabled = mfaEnabled;
+    if (customRoles !== undefined) updateData.customRoles = customRoles;
     if (password) {
       updateData.passwordHash = await bcrypt.hash(password, 10);
     }
 
     const user = await User.findByIdAndUpdate(id, updateData, { new: true })
-      .populate('departmentId', 'name');
+      .populate('departmentId', 'name')
+      .populate('customRoles');
     if (!user) return res.status(404).json({ message: "User not found" });
 
     res.json({
@@ -156,6 +167,7 @@ export const updateUser = async (req, res, next) => {
       departmentId: user.departmentId?._id?.toString() || user.departmentId?.toString(),
       department: user.departmentId?.name || '',
       mfaEnabled: user.mfaEnabled,
+      customRoles: user.customRoles || [],
     });
   } catch (err) {
     next(err);

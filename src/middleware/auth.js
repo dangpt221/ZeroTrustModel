@@ -51,6 +51,27 @@ export function requireRole(roles = []) {
   };
 }
 
+export function requirePermission(permissionsArray = []) {
+  return (req, res, next) => {
+    console.log('[requirePermission] Checking permission. User role:', req.user?.role, 'Req:', permissionsArray);
+    if (!req.user) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+    // ADMIN automatically bypasses granular permission checks
+    if (req.user.role === 'ADMIN') {
+      return next();
+    }
+    const userPerms = req.user.permissions || [];
+    const hasPermission = permissionsArray.some(p => userPerms.includes(p));
+    
+    if (!hasPermission) {
+      console.log(`[requirePermission] Denied. User lacks ${permissionsArray.join(' or ')}`);
+      return res.status(403).json({ message: 'Forbidden: Missing Required Permission' });
+    }
+    next();
+  };
+}
+
 export function signUserToken(user) {
   // Handle departmentId - convert to string if it's an object (populated)
   let deptId = user.departmentId;
@@ -58,6 +79,21 @@ export function signUserToken(user) {
     deptId = deptId._id.toString();
   } else if (deptId && typeof deptId === 'object' && deptId.toString) {
     deptId = deptId.toString();
+  }
+
+  // Extract flat list of permissions from custom roles
+  let permissions = [];
+  if (user.customRoles && Array.isArray(user.customRoles)) {
+    const permsSet = new Set();
+    user.customRoles.forEach(role => {
+      if (role && role.permissions && Array.isArray(role.permissions)) {
+        role.permissions.forEach(p => {
+          // p could be an object or a string ID
+          permsSet.add(typeof p === 'object' ? (p.id || p.code || p._id || p) : p);
+        });
+      }
+    });
+    permissions = Array.from(permsSet);
   }
 
   return jwt.sign(
@@ -68,6 +104,7 @@ export function signUserToken(user) {
       role: user.role,
       departmentId: deptId || null,
       trustScore: user.trustScore ?? 95,
+      permissions: permissions,
     },
     JWT_SECRET,
     { expiresIn: '12h' },
@@ -75,10 +112,11 @@ export function signUserToken(user) {
 }
 
 export function setAuthCookie(res, token) {
+  const isProduction = process.env.NODE_ENV === 'production';
   res.cookie(COOKIE_NAME, token, {
     httpOnly: true,
-    sameSite: 'lax',
-    secure: false,
+    sameSite: 'strict', // upgraded from 'lax' to tightly kill CSRF
+    secure: isProduction, // enforce HTTPS in production
     maxAge: 12 * 60 * 60 * 1000,
   });
 }

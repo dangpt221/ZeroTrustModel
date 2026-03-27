@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { chatManagementApi, usersApi } from '../../api';
 import { usePermission } from '../../hooks/usePermission';
-import { Search, MessageSquare, Users, Lock, Unlock, Trash2, Send, Download, Settings, Filter, Eye, X, Plus, Minus, Mail } from 'lucide-react';
+import { Search, MessageSquare, Users, Lock, Unlock, Trash2, Send, Download, Settings, Filter, Eye, X, Plus, Minus, Mail, MessageCircle, Smile } from 'lucide-react';
 import { Modal } from '../../components/Admin/Modal';
 import { useAuth } from '../../context/AuthContext';
+import { io } from 'socket.io-client';
 
 interface ChatRoom {
   id: string;

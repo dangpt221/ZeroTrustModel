@@ -10,6 +10,7 @@ const UserSchema = new mongoose.Schema(
       enum: ['ADMIN', 'MANAGER', 'STAFF'],
       default: 'STAFF',
     },
+    customRoles: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Role' }],
     googleId: { type: String, unique: true, sparse: true },
     avatar: { type: String },
     departmentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Department' },
