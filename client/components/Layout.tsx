@@ -203,11 +203,12 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                       <p className="text-sm font-bold text-slate-800">{user?.name}</p>
                       <p className="text-xs text-slate-500 mt-0.5">{user?.email || 'user@company.com'}</p>
                     </div>
-                    <Link to="/profile" className="flex items-center gap-3 px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition-colors group">
+                    <Link 
+                      to="/profile" 
+                      onClick={() => setProfileOpen(false)}
+                      className="flex items-center gap-3 px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition-colors group"
+                    >
                       <User size={16} className="text-slate-400 group-hover:text-blue-500 transition-colors" /> Hồ sơ của tôi
-                    </Link>
-                    <Link to="/settings" className="flex items-center gap-3 px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition-colors group">
-                      <Settings size={16} className="text-slate-400 group-hover:text-blue-500 transition-colors" /> Cài đặt
                     </Link>
                     <div className="h-px bg-slate-100 my-2 mx-5"></div>
                     <button

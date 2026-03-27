@@ -167,18 +167,26 @@ const App: React.FC = () => {
 
 const DashboardSelectorProfileWrapper: React.FC = () => {
   const { user } = useAuth();
-  if (user?.role === UserRole.STAFF) return <StaffProfile />;
-
+  
   return (
-    <div className="bg-white p-10 rounded-3xl border border-slate-100 shadow-sm max-w-4xl mx-auto">
-      <div className="flex items-center gap-6 mb-10 pb-10 border-b border-slate-50">
-        <img src={user?.avatar} className="w-24 h-24 rounded-3xl" />
+    <div className="max-w-6xl mx-auto space-y-8">
+      {/* Premium Profile Header */}
+      <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm flex items-center gap-6 animate-in fade-in slide-in-from-top-4 duration-700">
+        <div className="relative">
+          <img src={user?.avatar} className="w-24 h-24 rounded-3xl object-cover ring-4 ring-blue-50" alt="Avatar" />
+          <div className="absolute -bottom-2 -right-2 bg-emerald-500 w-6 h-6 rounded-full border-4 border-white flex items-center justify-center">
+            <div className="w-2 h-2 bg-white rounded-full animate-ping"></div>
+          </div>
+        </div>
         <div>
-          <h2 className="text-3xl font-black text-slate-800">{user?.name}</h2>
-          <p className="text-slate-400 font-medium">{user?.role} Profile</p>
+          <h2 className="text-3xl font-black text-slate-800 tracking-tight">{user?.name}</h2>
+          <p className="text-blue-600 font-bold uppercase tracking-widest text-xs mt-1 bg-blue-50 inline-block px-3 py-1 rounded-lg">
+            {user?.role} Profile
+          </p>
         </div>
       </div>
-      <p className="text-slate-500 italic">Giao diện hồ sơ Admin/Manager đang được đồng bộ...</p>
+
+      {user?.role === UserRole.STAFF ? <StaffProfile /> : <ManagerProfile />}
     </div>
   );
 }

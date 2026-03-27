@@ -283,12 +283,6 @@ export const Login: React.FC = () => {
           <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.3em] flex items-center justify-center gap-2">
             <Shield size={12} className="text-blue-500" /> Hệ thống bảo mật đa lớp Active
           </p>
-          <div className="p-4 rounded-2xl bg-white/5 border border-white/5 inline-block">
-            <p className="text-[10px] text-slate-500 italic leading-relaxed">
-              Tài khoản: admin@nexus.com (có MFA) hoặc manager@nexus.com, staff@nexus.com (không MFA)<br />
-              Mật khẩu: nexus123. OTP: 000000.
-            </p>
-          </div>
         </div>
       </div>
     </div>

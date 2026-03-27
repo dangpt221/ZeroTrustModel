@@ -4,6 +4,7 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import * as userController from "../controllers/userController.js";
+import { User } from "../models/User.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { Role } from "../models/Role.js";
 
@@ -57,12 +58,12 @@ router.post("/users/upload-avatar", requireAuth, avatarUpload.single('avatar'), 
   try {
     if (!req.file) return res.status(400).json({ message: "No file uploaded" });
     const url = `/uploads/avatars/${req.file.filename}`;
-    await req.app.locals.db.collection('users').findOneAndUpdate(
-      { _id: require('mongoose').Types.ObjectId.createFromHexString(req.user._id.toString()) },
-      { $set: { avatar: url } }
-    );
+    
+    await User.findByIdAndUpdate(req.user._id, { $set: { avatar: url } });
+    
     res.json({ url });
   } catch (err) {
+    console.error('Avatar upload error:', err);
     res.status(500).json({ message: err.message });
   }
 });

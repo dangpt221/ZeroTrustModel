@@ -78,8 +78,8 @@ export const ChatManagement: React.FC = () => {
   const adminChatScrollRef = useRef<HTMLDivElement>(null);
   const adminChatInputRef = useRef<HTMLInputElement>(null);
 
-// Sticker categories
-const ADMIN_COMMON_EMOJIS = ['👍', '❤️', '😮', '😢', '😠', '😂'];
+  // Sticker categories
+  const ADMIN_COMMON_EMOJIS = ['👍', '❤️', '😮', '😢', '😠', '😂'];
 
   // Add toast notification
   const addToast = (title: string, message: string, role?: string) => {
@@ -419,22 +419,20 @@ const ADMIN_COMMON_EMOJIS = ['👍', '❤️', '😮', '😢', '😠', '😂'];
       <div className="flex gap-2 border-b border-slate-200">
         <button
           onClick={() => setActiveTab('rooms')}
-          className={`px-4 py-2 font-bold text-sm border-b-2 transition-colors ${
-            activeTab === 'rooms'
+          className={`px-4 py-2 font-bold text-sm border-b-2 transition-colors ${activeTab === 'rooms'
               ? 'border-blue-500 text-blue-600'
               : 'border-transparent text-slate-500 hover:text-slate-700'
-          }`}
+            }`}
         >
           <MessageSquare size={16} className="inline mr-2" />
           Danh sach phong
         </button>
         <button
           onClick={() => setActiveTab('messages')}
-          className={`px-4 py-2 font-bold text-sm border-b-2 transition-colors ${
-            activeTab === 'messages'
+          className={`px-4 py-2 font-bold text-sm border-b-2 transition-colors ${activeTab === 'messages'
               ? 'border-blue-500 text-blue-600'
               : 'border-transparent text-slate-500 hover:text-slate-700'
-          }`}
+            }`}
         >
           <Search size={16} className="inline mr-2" />
           Tim tin nhan
@@ -443,11 +441,10 @@ const ADMIN_COMMON_EMOJIS = ['👍', '❤️', '😮', '😢', '😠', '😂'];
           <>
             <button
               onClick={() => setActiveTab('policy')}
-              className={`px-4 py-2 font-bold text-sm border-b-2 transition-colors ${
-                activeTab === 'policy'
+              className={`px-4 py-2 font-bold text-sm border-b-2 transition-colors ${activeTab === 'policy'
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-slate-500 hover:text-slate-700'
-              }`}
+                }`}
             >
               <Settings size={16} className="inline mr-2" />
               Cau hinh
@@ -779,11 +776,10 @@ const ADMIN_COMMON_EMOJIS = ['👍', '❤️', '😮', '😢', '😠', '😂'];
               {(isSuperAdmin || isAdmin) && (
                 <button
                   onClick={() => handleLockRoom(selectedRoom)}
-                  className={`px-4 py-2 rounded-xl font-bold text-sm ${
-                    selectedRoom.isLocked
+                  className={`px-4 py-2 rounded-xl font-bold text-sm ${selectedRoom.isLocked
                       ? 'bg-emerald-100 text-emerald-600 hover:bg-emerald-200'
                       : 'bg-rose-100 text-rose-600 hover:bg-rose-200'
-                  }`}
+                    }`}
                 >
                   {selectedRoom.isLocked ? <><Unlock size={16} className="inline mr-1" /> Mo khoa</> : <><Lock size={16} className="inline mr-1" /> Khoa</>}
                 </button>
@@ -925,9 +921,8 @@ const ADMIN_COMMON_EMOJIS = ['👍', '❤️', '😮', '😢', '😠', '😂'];
                         return next;
                       });
                     }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors relative ${
-                      selectedChatUser?.id === u.id ? 'bg-blue-50 border-r-2 border-blue-500' : ''
-                    }`}
+                    className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors relative ${selectedChatUser?.id === u.id ? 'bg-blue-50 border-r-2 border-blue-500' : ''
+                      }`}
                   >
                     <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm">
                       {u.name?.charAt(0).toUpperCase()}
