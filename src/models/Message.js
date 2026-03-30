@@ -28,7 +28,7 @@ const MessageSchema = new mongoose.Schema(
     }],
 
     // Room/Channel info
-    roomId: { type: String, default: null }, // String room ID or null
+    roomId: { type: mongoose.Schema.Types.ObjectId, ref: 'ChatRoom', default: null }, // Reference to ChatRoom
     room: { type: String, default: 'general' },
 
     // Message status

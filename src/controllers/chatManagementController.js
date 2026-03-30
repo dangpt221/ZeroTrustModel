@@ -13,8 +13,8 @@ function toClientMessage(msg) {
     userName: msg.userName,
     text: msg.text,
     attachments: msg.attachments || [],
-    roomId: msg.roomId?.toString(),
-    room: msg.room,
+    roomId: msg.roomId?.toString() || msg.room,
+    room: getRoomDisplayName(msg.roomId) || msg.room, // Use name if populated, else ID
     timestamp: msg.createdAt ? new Date(msg.createdAt).toISOString() : new Date().toISOString(),
     reactions: msg.reactions || [],
     isEdited: msg.isEdited || false,
@@ -37,12 +37,23 @@ function toClientMessage(msg) {
   };
 }
 
+// Helper: Get room display name (handles DMs)
+function getRoomDisplayName(room) {
+  if (!room) return 'Unknown Room';
+  if (room.isDirectMessage && room.participantNames && room.participantNames.length > 0) {
+    return room.participantNames.join(" & ");
+  }
+  return room.name || 'Unnamed Room';
+}
+
 function toClientRoom(room, includeJoinCode = false) {
   return {
     id: room._id.toString(),
-    name: room.name,
+    name: getRoomDisplayName(room),
     description: room.description,
     type: room.type,
+    isDirectMessage: room.isDirectMessage || false,
+    participantNames: room.participantNames || [],
     isPrivate: room.isPrivate || false,
     isSystemRoom: room.isSystemRoom || false,
     createdBy: room.createdBy?.toString(),
@@ -187,6 +198,7 @@ export const getRoomMessages = async (req, res, next) => {
     const [messages, total] = await Promise.all([
       Message.find(query)
         .populate('userId', 'name email avatar')
+        .populate('roomId', 'name isDirectMessage participantNames') // Added isDirectMessage and participantNames
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit))
@@ -239,7 +251,7 @@ export const searchMessages = async (req, res, next) => {
     const [messages, total] = await Promise.all([
       Message.find(query)
         .populate('userId', 'name email avatar')
-        .populate('roomId', 'name')
+        .populate('roomId', 'name isDirectMessage participantNames') // Added fields for DM name display
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit))

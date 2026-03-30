@@ -120,6 +120,17 @@ export const getAllDocuments = async (req, res, next) => {
       orConditions.push({ ownerId: userId });
 
       query.$or = orConditions;
+
+      // SPECIFIC RESTRICTION: STAFF cannot see HIGH/CRITICAL sensitivity + High security level documents
+      if (userRole === 'STAFF') {
+        query.$and = query.$and || [];
+        query.$and.push({
+          $or: [
+            { sensitivity: { $nin: ['HIGH', 'CRITICAL'] } },
+            { securityLevel: { $lt: 3 } }
+          ]
+        });
+      }
     }
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -196,6 +207,14 @@ export const getDocumentById = async (req, res, next) => {
           requiresRequest: true
         });
       }
+    }
+
+    // SPECIFIC RESTRICTION: STAFF cannot access HIGH/CRITICAL sensitivity + High security level documents
+    if (userRole === 'STAFF' && ['HIGH', 'CRITICAL'].includes(doc.sensitivity) && doc.securityLevel >= 3) {
+      return res.status(403).json({
+        message: "You do not have sufficient clearance to view this high-security document.",
+        requiresElevatedPrivileges: true
+      });
     }
 
     // Check if password protected and user is not admin
@@ -290,6 +309,12 @@ export const createDocument = async (req, res, next) => {
       docStatus = 'DRAFT';
     }
 
+    // AUTO-LOCK: High security + High/Critical sensitivity = Automatically Lock and require Admin approval
+    const shouldAutoLock = ['HIGH', 'CRITICAL'].includes(sensitivity) && Number(securityLevel) >= 3;
+    const isLocked = shouldAutoLock ? true : false;
+    const lockedAt = shouldAutoLock ? new Date() : null;
+    const lockedBy = shouldAutoLock ? ownerId : null; // System-locked by owner ID attribute
+
     const doc = await Document.create({
       title,
       description,
@@ -304,6 +329,9 @@ export const createDocument = async (req, res, next) => {
       fileSize: fileSize || '',
       fileType: fileType || 'PDF',
       status: docStatus,
+      isLocked,
+      lockedAt,
+      lockedBy,
       currentVersion: 1,
       versions: [{
         version: 1,
@@ -381,6 +409,14 @@ export const updateDocument = async (req, res, next) => {
     if (securityLevel) doc.securityLevel = securityLevel;
     if (sensitivity) doc.sensitivity = sensitivity;
     if (tags) doc.tags = tags;
+
+    // AUTO-LOCK CHECK on update
+    const shouldNowBeLocked = ['HIGH', 'CRITICAL'].includes(doc.sensitivity) && Number(doc.securityLevel) >= 3;
+    if (shouldNowBeLocked && !doc.isLocked) {
+      doc.isLocked = true;
+      doc.lockedAt = new Date();
+      doc.lockedBy = userId;
+    }
 
     // New version if file changed
     if (url && url !== doc.url) {
