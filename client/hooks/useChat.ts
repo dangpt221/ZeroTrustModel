@@ -74,6 +74,7 @@ export function useChat() {
   const [activeRoom, setActiveRoom] = useState<string>('');
   const [typingUsers, setTypingUsers] = useState<Map<string, { userId: string; userName: string }[]>>(new Map());
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
 
   // Use refs to avoid stale closures
   const activeRoomRef = useRef<string>('');
@@ -194,6 +195,24 @@ export function useChat() {
 
     newSocket.on('disconnect', () => {
       setIsConnected(false);
+      setOnlineUsers(new Set()); // Reset online users on disconnect
+    });
+
+    // Handle online presence
+    newSocket.on('initial_online_users', (userIds: string[]) => {
+      setOnlineUsers(new Set(userIds));
+    });
+
+    newSocket.on('user_status_changed', ({ userId, isOnline }) => {
+      setOnlineUsers(prev => {
+        const next = new Set(prev);
+        if (isOnline) {
+          next.add(userId);
+        } else {
+          next.delete(userId);
+        }
+        return next;
+      });
     });
 
     // Receive message - only add if for current room and not duplicate
@@ -560,6 +579,7 @@ export function useChat() {
     createConversation,
     searchMessages,
     getReplies,
-    processIncomingMessage
+    processIncomingMessage,
+    onlineUsers
   };
 }

@@ -76,6 +76,7 @@ export const ChatManagement: React.FC = () => {
   const [pendingChatNotification, setPendingChatNotification] = useState<Record<string, any>>({});
   const [showAdminStickerPanel, setShowAdminStickerPanel] = useState(false);
   const [adminReactions, setAdminReactions] = useState<Record<string, any[]>>({});
+  const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   const adminChatScrollRef = useRef<HTMLDivElement>(null);
   const adminChatInputRef = useRef<HTMLInputElement>(null);
 
@@ -142,7 +143,7 @@ export const ChatManagement: React.FC = () => {
   useEffect(() => {
     if (!user) return;
     const socket = io(window.location.origin, {
-      transports: ['websocket'],
+      transports: ['polling', 'websocket'],
       auth: { userId: user.id, userName: user.name },
       query: { userId: user.id, userName: user.name },
       withCredentials: false
@@ -187,6 +188,20 @@ export const ChatManagement: React.FC = () => {
           fetchAdminChatMessages(data.fromUserId);
         }
       }
+    });
+
+    // Handle online presence
+    socket.on('initial_online_users', (userIds: string[]) => {
+      setOnlineUsers(new Set(userIds.map(String)));
+    });
+
+    socket.on('user_status_changed', ({ userId, isOnline }: any) => {
+      setOnlineUsers(prev => {
+        const next = new Set(prev);
+        if (isOnline) next.add(String(userId));
+        else next.delete(String(userId));
+        return next;
+      });
     });
 
     return () => {
@@ -925,10 +940,13 @@ export const ChatManagement: React.FC = () => {
                     className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors relative ${selectedChatUser?.id === u.id ? 'bg-blue-50 border-r-2 border-blue-500' : ''
                       }`}
                   >
-                    <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm">
+                    <div className="relative w-10 h-10 shrink-0 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm">
                       {u.name?.charAt(0).toUpperCase()}
+                      {onlineUsers.has(u.id) && (
+                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></span>
+                      )}
                     </div>
-                    <div className="flex-1 text-left">
+                    <div className="flex-1 text-left min-w-0">
                       <p className="font-bold text-slate-700 text-sm">{u.name}</p>
                       <p className="text-xs text-slate-400">{u.email}</p>
                       {pendingChatNotification[u.id] && (

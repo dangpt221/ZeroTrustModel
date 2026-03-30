@@ -111,7 +111,7 @@ export const getBackup = async (req, res) => {
     }
 
     if (!user.hasE2EEBackup) {
-      return res.status(404).json({ message: 'No E2EE backup found for this user' });
+      return res.status(200).json({ hasBackup: false });
     }
 
     res.status(200).json({ 

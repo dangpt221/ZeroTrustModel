@@ -13,7 +13,7 @@ import { fileURLToPath } from 'url';
 import helmet from 'helmet';
 import mongoSanitize from 'express-mongo-sanitize';
 import xss from 'xss-clean';
-import rateLimit from 'express-rate-limit';
+
 
 import { connectDB } from './configs/db.js';
 import passport from './configs/passport.js';
@@ -69,15 +69,7 @@ export async function createApp() {
   }));
   app.use(passport.initialize());
 
-  // Global Rate Limiting to prevent API Abuse / DDoS
-  const apiLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 300, // limit each IP to 300 requests per windowMs
-    message: 'Too many requests from this IP, please try again after 15 minutes',
-    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-  });
-  app.use('/api/', apiLimiter);
+  // Removed Global Rate Limiting as requested due to internal network shared IP
 
   // 4a. Security headers — Helmet
   app.use(helmet({
@@ -89,11 +81,11 @@ export async function createApp() {
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com", "https://esm.sh"],
         styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-        imgSrc: ["'self'", "data:", "blob:", "http://localhost:*", "https://lh3.googleusercontent.com", "https://api.dicebear.com", "https://www.gstatic.com", "https://picsum.photos", "https://fastly.picsum.photos"],
+        imgSrc: ["'self'", "data:", "blob:", "http://localhost:*", "https://lh3.googleusercontent.com"],
         fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
-        connectSrc: ["'self'", "https://esm.sh", "blob:"],
-        frameSrc: ["'self'", "blob:", "data:"],
-        objectSrc: ["'self'", "blob:", "data:"],
+        connectSrc: ["'self'", "https://esm.sh"],
+        frameSrc: ["'none'"],
+        objectSrc: ["'none'"],
         upgradeInsecureRequests: [],
       },
     },
@@ -130,29 +122,13 @@ export async function createApp() {
 
   // Serve Production Frontend
   const clientDistPath = path.join(__dirname, '../client/dist');
-  app.use(express.static(clientDistPath, {
-    setHeaders: (res, path, stat) => {
-      // Prevent browser from caching the index.html
-      if (path.endsWith('.html')) {
-        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-        res.setHeader('Pragma', 'no-cache');
-        res.setHeader('Expires', '0');
-      } else {
-        res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache JS/CSS
-      }
-    }
-  }));
+  app.use(express.static(clientDistPath));
 
   app.use((req, res, next) => {
     if (req.method !== 'GET') return next();
     if (req.originalUrl.startsWith('/api') || req.originalUrl.startsWith('/socket.io')) {
       return next(); // Let API and Socket 404 handlers take over
     }
-    
-    // Fallback to index.html with no-cache headers for client-side routing
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
     res.sendFile(path.join(clientDistPath, 'index.html'));
   });
 

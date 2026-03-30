@@ -13,12 +13,16 @@ import {
   UserPlus
 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
+import { io } from 'socket.io-client';
 import { departmentsApi, usersApi } from '../../api';
+import { useAuth } from '../../context/AuthContext';
 import { Modal } from '../../components/Admin/Modal';
 import { User, UserRole } from '../../types';
 
 export const UserManagement: React.FC = () => {
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
+  const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -67,6 +71,33 @@ export const UserManagement: React.FC = () => {
     fetchUsers();
     fetchDepartments();
   }, []);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    const socket = io(window.location.origin, {
+      transports: ['polling', 'websocket'],
+      auth: { userId: currentUser.id, userName: currentUser.name },
+      query: { userId: currentUser.id, userName: currentUser.name },
+      withCredentials: false
+    });
+
+    socket.on('initial_online_users', (userIds: string[]) => {
+      setOnlineUsers(new Set(userIds.map(String)));
+    });
+
+    socket.on('user_status_changed', ({ userId, isOnline }: any) => {
+      setOnlineUsers(prev => {
+        const next = new Set(prev);
+        if (isOnline) next.add(String(userId));
+        else next.delete(String(userId));
+        return next;
+      });
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [currentUser]);
 
   const filteredUsers = users.filter(u => {
     const matchSearch = u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -299,7 +330,7 @@ export const UserManagement: React.FC = () => {
                     <div className="flex items-center gap-4">
                       <div className="relative">
                         <img src={user.avatar} className="w-11 h-11 rounded-2xl object-cover ring-2 ring-white shadow-sm" />
-                        <div className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 border-2 border-white rounded-full ${user.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
+                        <div className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 border-2 border-white rounded-full ${onlineUsers.has(user.id) ? 'bg-green-500' : 'bg-slate-300'}`} title={onlineUsers.has(user.id) ? 'Đang hoạt động' : 'Ngoại tuyến'}></div>
                       </div>
                       <div>
                         <p className="text-sm font-bold text-slate-800">{user.name}</p>

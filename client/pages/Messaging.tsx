@@ -39,7 +39,8 @@ export const Messaging: React.FC = () => {
     messages, setMessages, isLoadingMessages, activeRoom, joinRoom, sendMessage,
     isConnected, typingUsers, startTyping, stopTyping,
     addReaction, markAsRead, markRoomAsRead, conversations, fetchConversations,
-    createConversation, searchMessages, getReplies, processIncomingMessage
+    createConversation, searchMessages, getReplies, processIncomingMessage,
+    onlineUsers
   } = useChat();
 
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
@@ -674,7 +675,12 @@ export const Messaging: React.FC = () => {
                         : 'text-slate-600 hover:bg-white hover:shadow-sm'
                     }`}
                   >
-                    <img src={conv.avatar} alt={conv.name} className="w-8 h-8 rounded-full bg-slate-200" />
+                    <div className="relative shrink-0">
+                      <img src={conv.avatar} alt={conv.name} className="w-8 h-8 rounded-full bg-slate-200" />
+                      {onlineUsers.has(conv.userId) && (
+                        <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></span>
+                      )}
+                    </div>
                     <div className="flex-1 text-left min-w-0">
                       <p className="text-sm font-medium truncate">{conv.name}</p>
                       {conv.lastMessage && (

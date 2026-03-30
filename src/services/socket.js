@@ -2,6 +2,8 @@ import { Message } from '../models/Message.js';
 import { User } from '../models/User.js';
 import { ChatRoom } from '../models/ChatRoom.js';
 
+export const connectedUsers = new Map(); // Global tracking: userId -> Set(socket.id)
+
 export function registerSocketHandlers(io) {
   io.on('connection', (socket) => {
     const userId = socket.handshake.query.userId || socket.handshake.auth.userId;
@@ -11,6 +13,18 @@ export function registerSocketHandlers(io) {
     if (userId) {
       socket.join(`user_${userId}`);
       console.log('[Socket] User connected:', userId, 'joined room user_', userId);
+
+      // --- Online Presence Tracking ---
+      if (!connectedUsers.has(userId)) {
+        connectedUsers.set(userId, new Set());
+        // First connection for this user -> emit online
+        io.emit('user_status_changed', { userId, isOnline: true });
+      }
+      connectedUsers.get(userId).add(socket.id);
+      
+      // Send initial online list to this specific client
+      socket.emit('initial_online_users', Array.from(connectedUsers.keys()));
+      // ---------------------------------
     } else {
       console.log('[Socket] Connection without userId, socket.id:', socket.id);
     }
@@ -209,7 +223,27 @@ export function registerSocketHandlers(io) {
       }
     });
 
-    socket.on('disconnect', () => {});
+    socket.on('disconnect', async () => {
+      if (userId) {
+        const userSockets = connectedUsers.get(userId);
+        if (userSockets) {
+          userSockets.delete(socket.id);
+          
+          if (userSockets.size === 0) {
+            // Completely disconnected
+            connectedUsers.delete(userId);
+            io.emit('user_status_changed', { userId, isOnline: false, lastActiveAt: new Date().toISOString() });
+            
+            // Update lastActiveAt in database
+            try {
+              await User.findByIdAndUpdate(userId, { lastActiveAt: new Date() });
+            } catch (err) {
+              console.error('[Socket] Error updating lastActiveAt for user:', userId, err);
+            }
+          }
+        }
+      }
+    });
   });
 }
 

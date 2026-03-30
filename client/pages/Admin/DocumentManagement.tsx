@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { documentsApi, departmentsApi } from '../../api';
 import { Document } from '../../types';
 import { Search, Filter, ShieldAlert, Eye, MoreVertical, FileText, Plus, Download, Upload, X, File, Lock, Unlock, Key, Shield } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Modal } from '../../components/Admin/Modal';
 import { useAuth } from '../../context/AuthContext';
 import { DocumentViewerModal } from '../../components/Staff/DocumentViewerModal';
@@ -260,9 +261,9 @@ export const DocumentManagement: React.FC = () => {
               </span>
             )}
           </button>
-          <div className="bg-amber-50 px-4 py-2 rounded-xl border border-amber-100 flex items-center gap-2">
+          <div className="bg-amber-50 px-4 py-2 rounded-2xl border border-amber-100 flex items-center gap-2">
             <ShieldAlert size={18} className="text-amber-500" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-amber-700">Critical Docs: {loading ? '...' : criticalDocs}</span>
+            <span className="text-xs font-bold uppercase tracking-widest text-amber-700">Critical Docs: {loading ? '...' : criticalDocs}</span>
           </div>
         </div>
       </div>
@@ -327,9 +328,10 @@ export const DocumentManagement: React.FC = () => {
         </div>
       )}
 
-      <div className="bg-white rounded-[32px] shadow-sm border border-slate-100 overflow-hidden">
-        <table className="w-full text-left">
-          <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-widest">
+      <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+        <div className="overflow-x-auto w-full">
+          <table className="w-full text-left min-w-[900px]">
+            <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 text-xs font-bold uppercase tracking-widest">
             <tr>
               <th className="px-8 py-6">Tài liệu / Định dạng</th>
               <th className="px-8 py-6">Bộ phận</th>
@@ -340,98 +342,123 @@ export const DocumentManagement: React.FC = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
-            {filteredDocs.map(doc => (
-              <tr key={doc.id} className="hover:bg-blue-50/20 transition-colors group">
-                <td className="px-8 py-5">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-slate-100 text-slate-400 group-hover:bg-blue-100 group-hover:text-blue-600 rounded-xl transition-all">
-                      <FileText size={20} />
+            <AnimatePresence>
+              {filteredDocs.length === 0 && !loading ? (
+                <motion.tr
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                >
+                  <td colSpan={6} className="py-24 text-center">
+                    <div className="flex flex-col items-center justify-center opacity-60">
+                      <FileText size={64} className="text-slate-300 mb-4" />
+                      <p className="text-lg text-slate-500 font-bold mb-1">Không tìm thấy tài liệu nào</p>
+                      <p className="text-slate-400 text-sm">Vui lòng điều chỉnh bộ lọc hoặc tạo tài liệu mới.</p>
                     </div>
-                    <div>
-                      <p className="text-sm font-bold text-slate-800 italic">{doc.title}</p>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase">{doc.fileType || 'PDF'} • {doc.fileSize || '-'}</p>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-8 py-5">
-                  <span className="text-[10px] font-black text-slate-500 bg-slate-100 px-2 py-1 rounded uppercase tracking-tighter">
-                    {doc.departmentName || '-'}
-                  </span>
-                </td>
-                <td className="px-8 py-5">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${
-                      doc.sensitivity === 'CRITICAL' ? 'bg-rose-500' :
-                      doc.sensitivity === 'HIGH' ? 'bg-amber-500' : 'bg-emerald-500'
-                    }`}></div>
-                    <span className={`text-[10px] font-black uppercase ${
-                      doc.sensitivity === 'CRITICAL' ? 'text-rose-600' :
-                      doc.sensitivity === 'HIGH' ? 'text-amber-600' : 'text-emerald-600'
-                    }`}>
-                      {doc.sensitivity}
-                    </span>
-                  </div>
-                </td>
-                <td className="px-8 py-5">
-                  <div className="flex items-center gap-1">
-                    {/* Security Level Badge */}
-                    <span className={`text-[10px] font-black px-2 py-1 rounded uppercase ${
-                      doc.securityLevel === 3 ? 'bg-rose-100 text-rose-600' :
-                      doc.securityLevel === 2 ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-600'
-                    }`}>
-                      L{doc.securityLevel}
-                    </span>
-                    {/* Lock Status */}
-                    <div className="flex gap-1 ml-1">
-                      {(doc as any).isLocked && (
-                        <span title="Bị khóa"><Lock size={14} className="text-rose-500" /></span>
-                      )}
-                      {(doc as any).failedAttempts > 0 && (
-                        <span className="text-[10px] text-red-500" title={`${(doc as any).failedAttempts} lần nhập sai`}>
-                          ⚠️{(doc as any).failedAttempts}
+                  </td>
+                </motion.tr>
+              ) : (
+                filteredDocs.map((doc, index) => (
+                  <motion.tr
+                    key={doc.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: index * 0.05 }}
+                    className="hover:bg-blue-50/40 transition-all duration-300 group hover:-translate-y-0.5"
+                  >
+                    <td className="px-8 py-5">
+                      <div className="flex items-center gap-4">
+                        <div className="p-3 bg-slate-100 text-slate-400 group-hover:bg-blue-100 group-hover:text-blue-600 rounded-2xl transition-all shadow-sm group-hover:shadow">
+                          <FileText size={20} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-slate-800 italic">{doc.title}</p>
+                          <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">{doc.fileType || 'PDF'} • {doc.fileSize || '-'}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-8 py-5">
+                      <span className="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-lg uppercase tracking-wider">
+                        {doc.departmentName || '-'}
+                      </span>
+                    </td>
+                    <td className="px-8 py-5">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${
+                          doc.sensitivity === 'CRITICAL' ? 'bg-rose-500 shadow-rose-500/50 shadow blur-[1px]' :
+                          doc.sensitivity === 'HIGH' ? 'bg-amber-500 shadow-amber-500/50 shadow blur-[1px]' : 'bg-emerald-500 shadow-emerald-500/50 shadow blur-[1px]'
+                        }`}></div>
+                        <span className={`text-xs font-bold uppercase tracking-wider ${
+                          doc.sensitivity === 'CRITICAL' ? 'text-rose-600' :
+                          doc.sensitivity === 'HIGH' ? 'text-amber-600' : 'text-emerald-600'
+                        }`}>
+                          {doc.sensitivity}
                         </span>
-                      )}
-                    </div>
-                    {/* Reset Access Button - Only show if has failed attempts */}
-                    {(doc as any).failedAttempts >= 3 && (
-                      <button
-                        onClick={() => handleResetAccess(doc)}
-                        className="ml-1 p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                        title="Mở khóa (sau khi bị khóa do nhập sai)"
-                      >
-                        <Unlock size={14} />
-                      </button>
-                    )}
-                    {/* Settings Button */}
-                    <button
-                      onClick={() => setSecurityModalDoc(doc)}
-                      className="ml-1 p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                      title="Cài đặt bảo mật"
-                    >
-                      <Shield size={14} />
-                    </button>
-                  </div>
-                </td>
-                <td className="px-8 py-5 text-xs font-bold text-slate-600">
-                  {doc.ownerName || doc.ownerId ? `U-${doc.ownerId?.slice(-4)}` : '-'}
-                </td>
-                <td className="px-8 py-5 text-right">
-                  <div className="flex justify-end gap-1">
-                    <button onClick={() => setViewingDoc(doc)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all">
-                      <Eye size={18} />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(doc.id)}
-                      className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
-                    >
-                      <MoreVertical size={18} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+                      </div>
+                    </td>
+                    <td className="px-8 py-5">
+                      <div className="flex items-center gap-1">
+                        {/* Security Level Badge */}
+                        <span className={`text-xs font-bold px-3 py-1.5 rounded-lg uppercase tracking-wider ${
+                          doc.securityLevel === 3 ? 'bg-rose-100 text-rose-600' :
+                          doc.securityLevel === 2 ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-600'
+                        }`}>
+                          L{doc.securityLevel}
+                        </span>
+                        {/* Lock Status */}
+                        <div className="flex gap-1 ml-1 items-center">
+                          {(doc as any).isLocked && (
+                            <span title="Bị khóa" className="p-1 rounded bg-rose-50"><Lock size={14} className="text-rose-500" /></span>
+                          )}
+                          {(doc as any).failedAttempts > 0 && (
+                            <span className="text-xs font-bold text-rose-500 bg-rose-50 px-2 py-0.5 rounded" title={`${(doc as any).failedAttempts} lần nhập sai`}>
+                              ⚠️{(doc as any).failedAttempts}
+                            </span>
+                          )}
+                        </div>
+                        {/* Reset Access Button - Only show if has failed attempts */}
+                        {(doc as any).failedAttempts >= 3 && (
+                          <button
+                            onClick={() => handleResetAccess(doc)}
+                            className="ml-1 p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                            title="Mở khóa (sau khi bị khóa do nhập sai)"
+                          >
+                            <Unlock size={14} />
+                          </button>
+                        )}
+                        {/* Settings Button */}
+                        <button
+                          onClick={() => setSecurityModalDoc(doc)}
+                          className="ml-1 p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                          title="Cài đặt bảo mật"
+                        >
+                          <Shield size={14} />
+                        </button>
+                      </div>
+                    </td>
+                    <td className="px-8 py-5 text-sm font-bold text-slate-600">
+                      {doc.ownerName || doc.ownerId ? `U-${doc.ownerId?.slice(-4)}` : '-'}
+                    </td>
+                    <td className="px-8 py-5 text-right">
+                      <div className="flex justify-end gap-1">
+                        <button onClick={() => setViewingDoc(doc)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 focus:ring-2 focus:ring-blue-100 rounded-xl transition-all">
+                          <Eye size={18} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(doc.id)}
+                          className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 focus:ring-2 focus:ring-rose-100 rounded-xl transition-all"
+                        >
+                          <MoreVertical size={18} />
+                        </button>
+                      </div>
+                    </td>
+                  </motion.tr>
+                ))
+              )}
+            </AnimatePresence>
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Add Document Modal */}
@@ -728,28 +755,24 @@ export const DocumentManagement: React.FC = () => {
         )}
       </Modal>
 
-      {/* Access Requests Panel */}
-      {showRequests && (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-          <div className="bg-blue-50 px-6 py-4 border-b border-blue-100 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Key size={20} className="text-blue-600" />
-              <h3 className="font-bold text-slate-800">Yêu cầu truy cập tài liệu</h3>
-              <span className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full font-bold">
-                {requests.filter(r => r.status === 'PENDING').length} chờ duyệt
-              </span>
-            </div>
-            <button onClick={loadRequests} className="text-sm text-blue-600 hover:underline">
+      {/* Access Requests Modal */}
+      <Modal isOpen={showRequests} onClose={() => setShowRequests(false)} title="Phê duyệt yêu cầu truy cập" size="lg">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="bg-blue-100 text-blue-700 text-xs px-3 py-1.5 rounded-full font-bold shadow-sm">
+              {requests.filter((r: any) => r.status === 'PENDING').length} chờ duyệt
+            </span>
+            <button onClick={loadRequests} className="text-sm text-blue-600 font-bold hover:underline">
               Làm mới
             </button>
           </div>
 
           {requestLoading ? (
-            <div className="p-8 text-center text-slate-400">Đang tải...</div>
+            <div className="p-8 text-center text-slate-400 bg-slate-50 rounded-xl font-medium">Đang tải...</div>
           ) : requests.length === 0 ? (
-            <div className="p-8 text-center text-slate-400">Không có yêu cầu nào</div>
+            <div className="p-8 text-center text-slate-400 bg-slate-50 rounded-xl font-medium">Không có yêu cầu nào</div>
           ) : (
-            <div className="divide-y divide-slate-50">
+            <div className="divide-y divide-slate-100 bg-white border border-slate-100 rounded-xl overflow-hidden shadow-sm max-h-[60vh] overflow-y-auto">
               {requests.map((request: any) => (
                 <div key={request._id || request.id} className="p-4 hover:bg-slate-50">
                   <div className="flex items-start justify-between gap-4">
@@ -814,7 +837,7 @@ export const DocumentManagement: React.FC = () => {
             </div>
           )}
         </div>
-      )}
+      </Modal>
 
       {/* Reject Reason Modal */}
       <Modal isOpen={!!selectedRequest} onClose={() => { setSelectedRequest(null); setRejectReason(''); }} title="Từ chối yêu cầu">
