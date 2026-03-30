@@ -15,7 +15,7 @@ import { getClientIP } from '../middleware/securityMiddleware.js';
  * @returns {object} - Watermark data
  */
 export function generateWatermarkData(user, doc, ip) {
-  const downloadId = crypto.randomUUID();
+  const downloadId = crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString('hex');
   const timestamp = Date.now();
 
   // Hash IP để bảo mật (vẫn track được nhưng không expose IP gốc)

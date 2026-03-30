@@ -1,7 +1,9 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from '../context/AuthContext';
-import { notificationsApi } from '../api';
+import { notificationsApi, e2eeApi } from '../api';
+import { useE2EE } from '../context/E2EEContext';
+import { encryptMessage, decryptMessage, importPublicKey, importPrivateKey, deriveActiveAesKey } from '../utils/e2ee';
 
 export interface ChatAttachment {
   url: string;
@@ -43,6 +45,8 @@ export interface ChatRoom {
   departmentId?: string;
   isMember?: boolean;
   isPrivate?: boolean;
+  isDirectMessage?: boolean;
+  participants?: any[];
   hasJoinCode?: boolean;
 }
 
@@ -63,6 +67,7 @@ export interface Conversation {
 
 export function useChat() {
   const { user } = useAuth();
+  const { isE2EEReady, deviceId, getDevicePrivateKey, publicKeyStr } = useE2EE();
   const [socket, setSocket] = useState<Socket | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isConnected, setIsConnected] = useState(false);
@@ -85,37 +90,94 @@ export function useChat() {
     userRef.current = user;
   }, [user]);
 
+    // Decrypt function
+    const processIncomingMessage = useCallback(async (msg: any): Promise<ChatMessage> => {
+      // Access the latest context via refs if needed, but since we are inside useCallback, we can use the E2EE hook variables if they are fresh.
+      // Better to check localStorage directly if hook is stale, but let's assume they are injected.
+      const currentDeviceId = localStorage.getItem(`e2ee_device_id_${userRef.current?.id}`);
+      
+      if (!currentDeviceId) return { ...msg, text: '[Lỗi Debug: Thiết bị chưa đăng ký trên trình duyệt này]' };
+      if (!msg.encryptedContent) return { ...msg, text: '[Lỗi Debug: Database không trả về encryptedContent]' };
+      if (!Array.isArray(msg.encryptedContent)) return { ...msg, text: '[Lỗi Debug: encryptedContent bị lỗi định dạng mảng]' };
+
+      if (msg.encryptedContent && Array.isArray(msg.encryptedContent) && currentDeviceId) {
+         const myEnc = msg.encryptedContent.find((e: any) => e.deviceId === currentDeviceId);
+         if (myEnc) {
+            try {
+              // We need private key
+              const storedPrivKey = localStorage.getItem(`e2ee_private_key_jwk_${userRef.current?.id}`);
+              if (storedPrivKey) {
+                 const privKey = await importPrivateKey(JSON.parse(storedPrivKey));
+                 const senderPub = await importPublicKey(myEnc.senderPublicKey);
+                 const aesKey = await deriveActiveAesKey(privKey, senderPub);
+                 const decryptedText = await decryptMessage(aesKey, myEnc.ciphertext, myEnc.iv);
+                 return { ...msg, text: decryptedText };
+              } else {
+                 return { ...msg, text: '[Lỗi Debug: Mất Private Key trong LocalStorage]' };
+              }
+            } catch (err: any) {
+              console.warn('Decryption failed for msg', msg.id, err);
+              return { ...msg, text: `[Lỗi giải mã: ${err.message || err.toString()}]` };
+            }
+         } else {
+            return { ...msg, text: '[Tin nhắn E2EE không có khóa cho thiết bị này]' };
+         }
+      }
+      return { ...msg, text: '[Lỗi Debug: Unknown Fallback]' };
+    }, []);
+
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+
   // Fetch messages from REST API (for persistence on load)
   const fetchMessages = useCallback(async (roomId: string) => {
+    setIsLoadingMessages(true);
     try {
       const res = await fetch(`/api/messages?room=${roomId}`, { credentials: 'include' });
+      if (res.status === 403) {
+          const data = await res.json();
+          alert(data.error || 'Bạn cần nhập mã bảo mật để tham gia');
+          setMessages([]);
+          setIsLoadingMessages(false);
+          return;
+      }
       if (res.ok) {
         const data = await res.json();
-        const msgs: ChatMessage[] = Array.isArray(data) ? data : (data.messages || []);
+        const msgs: any[] = Array.isArray(data) ? data : (data.messages || []);
+
+        // Decrypt all messages
+        const processedMsgs = await Promise.all(msgs.map(m => processIncomingMessage(m)));
 
         setMessages(prev => {
           // Merge: keep socket messages, add REST messages that aren't already present
           const existingIds = new Set(prev.map(m => m.id));
-          const newMsgs = msgs.filter(m => !existingIds.has(m.id));
+          const newMsgs = processedMsgs.filter(m => !existingIds.has(m.id));
           return [...prev, ...newMsgs].sort((a, b) =>
             new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
           );
         });
 
         // Track message IDs to avoid duplicates
-        msgs.forEach(m => messageIdsRef.current.add(m.id));
+        processedMsgs.forEach(m => {
+           messageIdsRef.current.add(m.id);
+           if (!m.isRead && m.userId !== userRef.current?.id) {
+              markAsRead(m.id, roomId);
+           }
+        });
       }
     } catch (err) {
       console.error('Failed to fetch messages', err);
+      setMessages([]);
+    } finally {
+      setIsLoadingMessages(false);
     }
-  }, []);
+  }, [userRef]);
 
   // Connect socket
   useEffect(() => {
     if (!user) return;
 
     const newSocket = io(window.location.origin, {
-      transports: ['polling', 'websocket'],
+      transports: ['websocket'],
       auth: { userId: user.id, userName: user.name },
       query: { userId: user.id, userName: user.name }
     });
@@ -135,7 +197,7 @@ export function useChat() {
     });
 
     // Receive message - only add if for current room and not duplicate
-    newSocket.on('receive_message', (message: ChatMessage) => {
+    newSocket.on('receive_message', async (message: any) => {
       // Only add if message is for the current room or no room filter
       if (message.room !== activeRoomRef.current) return;
 
@@ -143,9 +205,11 @@ export function useChat() {
       if (messageIdsRef.current.has(message.id)) return;
       messageIdsRef.current.add(message.id);
 
+      const processedMsg = await processIncomingMessage(message);
+
       setMessages(prev => {
-        if (prev.find(m => m.id === message.id)) return prev;
-        return [...prev, message].sort((a, b) =>
+        if (prev.find(m => m.id === processedMsg.id)) return prev;
+        return [...prev, processedMsg].sort((a, b) =>
           new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
         );
       });
@@ -184,8 +248,19 @@ export function useChat() {
     });
 
     // Mentioned notification
-    newSocket.on('mentioned', ({ mentionedBy }) => {
-      console.log(`${mentionedBy} mentioned you in a message`);
+    newSocket.on('mentioned', ({ room, messageId, byUserName }) => {
+      // Could show toast notification here
+      console.log(`Mentioned in room ${room} by ${byUserName}`);
+    });
+
+    // Room deleted notification
+    newSocket.on('room_deleted', (deletedRoomId: string) => {
+      if (activeRoomRef.current === deletedRoomId) {
+        setMessages([]);
+        setActiveRoom(null);
+        alert('Hộp thoại hiện tại đã bị xóa.');
+      }
+      fetchConversations();
     });
 
     // Message deleted (recall)
@@ -225,28 +300,73 @@ export function useChat() {
     fetchMessages(roomId);
   }, [isConnected, fetchMessages]);
 
-  const sendMessage = useCallback((text: string, roomId: string, parentMessageId?: string, attachments?: ChatAttachment[]) => {
+  const sendMessage = useCallback(async (text: string, roomId: string, parentMessageId?: string, attachments?: ChatAttachment[]) => {
     const currentUser = userRef.current;
     if (!currentUser) return;
+
+    let encryptedContent = null;
+    let fallbackText = text;
+
+    const currentDeviceId = localStorage.getItem(`e2ee_device_id_${currentUser.id}`);
+    const storedPrivKey = localStorage.getItem(`e2ee_private_key_jwk_${currentUser.id}`);
+    const currentPubKeyStr = localStorage.getItem(`e2ee_public_key_b64_${currentUser.id}`);
+
+    if (currentDeviceId && storedPrivKey && currentPubKeyStr) {
+      try {
+        // Fetch room members
+        const res = await fetch(`/api/messaging/rooms/${roomId}/members`, { credentials: 'include' });
+        if (res.ok) {
+           const data = await res.json();
+           const memberIds = data.members.map((m: any) => m.id);
+           if (!memberIds.includes(currentUser.id)) memberIds.push(currentUser.id);
+
+           // Fetch public keys
+           const keysRes = await e2eeApi.getPublicKeys(memberIds);
+           const publicKeys = keysRes.keys;
+
+           // Encrypt
+           const myPriv = await importPrivateKey(JSON.parse(storedPrivKey));
+           if (myPriv && publicKeys) {
+             encryptedContent = [];
+             for (const uid in publicKeys) {
+               for (const device of publicKeys[uid]) {
+                  try {
+                    const theirPub = await importPublicKey(device.publicKey);
+                    const aesKey = await deriveActiveAesKey(myPriv, theirPub);
+                    const { ciphertext, iv } = await encryptMessage(aesKey, text);
+                    encryptedContent.push({
+                       deviceId: device.deviceId,
+                       ciphertext, iv, senderPublicKey: currentPubKeyStr
+                    });
+                  } catch (e) { console.warn('Could not encrypt for device', device.deviceId); }
+               }
+             }
+             fallbackText = "[Tin nhắn được bảo mật mã hóa đầu cuối]";
+           }
+        }
+      } catch (err) {
+        console.error('E2EE Encryption flow failed', err);
+      }
+    }
 
     if (socketRef.current && isConnected) {
       socketRef.current.emit('send_message', {
         userId: currentUser.id,
         userName: currentUser.name,
         userRole: currentUser.role,
-        text,
+        text: fallbackText,
+        encryptedContent,
+        senderDeviceId: currentDeviceId,
         room: roomId,
         parentMessageId,
         attachments
       });
       // Create chat notification for admin if sender is MANAGER or STAFF
       if (currentUser.role === 'MANAGER' || currentUser.role === 'STAFF') {
-        console.log('[useChat] Creating chat notification for admin, role:', currentUser.role, 'roomId:', roomId);
-        notificationsApi.createChatNotification({
+        notificationsApi.createChatNotification?.({
           roomId,
           messagePreview: text.substring(0, 50)
-        }).then(res => console.log('[useChat] createChatNotification success:', res))
-          .catch(err => console.error('Failed to create chat notification:', err));
+        }).catch((err: any) => console.error('Failed to create chat notification:', err));
       }
     } else {
       // Fallback: send via REST API (only when socket is disconnected)
@@ -254,7 +374,7 @@ export function useChat() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ text, room: roomId, parentMessageId })
+        body: JSON.stringify({ text: fallbackText, encryptedContent, senderDeviceId: currentDeviceId, room: roomId, parentMessageId })
       }).then(async res => {
         if (res.ok) {
           const data = await res.json();
@@ -307,11 +427,39 @@ export function useChat() {
     }
   }, [isConnected]);
 
-  // Mark as read
+  // Mark a single message as read
   const markAsRead = useCallback((messageId: string, roomId: string) => {
     const currentUser = userRef.current;
     if (socketRef.current && isConnected && currentUser) {
       socketRef.current.emit('mark_read', { messageId, userId: currentUser.id, room: roomId });
+    }
+  }, [isConnected]);
+
+  // Mark ALL messages in a room as read
+  const markRoomAsRead = useCallback(async (roomId: string) => {
+    const currentUser = userRef.current;
+    if (!roomId || !currentUser) return;
+
+    try {
+      // Backend update
+      const res = await fetch(`/api/messages/room/${roomId}/read-all`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+
+      if (res.ok) {
+        // Socket update if needed (backend also emits all_messages_read)
+        if (socketRef.current && isConnected) {
+          socketRef.current.emit('mark_room_read', { roomId, userId: currentUser.id });
+        }
+
+        // Optimistic UI update: clear unreadCount for this conversation in state
+        setConversations(prev => prev.map(c => 
+          c.id === roomId ? { ...c, unreadCount: 0 } : c
+        ));
+      }
+    } catch (err) {
+      console.error('[useChat] Failed to mark room as read:', err);
     }
   }, [isConnected]);
 
@@ -324,11 +472,18 @@ export function useChat() {
         const convs = data.conversations || [];
         // Deduplicate by userId - keep the most recent one
         const seen = new Map();
-        convs.forEach((c: Conversation) => {
+        for (const c of convs) {
           if (!seen.has(c.userId)) {
+            // Decrypt lastMessage
+            if (c.lastMessage && c.lastMessage.encryptedContent) {
+               try {
+                 const decryptedMs = await processIncomingMessage(c.lastMessage);
+                 c.lastMessage.text = decryptedMs.text;
+               } catch(e) {}
+            }
             seen.set(c.userId, c);
           }
-        });
+        }
         setConversations(Array.from(seen.values()));
       }
     } catch (err) {
@@ -390,6 +545,7 @@ export function useChat() {
     isConnected,
     messages,
     setMessages,
+    isLoadingMessages,
     activeRoom,
     joinRoom,
     sendMessage,
@@ -398,10 +554,12 @@ export function useChat() {
     stopTyping,
     addReaction,
     markAsRead,
+    markRoomAsRead,
     conversations,
     fetchConversations,
     createConversation,
     searchMessages,
-    getReplies
+    getReplies,
+    processIncomingMessage
   };
 }

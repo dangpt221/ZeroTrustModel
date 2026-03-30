@@ -114,6 +114,8 @@ export function registerMessageRoutes(router) {
           lastMessage: lastMessage ? {
             id: lastMessage._id.toString(),
             text: lastMessage.text,
+            encryptedContent: lastMessage.encryptedContent || null,
+            senderDeviceId: lastMessage.senderDeviceId || null,
             timestamp: lastMessage.createdAt,
             userId: lastMessage.userId?.toString()
           } : null,
@@ -198,6 +200,8 @@ export function registerMessageRoutes(router) {
             userName: m.userName || 'Ẩn danh',
             userAvatar: m.userId?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(m.userName || 'default')}`,
             text: m.text || '',
+            encryptedContent: m.encryptedContent || null,
+            senderDeviceId: m.senderDeviceId || null,
             room: m.room || 'general',
             timestamp: m.createdAt ? new Date(m.createdAt).toISOString() : new Date().toISOString(),
             reactions: m.reactions || [],
@@ -223,10 +227,10 @@ export function registerMessageRoutes(router) {
   router.post('/messages', requireAuth, async (req, res, next) => {
     try {
       const io = req.app.get('io');
-      const { text, room, parentMessageId } = req.body;
+      const { text, encryptedContent, senderDeviceId, room, parentMessageId } = req.body;
 
-      if (!text?.trim()) {
-        return res.status(400).json({ error: 'Message text is required' });
+      if (!text?.trim() && (!encryptedContent || encryptedContent.length === 0)) {
+        return res.status(400).json({ error: 'Message text or encrypted content is required' });
       }
 
       const chatRoom = await ChatRoom.findById(room);
@@ -242,7 +246,9 @@ export function registerMessageRoutes(router) {
       const msg = await Message.create({
         userId: req.user.id,
         userName: req.user.name,
-        text: text.trim(),
+        text: text?.trim() || '',
+        encryptedContent,
+        senderDeviceId,
         room: room || 'general',
         roomId: room || null,
         parentMessageId: parentMessageId || null,
@@ -272,6 +278,8 @@ export function registerMessageRoutes(router) {
         userName: msg.userName || 'Ẩn danh',
         userAvatar,
         text: msg.text || '',
+        encryptedContent: msg.encryptedContent || null,
+        senderDeviceId: msg.senderDeviceId || null,
         room: msg.room || 'general',
         timestamp: msg.createdAt ? new Date(msg.createdAt).toISOString() : new Date().toISOString(),
         reactions: [],
@@ -813,20 +821,30 @@ export function registerMessageRoutes(router) {
       const { roomId } = req.params;
       const currentUser = req.user;
 
-      if (currentUser.role !== 'MANAGER') {
-        return res.status(403).json({ success: false, message: 'Chỉ quản lý mới có quyền xóa phòng' });
-      }
-
       const chatRoom = await ChatRoom.findById(roomId);
       if (!chatRoom) {
         return res.status(404).json({ success: false, message: 'Phòng không tồn tại' });
       }
 
-      // Soft delete
-      chatRoom.isDeleted = true;
-      await chatRoom.save();
+      const isParticipant = chatRoom.participants.some(p => p.toString() === currentUser.id.toString());
+      if (currentUser.role !== 'ADMIN' && currentUser.role !== 'MANAGER' && !(chatRoom.isDirectMessage && isParticipant)) {
+        return res.status(403).json({ success: false, message: 'Bạn không có quyền xóa cuộc trò chuyện này' });
+      }
 
-      res.json({ success: true, message: 'Đã xóa phòng thành công' });
+      if (chatRoom.isDirectMessage) {
+        // Completely destroy DM history and Room for a clean slate
+        await mongoose.model('Message').deleteMany({ room: roomId });
+        await ChatRoom.deleteOne({ _id: roomId });
+      } else {
+        // Soft delete for project channels
+        chatRoom.isDeleted = true;
+        await chatRoom.save();
+      }
+
+      // Notify users to update their local lists
+      req.app.get('io').to(roomId).emit('room_deleted', roomId);
+
+      res.json({ success: true, message: 'Đã xóa hộp thoại thành công' });
     } catch (err) {
       next(err);
     }

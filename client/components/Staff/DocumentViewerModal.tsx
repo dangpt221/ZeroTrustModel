@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { X, Download, FileText, File, ZoomIn, ZoomOut, Shield, AlertTriangle, Key } from 'lucide-react';
 import { Document } from '../../types';
 import { SecureDocumentViewer } from '../Security/SecureDocumentViewer';
+import { renderAsync } from 'docx-preview';
 
 interface DocumentViewerModalProps {
   document: Document | null;
@@ -31,6 +32,8 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [textContent, setTextContent] = useState<string | null>(null);
+  const [docxBlob, setDocxBlob] = useState<Blob | null>(null);
+  const docxContainerRef = React.useRef<HTMLDivElement>(null);
   const [isSecureMode, setIsSecureMode] = useState(false);
   const [showSecurityWarning, setShowSecurityWarning] = useState(false);
   const [showRequestModal, setShowRequestModal] = useState(false);
@@ -49,6 +52,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
       setError(null);
       setPreviewUrl(null);
       setTextContent(null);
+      setDocxBlob(null);
       setIsSecureMode(false);
       loadPreview();
     }
@@ -88,6 +92,37 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
       window.removeEventListener('afterprint', handleAfterPrint);
     };
   }, []);
+
+  // Render DOCX when blob is loaded
+  useEffect(() => {
+    if (docxBlob && docxContainerRef.current) {
+      console.log('[DocumentViewerModal] Rendering DOCX blob, size:', docxBlob.size);
+      docxContainerRef.current.innerHTML = '';
+      renderAsync(docxBlob, docxContainerRef.current, undefined, {
+        className: 'docx-preview-content',
+        inWrapper: true,
+        ignoreWidth: false,
+        ignoreHeight: false,
+        ignoreFonts: false,
+        breakPages: true,
+        ignoreLastRenderedPageBreak: true,
+        experimental: false,
+        trimXmlDeclaration: true,
+        useBase64URL: false,
+        useMathMLPolyfill: false,
+        renderChanges: false,
+        renderHeaders: true,
+        renderFooters: true,
+        renderFootnotes: true,
+        renderEndnotes: true,
+      }).then(() => {
+        console.log('[DocumentViewerModal] DOCX rendered successfully');
+      }).catch((err: any) => {
+        console.error('[DocumentViewerModal] DOCX render error:', err);
+        setError('Lỗi hiển thị DOCX: ' + err.message);
+      });
+    }
+  }, [docxBlob]);
 
   const loadPreview = async () => {
     if (!doc) return;
@@ -135,10 +170,13 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
       const fileType = (doc.fileType || doc.type || '').toUpperCase();
       const isImage = ['JPG', 'JPEG', 'PNG', 'GIF', 'WEBP', 'SVG'].includes(fileType);
       const isPdf = fileType === 'PDF';
+      const isDocx = ['DOCX'].includes(fileType);
       const isText = ['TXT', 'MD', 'JSON', 'XML', 'HTML', 'CSS', 'JS', 'TS', 'TSX', 'PY', 'JAVA', 'C', 'CPP'].includes(fileType);
 
       if (isImage || isPdf) {
         setPreviewUrl(blobUrl);
+      } else if (isDocx) {
+        setDocxBlob(blob);
       } else if (isText) {
         const text = await blob.text();
         setTextContent(text);
@@ -225,7 +263,8 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
   const isImage = ['JPG', 'JPEG', 'PNG', 'GIF', 'WEBP', 'SVG'].includes(fileType);
   const isPdf = fileType === 'PDF';
   const isText = ['TXT', 'MD', 'JSON', 'XML', 'HTML', 'CSS', 'JS', 'TS', 'TSX', 'PY', 'JAVA', 'C', 'CPP'].includes(fileType);
-  const hasPreview = (previewUrl || textContent) && !error;
+  const isDocx = ['DOCX'].includes(fileType);
+  const hasPreview = (previewUrl || textContent || docxBlob) && !error;
 
   const isHighSecurity = d.sensitivity === 'CRITICAL' || d.classification === 'CONFIDENTIAL';
   const hasDRM = d.drm?.enabled;
@@ -348,7 +387,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
               )}
 
               {/* Preview toolbar */}
-              {(isPdf || isImage || isText) && hasPreview && (
+              {(isPdf || isImage || isText || isDocx) && hasPreview && (
                 <div className="flex items-center justify-between px-4 py-2 bg-white border-b border-slate-200 relative z-20">
                   <div className="flex items-center gap-4">
                     <button
@@ -441,6 +480,14 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
                       >
                         {textContent}
                       </pre>
+                    )}
+                    {docxBlob && (
+                      <div
+                        ref={docxContainerRef}
+                        className="w-full h-full overflow-auto bg-white rounded-lg shadow-2xl p-6 docx-preview-wrapper"
+                        style={{ transform: `scale(${zoom / 100})`, transformOrigin: 'top left', minHeight: '400px' }}
+                        onContextMenu={(e) => isHighSecurity ? e.preventDefault() : undefined}
+                      />
                     )}
                   </div>
                 ) : (

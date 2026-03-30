@@ -142,7 +142,7 @@ export const ChatManagement: React.FC = () => {
   useEffect(() => {
     if (!user) return;
     const socket = io(window.location.origin, {
-      transports: ['polling', 'websocket'],
+      transports: ['websocket'],
       auth: { userId: user.id, userName: user.name },
       query: { userId: user.id, userName: user.name },
       withCredentials: false

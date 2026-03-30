@@ -51,6 +51,27 @@ export const ManagerDashboard: React.FC = () => {
   const onlineStaff = departmentStaff.filter(u => u.status === 'ACTIVE');
   const departmentProjects = projects.filter(p => p.departmentId === managerDepartmentId || p.department === user?.department);
 
+  if (!user?.departmentId && !isAdmin) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center p-8 animate-in fade-in zoom-in duration-700">
+        <div className="w-24 h-24 bg-sky-50 text-sky-500 rounded-[32px] flex items-center justify-center mb-8 border border-sky-100 shadow-sm relative overflow-hidden group">
+          <div className="absolute inset-0 bg-sky-400/5 translate-y-12 group-hover:translate-y-0 transition-transform duration-700"></div>
+          <ShieldAlert size={40} className="relative z-10" />
+        </div>
+        <h2 className="text-3xl font-black text-slate-800 tracking-tight text-center max-w-md italic">Manager: Waiting for Assignment</h2>
+        <p className="text-slate-500 text-center mt-3 max-w-sm leading-relaxed">
+          Tài khoản quản lý của bạn đã được kích hoạt, nhưng chưa được gán vào bộ phận cụ thể để quản lý.
+        </p>
+        <div className="mt-8 p-6 bg-sky-50 border border-sky-100 rounded-2xl flex items-start gap-4 max-w-md">
+          <AlertCircle className="text-sky-600 shrink-0 mt-1" size={20} />
+          <p className="text-sm text-sky-700 leading-relaxed font-medium">
+            Vui lòng liên hệ với Quản trị viên hệ thống để được gán vào phòng ban tương ứng.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">

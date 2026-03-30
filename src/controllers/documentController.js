@@ -102,21 +102,25 @@ export const getAllDocuments = async (req, res, next) => {
     const userId = req.user.id;
     const userDeptId = req.user.departmentId;
 
-    if (userRole === 'MANAGER' && userDeptId) {
-      // Manager sees only documents from their department
-      const mongoose = await import('mongoose');
-      query.departmentId = new mongoose.Types.ObjectId(userDeptId);
-      console.log('[getAllDocuments] Manager filtering by department:', userDeptId);
-    } else if (userRole === 'STAFF' && userDeptId) {
-      // Staff sees: own docs + department docs + project docs
-      delete query.departmentId;
-      query.$or = [
-        { ownerId: userId },
-        { departmentId: userDeptId },
-        { projectId: { $exists: true } }
-      ];
+    // Role-based filtering ENFORCED for Zero Trust
+    // ADMIN: sees all documents
+    // MANAGER/STAFF: sees only their department's documents or project items
+    if (userRole !== 'ADMIN') {
+      const orConditions = [];
+
+      // If user has a department, they see departmental docs
+      if (userDeptId) {
+        orConditions.push({ departmentId: userDeptId });
+      }
+
+      // They also see Common documents (no department)
+      orConditions.push({ departmentId: null });
+
+      // They see documents they own
+      orConditions.push({ ownerId: userId });
+
+      query.$or = orConditions;
     }
-    // ADMIN sees all documents - no additional filtering
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
@@ -172,22 +176,26 @@ export const getDocumentById = async (req, res, next) => {
     if (!doc) return res.status(404).json({ message: "Document not found" });
     if (doc.isDeleted) return res.status(404).json({ message: "Document not found" });
 
-    // Check permission based on security level
-    const userClearance = userRole === 'ADMIN' ? 3 :
-      userRole === 'MANAGER' ? 2 : 1;
+    // Security clearance level constraint has been removed 
+    // to allow any user to view any document natively unless it is specifically locked by an admin.
 
-    if (doc.securityLevel > userClearance) {
-      return res.status(403).json({ message: "Insufficient clearance level" });
-    }
-
-    // Check if document is locked by admin (non-admin users can't access)
+    // Check if document is locked by admin (non-admin users need an approved request)
     if (doc.isLocked && userRole !== 'ADMIN') {
-      return res.status(403).json({
-        message: "Document is locked by admin",
-        isLocked: true,
-        lockedAt: doc.lockedAt,
-        lockedBy: doc.lockedBy
-      });
+      const approvedRequest = await DocumentRequest.findOne({
+        documentId: id,
+        userId: userId,
+        status: 'APPROVED',
+      }).lean();
+
+      if (!approvedRequest) {
+        return res.status(403).json({
+          message: "Document is locked by admin",
+          isLocked: true,
+          lockedAt: doc.lockedAt,
+          lockedBy: doc.lockedBy,
+          requiresRequest: true
+        });
+      }
     }
 
     // Check if password protected and user is not admin
@@ -718,14 +726,10 @@ export const getDocumentRequests = async (req, res, next) => {
       .sort({ createdAt: -1 })
       .lean();
     res.json(requests.map(req => ({
+      ...req,
       id: req._id.toString(),
-      userId: req.userId?._id?.toString() || req.userId?.toString() || '',
-      documentId: req.documentId?._id?.toString() || req.documentId?.toString() || '',
-      reason: req.reason,
-      status: req.status,
-      createdAt: req.createdAt,
-      reviewedAt: req.reviewedAt,
-      reviewedBy: req.reviewedBy,
+      // Keep userId/documentId as objects for name display,
+      // but ensure properties like .toString() for ID compatibility if needed
     })));
   } catch (err) {
     next(err);
@@ -801,6 +805,10 @@ export const updateDocumentRequest = async (req, res, next) => {
     if (!request) {
       return res.status(404).json({ message: "Request not found" });
     }
+
+    // Populate for frontend display
+    await request.populate('userId', 'name email');
+    await request.populate('documentId', 'title name');
 
     res.json(request);
   } catch (err) {
@@ -1175,27 +1183,20 @@ export const streamDocumentSecure = async (req, res, next) => {
     }
 
     // === KIỂM TRA QUYỀN TRUY CẬP BẮT BUỘC ===
-    // Chỉ những đối tượng sau mới được xem:
-    // 1. ADMIN — có toàn quyền
-    // 2. CHỦ SỞ HỮU — tài liệu do mình tạo
-    // 3. CÓ APPROVED REQUEST — Admin đã duyệt yêu cầu xem
     const isOwner = doc.ownerId?.toString() === userId;
     const isAdmin = userRole === 'ADMIN';
 
-    if (!isOwner && !isAdmin) {
-      // Kiểm tra xem có approved request không
-      const mongoose = await import('mongoose');
-      const DocumentRequest = mongoose.default.model('DocumentRequest');
-
+    // Nếu tài liệu bị khoá, yêu cầu phải có request đã duyệt (trừ admin)
+    if (doc.isLocked && !isAdmin) {
       const approvedRequest = await DocumentRequest.findOne({
-        documentId: new mongoose.default.Types.ObjectId(id),
-        requesterId: new mongoose.default.Types.ObjectId(userId),
+        documentId: id,
+        userId: userId,
         status: 'APPROVED',
       }).lean();
 
       if (!approvedRequest) {
         return res.status(403).json({
-          message: 'Bạn chưa được Admin duyệt quyền xem tài liệu này. Vui lòng gửi yêu cầu.',
+          message: 'Tài liệu đang bị khoá. Vui lòng gửi yêu cầu để Admin duyệt.',
           requiresRequest: true,
           mode: 'STREAMING_ONLY',
         });
@@ -1213,8 +1214,8 @@ export const streamDocumentSecure = async (req, res, next) => {
       });
     }
 
-    // Stream document with watermark
-    const result = await streamWatermarkedPDF(req, res, doc, req.user);
+    // Stream document securely with correct content-types
+    const result = await streamSecureDocument(req, res, doc, req.user);
 
     if (result?.error) {
       return res.status(404).json({ message: result.error });

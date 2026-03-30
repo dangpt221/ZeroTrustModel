@@ -27,7 +27,7 @@ const uploadsDir = path.join(__dirname, '../../uploads/documents');
  */
 export async function streamSecureDocument(req, res, doc, user) {
   const ip = getClientIP(req);
-  const downloadId = crypto.randomUUID();
+  const downloadId = crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString('hex');
 
   // Tạo watermark
   const watermark = generateWatermarkData(user, doc, ip);
@@ -54,17 +54,30 @@ export async function streamSecureDocument(req, res, doc, user) {
     },
   });
 
-  // Tìm file
+  if (!doc.url) {
+    return { error: 'Document does not have a valid file attached' };
+  }
+
   let filePath = path.join(uploadsDir, path.basename(doc.url));
 
-  // Check encrypted version first
-  const encryptedPath = path.join(uploadsDir, `encrypted_${path.basename(doc.url)}`);
+  // Check encrypted version
+  const isAlreadyEncryptedPath = path.basename(doc.url).startsWith('encrypted_');
+  const encryptedPath = isAlreadyEncryptedPath 
+    ? filePath 
+    : path.join(uploadsDir, `encrypted_${path.basename(doc.url)}`);
+
   if (fs.existsSync(encryptedPath)) {
-    // Decrypt on-the-fly
-    const { decryptFile } = await import('./encryption.js');
-    const tempPath = path.join(uploadsDir, `temp_stream_${downloadId}.${doc.fileType}`);
-    await decryptFile(encryptedPath, tempPath);
-    filePath = tempPath;
+    try {
+      // Decrypt on-the-fly
+      const { decryptFile } = await import('./encryption.js');
+      const tempPath = path.join(uploadsDir, `temp_stream_${downloadId}.${doc.fileType}`);
+      await decryptFile(encryptedPath, tempPath);
+      filePath = tempPath;
+    } catch (err) {
+      console.error('[SecureStream] Decryption failed:', err);
+      // Decryption failure handled gracefully
+      return { error: 'Không thể giải mã tài liệu.' };
+    }
   }
 
   // Nếu file không tồn tại, trả về thông báo
@@ -93,7 +106,7 @@ export async function streamSecureDocument(req, res, doc, user) {
 
   // Set headers
   res.setHeader('Content-Type', contentType);
-  res.setHeader('Content-Disposition', `inline; filename="${doc.title}.${ext}"`);
+  res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(doc.title)}.${ext}"`);
   res.setHeader('X-Document-Streaming', 'Secure');
   res.setHeader('X-Watermark-Id', watermark.downloadId);
   res.setHeader('X-Fingerprint', fingerprint.shortFingerprint);
@@ -131,21 +144,34 @@ export async function streamSecureDocument(req, res, doc, user) {
  */
 export async function streamWatermarkedPDF(req, res, doc, user) {
   const ip = getClientIP(req);
-  const downloadId = crypto.randomUUID();
+  const downloadId = crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString('hex');
 
   // Tạo watermark
   const watermark = generateWatermarkData(user, doc, ip);
+
+  if (!doc.url) {
+    return { error: 'Document does not have a valid file attached' };
+  }
 
   // File path
   let filePath = path.join(uploadsDir, path.basename(doc.url));
 
   // Check encrypted
-  const encryptedPath = path.join(uploadsDir, `encrypted_${path.basename(doc.url)}`);
+  const isAlreadyEncryptedPath = path.basename(doc.url).startsWith('encrypted_');
+  const encryptedPath = isAlreadyEncryptedPath 
+    ? filePath 
+    : path.join(uploadsDir, `encrypted_${path.basename(doc.url)}`);
+
   if (fs.existsSync(encryptedPath)) {
-    const { decryptFile } = await import('./encryption.js');
-    const tempPath = path.join(uploadsDir, `temp_wm_${downloadId}.pdf`);
-    await decryptFile(encryptedPath, tempPath);
-    filePath = tempPath;
+    try {
+      const { decryptFile } = await import('./encryption.js');
+      const tempPath = path.join(uploadsDir, `temp_wm_${downloadId}.pdf`);
+      await decryptFile(encryptedPath, tempPath);
+      filePath = tempPath;
+    } catch (err) {
+      console.error('[WatermarkedStream] Decryption failed:', err);
+      return { error: 'Không thể giải mã tài liệu.' };
+    }
   }
 
   if (!fs.existsSync(filePath)) {
@@ -154,10 +180,10 @@ export async function streamWatermarkedPDF(req, res, doc, user) {
 
   // Set headers
   res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('Content-Disposition', `inline; filename="${doc.title}_watermarked.pdf"`);
+  res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(doc.title)}_watermarked.pdf"`);
   res.setHeader('X-Document-Streaming', 'Secure-Watermarked');
   res.setHeader('X-Watermark-Id', watermark.downloadId);
-  res.setHeader('X-Watermark-Visible', watermark.visibleWatermark);
+  res.setHeader('X-Watermark-Visible', encodeURIComponent(watermark.visibleWatermark));
   res.setHeader('X-No-Store', 'true'); // No cache
   res.setHeader('X-Download-Options', 'noopen'); // Không mở trong browser
 
@@ -173,6 +199,13 @@ export async function streamWatermarkedPDF(req, res, doc, user) {
       } catch (e) {
         // Ignore
       }
+    }
+  });
+
+  fileStream.on('error', (err) => {
+    console.error('[WatermarkedStream] Stream error:', err);
+    if (!res.headersSent) {
+      res.status(500).json({ message: 'Error streaming watermarked document' });
     }
   });
 
@@ -225,7 +258,7 @@ export function verifySecurePreviewToken(documentId, token, exp) {
 const documentSessions = new Map();
 
 export function createDocumentAccessSession(documentId, userId, user) {
-  const sessionId = crypto.randomUUID();
+  const sessionId = crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString('hex');
   const session = {
     sessionId,
     documentId,

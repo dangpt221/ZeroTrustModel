@@ -47,17 +47,18 @@ export function getDocumentDRMPolicy(document, user) {
     shareWith: [],
   };
 
+  // Default policy allows view, but editing/sharing depends on ownership/admin
   switch (classification) {
     case 'CONFIDENTIAL':
       policy = {
-        view: false,           // Phải có approved request mới xem được
-        download: false,        // Cấm tuyệt đối tải file
+        view: true,
+        download: false,
         print: false,
         copy: false,
         edit: isOwner || isAdmin,
         share: isOwner || isAdmin,
         expiresAt: getDefaultExpiry(securityLevel),
-        watermark: true,       // Luôn có watermark khi xem
+        watermark: true,
         offlineAccess: false,
         printLimit: 0,
         shareWith: [],
@@ -66,8 +67,8 @@ export function getDocumentDRMPolicy(document, user) {
 
     case 'INTERNAL':
       policy = {
-        view: false,           // Phải có approved request mới xem được
-        download: false,        // Cấm tải file
+        view: true,
+        download: false,
         print: false,
         copy: false,
         edit: isOwner || isAdmin,
@@ -82,8 +83,8 @@ export function getDocumentDRMPolicy(document, user) {
 
     case 'PUBLIC':
       policy = {
-        view: false,           // Phải có approved request mới xem được
-        download: false,         // Cấm tải file — chỉ ADMIN mới được tải
+        view: true,
+        download: false,
         print: true,
         copy: false,
         edit: isOwner || isAdmin,
@@ -97,9 +98,8 @@ export function getDocumentDRMPolicy(document, user) {
       break;
 
     default:
-      // RESTRICTED (if added)
       policy = {
-        view: false,
+        view: true,
         download: false,
         print: false,
         copy: false,
@@ -114,25 +114,20 @@ export function getDocumentDRMPolicy(document, user) {
       break;
   }
 
-  // Admin bypasses all restrictions (but NEVER download — ZeroTrust: never trust, always verify)
+  // Admin bypasses all restrictions (but NEVER download — ZeroTrust)
   if (isAdmin) {
-    policy = {
-      view: true,              // Xem qua streaming
-      download: false,          // TUYỆT ĐỐI KHÔNG TẢI — hacker đánh cắp admin cũng không tải được
-      print: false,             // Không in
-      copy: false,             // Không copy
-      edit: true,
-      share: true,
-      expiresAt: null,
-      watermark: true,          // Luôn watermark khi stream
-      offlineAccess: false,
-      printLimit: 0,
-      shareWith: [],
-    };
+    policy.view = true;
+    policy.download = false;
+    policy.print = false;
+    policy.copy = false;
+    policy.edit = true;
+    policy.share = true;
+    policy.watermark = true;
   }
 
-  // Owner has full access (view only, no download)
-  if (isOwner && !isAdmin) {
+  // Owner has full access
+  if (isOwner) {
+    policy.view = true;
     policy.edit = true;
     policy.share = true;
   }
@@ -168,7 +163,8 @@ export function checkDRMPermission(document, user, action) {
     };
   }
 
-  const allowed = policy[action] === true;
+  const allowedAction = action.toLowerCase();
+  const allowed = policy[allowedAction] === true;
   if (!allowed) {
     const actionLabels = {
       VIEW: 'xem',

@@ -4,8 +4,12 @@ import { documentsApi, departmentsApi } from '../../api';
 import { Document } from '../../types';
 import { Search, Filter, ShieldAlert, Eye, MoreVertical, FileText, Plus, Download, Upload, X, File, Lock, Unlock, Key, Shield } from 'lucide-react';
 import { Modal } from '../../components/Admin/Modal';
+import { useAuth } from '../../context/AuthContext';
+import { DocumentViewerModal } from '../../components/Staff/DocumentViewerModal';
 
 export const DocumentManagement: React.FC = () => {
+  const { user } = useAuth();
+
   // Helper to get user name safely
   const getUserName = (user: any) => {
     if (!user) return 'N/A';
@@ -61,6 +65,8 @@ export const DocumentManagement: React.FC = () => {
         // API returns { documents: [], pagination: {} }
         setDocs(docsResponse?.documents || []);
         setDepartments(deptsData || []);
+        // Load initial requests count for the notification badge
+        loadRequests();
       } catch (error) {
         console.error('Error fetching documents:', error);
         setDocs([]);
@@ -239,15 +245,18 @@ export const DocumentManagement: React.FC = () => {
         <div className="flex gap-3">
           <button
             onClick={() => setShowRequests(!showRequests)}
-            className={`px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 transition-all ${
+            className={`relative px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 transition-all ${
               showRequests ? 'bg-blue-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
             }`}
           >
             <Key size={18} />
             Yêu cầu truy cập
             {requests.filter(r => r.status === 'PENDING').length > 0 && (
-              <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">
-                {requests.filter(r => r.status === 'PENDING').length}
+              <span className="absolute -top-1 -right-1 flex h-5 w-5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-5 w-5 bg-red-500 text-[10px] items-center justify-center text-white ring-2 ring-white">
+                  {requests.filter(r => r.status === 'PENDING').length}
+                </span>
               </span>
             )}
           </button>
@@ -411,9 +420,6 @@ export const DocumentManagement: React.FC = () => {
                     <button onClick={() => setViewingDoc(doc)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all">
                       <Eye size={18} />
                     </button>
-                    <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all">
-                      <Download size={18} />
-                    </button>
                     <button
                       onClick={() => handleDelete(doc.id)}
                       className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
@@ -567,72 +573,18 @@ export const DocumentManagement: React.FC = () => {
         </div>
       </Modal>
 
-      {/* View Document Modal */}
-      <Modal isOpen={!!viewingDoc} onClose={() => setViewingDoc(null)} title="Chi tiet tai lieu">
-        {viewingDoc && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl">
-              <div className="p-4 bg-blue-100 text-blue-600 rounded-xl">
-                <FileText size={32} />
-              </div>
-              <div>
-                <h4 className="font-bold text-slate-800">{viewingDoc.title}</h4>
-                <p className="text-sm text-slate-500">{viewingDoc.fileType} - {viewingDoc.fileSize}</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs font-bold text-slate-400 uppercase">Bo phan</p>
-                <p className="font-bold text-slate-700">{viewingDoc.departmentName || '-'}</p>
-              </div>
-              <div>
-                <p className="text-xs font-bold text-slate-400 uppercase">Do nhay cam</p>
-                <span className={`text-[10px] font-black px-2 py-1 rounded uppercase ${
-                  viewingDoc.sensitivity === 'CRITICAL' ? 'bg-rose-100 text-rose-600' :
-                  viewingDoc.sensitivity === 'HIGH' ? 'bg-amber-100 text-amber-600' :
-                  'bg-emerald-100 text-emerald-600'
-                }`}>
-                  {viewingDoc.sensitivity}
-                </span>
-              </div>
-              <div>
-                <p className="text-xs font-bold text-slate-400 uppercase">Nguoi so huu</p>
-                <p className="font-bold text-slate-700">{viewingDoc.ownerName || '-'}</p>
-              </div>
-              <div>
-                <p className="text-xs font-bold text-slate-400 uppercase">Trang thai</p>
-                <span className={`text-[10px] font-black px-2 py-1 rounded uppercase ${
-                  viewingDoc.status === 'APPROVED' ? 'bg-green-100 text-green-600' :
-                  viewingDoc.status === 'PENDING' ? 'bg-yellow-100 text-yellow-600' :
-                  viewingDoc.status === 'REJECTED' ? 'bg-red-100 text-red-600' :
-                  'bg-slate-100 text-slate-600'
-                }`}>
-                  {viewingDoc.status}
-                </span>
-              </div>
-              <div>
-                <p className="text-xs font-bold text-slate-400 uppercase">Ngay tao</p>
-                <p className="font-bold text-slate-700">{viewingDoc.createdAt ? new Date(viewingDoc.createdAt).toLocaleDateString('vi-VN') : '-'}</p>
-              </div>
-              <div>
-                <p className="text-xs font-bold text-slate-400 uppercase">Phien ban</p>
-                <p className="font-bold text-slate-700">v{viewingDoc.currentVersion || 1}</p>
-              </div>
-            </div>
-            <div className="flex gap-2 pt-4">
-              <button
-                onClick={() => window.open(viewingDoc.url || '#', '_blank')}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2"
-              >
-                <Download size={18} /> Tai xuong
-              </button>
-              <button onClick={() => handleDelete(viewingDoc.id)} className="px-6 py-3 border border-rose-200 text-rose-600 rounded-xl font-bold hover:bg-rose-50 transition-all">
-                <MoreVertical size={18} />
-              </button>
-            </div>
-          </div>
-        )}
-      </Modal>
+      {/* Document Viewer Modal - Secure Streaming */}
+      <DocumentViewerModal
+        document={viewingDoc}
+        isOpen={!!viewingDoc}
+        onClose={() => setViewingDoc(null)}
+        onDownload={undefined}
+        onRequestAccess={async (doc: Document, reason: string) => {
+          await documentsApi.requestAccess(doc.id, reason);
+          alert('Yêu cầu đã được gửi! Admin sẽ xem xét sớm.');
+        }}
+        user={user ? { id: user.id || '', name: user.name || '', email: user.email || '', role: user.role || '' } : undefined}
+      />
 
       {/* Security Settings Modal - Enhanced DRM */}
       <Modal isOpen={!!securityModalDoc} onClose={() => { setSecurityModalDoc(null); setPasswordInput(''); }} title="Cài đặt bảo mật tài liệu" size="lg">

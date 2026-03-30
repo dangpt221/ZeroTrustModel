@@ -18,13 +18,19 @@ const UserSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: ['ACTIVE', 'LOCKED', 'PENDING'],
-      default: 'ACTIVE',
+      default: 'PENDING',
     },
     mfaEnabled: { type: Boolean, default: false },
     trustScore: { type: Number, default: 95 },
     knownDevices: [{ type: String }], // Store device fingerprints
     device: { type: String, default: '' }, // e.g. "Điện thoại (Chrome)" or "Máy tính (Chrome)"
     lastActiveAt: { type: Date, default: null }, // For online/offline status
+
+    // E2EE Key Backup (Recovery Password System)
+    hasE2EEBackup: { type: Boolean, default: false },
+    encryptedMasterKey: { type: String, default: null },
+    masterKeySalt: { type: String, default: null },
+    masterKeyIv: { type: String, default: null },
   },
   { timestamps: true },
 );

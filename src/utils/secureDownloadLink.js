@@ -31,7 +31,7 @@ export function generateSecureDownloadURL(documentId, user, options = {}) {
     watermarkData = null,
   } = options;
 
-  const downloadId = crypto.randomUUID();
+  const downloadId = crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString('hex');
   const nonce = crypto.randomBytes(16).toString('hex');
   const now = Math.floor(Date.now() / 1000);
   const expiresAt = now + expirySeconds;

@@ -108,7 +108,7 @@ export const createUser = async (req, res, next) => {
       role: role || "STAFF",
       departmentId,
       mfaEnabled: mfaEnabled || false,
-      status: "ACTIVE",
+      status: "PENDING", // Enforce PENDING by default for Zero Trust approval flow
       trustScore: 95,
       customRoles: customRoles || [],
     });

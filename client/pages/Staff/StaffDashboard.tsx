@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { projectsApi, documentsApi, teamsApi } from '../../api';
 import { Document } from '../../types';
 import { ShieldCheck, FileText, Zap, Clock, CheckCircle2, LayoutGrid, ArrowRight, Lock, Key, Users } from 'lucide-react';
-import { DocumentContent } from '../../components/Staff/DocumentContent';
+import { DocumentViewerModal } from '../../components/Staff/DocumentViewerModal';
 import { Modal } from '../../components/Admin/Modal';
 
 export const StaffDashboard: React.FC = () => {
@@ -15,10 +15,6 @@ export const StaffDashboard: React.FC = () => {
   const [teams, setTeams] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewingDoc, setViewingDoc] = useState<Document | null>(null);
-  const [requestModalDoc, setRequestModalDoc] = useState<Document | null>(null);
-  const [requestReason, setRequestReason] = useState('');
-  const [requestingAccess, setRequestingAccess] = useState(false);
-  const [myRequests, setMyRequests] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -52,51 +48,29 @@ export const StaffDashboard: React.FC = () => {
   }, [projects, user]);
 
   const handleViewDoc = async (doc: Document) => {
-    // Only require request if document is locked by Admin
-    const isLocked = (doc as any).isLocked;
-
-    if (isLocked) {
-      // Check if user already has an approved request
-      const approvedRequest = myRequests.find(
-        (r: any) => {
-          const reqDocId = typeof r.documentId === 'object' ? r.documentId._id : r.documentId;
-          return reqDocId === doc.id && r.status === 'APPROVED';
-        }
-      );
-      if (approvedRequest) {
-        setViewingDoc(doc);
-        return;
-      }
-      // Show request modal
-      setRequestModalDoc(doc);
-      setRequestReason('');
-      return;
-    }
-    // Document is not locked, allow viewing
     setViewingDoc(doc);
   };
 
-  const handleSendRequest = async () => {
-    if (!requestModalDoc) return;
-    try {
-      setRequestingAccess(true);
-      const result = await documentsApi.requestAccess(requestModalDoc.id, requestReason);
-      alert(result.message || 'Yêu cầu đã được gửi!');
-      setRequestModalDoc(null);
-      // Refresh my requests
-      const requests = await documentsApi.getMyRequests();
-      setMyRequests(requests);
-    } catch (err: any) {
-      alert(err.message || 'Gửi yêu cầu thất bại!');
-    } finally {
-      setRequestingAccess(false);
-    }
-  };
-
-  // Load my requests on mount
-  useEffect(() => {
-    documentsApi.getMyRequests().then(setMyRequests).catch(() => {});
-  }, []);
+  if (!user?.departmentId && user?.role !== 'ADMIN') {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center p-8 animate-in fade-in zoom-in duration-700">
+        <div className="w-24 h-24 bg-amber-50 text-amber-500 rounded-[32px] flex items-center justify-center mb-8 border border-amber-100 shadow-sm relative overflow-hidden group">
+          <div className="absolute inset-0 bg-amber-400/5 translate-y-12 group-hover:translate-y-0 transition-transform duration-700"></div>
+          <Users size={40} className="relative z-10" />
+        </div>
+        <h2 className="text-3xl font-black text-slate-800 tracking-tight text-center max-w-md">Chào mừng, {user?.name}</h2>
+        <p className="text-slate-500 text-center mt-3 max-w-sm leading-relaxed">
+          Tài khoản của bạn đã được kích hoạt, nhưng chưa được phân công vào bộ phận cụ thể. 
+        </p>
+        <div className="mt-8 p-6 bg-blue-50 border border-blue-100 rounded-2xl flex items-start gap-4 max-w-md">
+          <Zap className="text-blue-600 shrink-0 mt-1" size={20} />
+          <p className="text-sm text-blue-700 leading-relaxed font-medium">
+            Vui lòng liên hệ với quản trị viên (Admin) hoặc quản lý bộ phận để được phân quyền vào dự án và truy cập tài liệu.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -162,8 +136,8 @@ export const StaffDashboard: React.FC = () => {
               <Clock size={24} />
             </div>
             <div>
-              <p className="text-xs text-slate-400 font-bold uppercase">Đăng nhập cuối</p>
-              <p className="text-lg font-black text-slate-800">{user?.lastLogin ? new Date(user.lastLogin).toLocaleDateString('vi-VN') : 'N/A'}</p>
+              <p className="text-xs text-slate-400 font-bold uppercase">Đăng nhập mới</p>
+              <p className="text-lg font-black text-slate-800">{(user as any)?.lastLogin ? new Date((user as any).lastLogin).toLocaleDateString('vi-VN') : 'N/A'}</p>
             </div>
           </div>
         </div>
@@ -211,10 +185,10 @@ export const StaffDashboard: React.FC = () => {
             </div>
             <div className="space-y-3">
               {documents.slice(0, 5).map(doc => {
-                const docName = doc.name || (doc as any).title || 'Không có tiêu đề';
+                const docName = doc.title || (doc as any).name || 'Không có tiêu đề';
                 const docDate = doc.createdAt ? new Date(doc.createdAt).toLocaleDateString('vi-VN') : '';
-                const docSize = doc.size || (doc as any).fileSize || '';
-                const isLocked = (doc as any).isLocked;
+                const docSize = doc.fileSize || (doc as any).size || '';
+                const isLocked = doc.isLocked;
                 const sensitivity = doc.sensitivity || 'LOW';
 
                 const getSensitivityColor = (level: string) => {
@@ -330,7 +304,7 @@ export const StaffDashboard: React.FC = () => {
               </div>
               <div>
                 <p className="text-xs text-slate-400">Phòng ban</p>
-                <p className="text-sm font-medium text-slate-700">{user?.department}</p>
+                <p className="text-sm font-medium text-slate-700">{user?.department || 'Chưa phân phối'}</p>
               </div>
               <div>
                 <p className="text-xs text-slate-400">Thiết bị</p>
@@ -341,64 +315,18 @@ export const StaffDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Document Content - Hiển thị trực tiếp trên trang */}
-      {viewingDoc && (
-        <div className="mt-6">
-          <DocumentContent
-            document={viewingDoc}
-            onClose={() => setViewingDoc(null)}
-          />
-        </div>
-      )}
-
-      {/* Request Access Modal */}
-      <Modal isOpen={!!requestModalDoc} onClose={() => setRequestModalDoc(null)} title="Yêu cầu xem tài liệu">
-        {requestModalDoc && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-xl border border-blue-100">
-              <div className="p-3 bg-blue-100 text-blue-600 rounded-xl">
-                <Lock size={24} />
-              </div>
-              <div>
-                <h4 className="font-bold text-slate-800">{requestModalDoc.title || requestModalDoc.name}</h4>
-                <p className="text-sm text-blue-600">Tài liệu bảo mật cao. Vui lòng gửi yêu cầu để Admin duyệt.</p>
-              </div>
-            </div>
-
-            <div>
-              <label className="text-xs font-bold text-slate-500 uppercase">Lý do</label>
-              <textarea
-                value={requestReason}
-                onChange={(e) => setRequestReason(e.target.value)}
-                placeholder="Nhập lý do bạn cần xem tài liệu này..."
-                className="w-full mt-1 px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                rows={3}
-                autoFocus
-              />
-            </div>
-
-            <div className="flex gap-2">
-              <button
-                onClick={() => setRequestModalDoc(null)}
-                className="flex-1 py-3 border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-50 transition-all"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={handleSendRequest}
-                disabled={requestingAccess}
-                className="flex-1 py-3 bg-blue-500 text-white rounded-xl font-bold hover:bg-blue-600 disabled:bg-slate-300 transition-all flex items-center justify-center gap-2"
-              >
-                {requestingAccess ? 'Đang gửi...' : (
-                  <>
-                    <Key size={18} /> Gửi yêu cầu
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        )}
-      </Modal>
+      {/* Document Viewer Modal - Secure Streaming */}
+      <DocumentViewerModal
+        document={viewingDoc}
+        isOpen={!!viewingDoc}
+        onClose={() => setViewingDoc(null)}
+        onDownload={undefined}
+        onRequestAccess={async (doc: Document, reason: string) => {
+          await documentsApi.requestAccess(doc.id, reason);
+          alert('Yêu cầu đã được gửi! Admin sẽ xem xét sớm.');
+        }}
+        user={user ? { id: user.id, name: user.name, email: user.email, role: user.role } : undefined}
+      />
     </div>
   );
 };

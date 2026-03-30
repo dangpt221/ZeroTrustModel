@@ -2,6 +2,7 @@
 import React from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { E2EEProvider } from './context/E2EEContext';
 import { Layout } from './components/Layout';
 import { Login } from './pages/Login';
 import { AdminDashboard } from './pages/AdminDashboard';
@@ -56,8 +57,9 @@ const DashboardSelector: React.FC = () => {
 const App: React.FC = () => {
   return (
     <AuthProvider>
-      <Router>
-        <Routes>
+      <E2EEProvider>
+        <Router>
+          <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/pending-approval" element={<PendingApproval />} />
 
@@ -169,7 +171,8 @@ const App: React.FC = () => {
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </Router>
+        </Router>
+      </E2EEProvider>
     </AuthProvider>
   );
 };

@@ -255,21 +255,22 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     </div>
   );
 };
-
 // Chat notification badge - direct unread conversations with sender names + preview
 const ChatBadge: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [unreadChats, setUnreadChats] = useState<any[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
 
   // Socket for real-time notifications
   useEffect(() => {
     if (!user) return;
 
     const socket = io(window.location.origin, {
-      transports: ['polling', 'websocket'],
+      transports: ['websocket'],
       auth: { userId: user.id, userName: user.name },
       query: { userId: user.id, userName: user.name },
       withCredentials: false
@@ -347,7 +348,9 @@ const ChatBadge: React.FC = () => {
     navigate('/messaging');
   };
 
-  if (unreadChats.length === 0) return null;
+  // Hide badge if on messaging page OR no unread chats
+  const isMessagingPage = location.pathname.toLowerCase().includes('messaging');
+  if (isMessagingPage || unreadChats.length === 0) return null;
 
   const totalUnread = unreadChats.reduce((sum: number, c: any) => sum + (c.unreadCount || 0), 0);
   const sendersPreview = unreadChats.slice(0, 3).map((c: any) => c.name).join(', ');

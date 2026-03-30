@@ -430,6 +430,8 @@ export const notificationsApi = {
 
   delete: (id: string) =>
     apiRequest<void>(`/notifications/${id}`, { method: 'DELETE' }),
+
+  createChatNotification: (data: any) => Promise.resolve(),
 };
 
 // ==================== Audit Logs API ====================
@@ -612,4 +614,28 @@ export const chatManagementApi = {
     apiRequest<{ success: boolean }>(`/chat/chat/messages/${messageId}`, {
       method: 'DELETE',
     }),
+};
+
+// ==================== E2EE API ====================
+export const e2eeApi = {
+  registerDevice: (data: { deviceId: string; deviceName: string; publicKey: string }) =>
+    apiRequest<{ message: string; device: any }>('/e2ee/device/register', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  getPublicKeys: (userIds: string[]) =>
+    apiRequest<{ keys: Record<string, any[]> }>('/e2ee/keys/users', {
+      method: 'POST',
+      body: JSON.stringify({ userIds }),
+    }),
+
+  setupBackup: (data: { encryptedMasterKey: string; masterKeySalt: string; masterKeyIv: string }) =>
+    apiRequest<{ message: string }>('/e2ee/backup/setup', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  recoverBackup: () =>
+    apiRequest<{ encryptedMasterKey: string; masterKeySalt: string; masterKeyIv: string }>('/e2ee/backup/recover'),
 };

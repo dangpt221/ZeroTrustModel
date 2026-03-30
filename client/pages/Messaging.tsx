@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useE2EE } from '../context/E2EEContext';
 import { ChatMessage, ChatRoom, useChat } from '../hooks/useChat';
 
 const formatTime = (timestamp: string) => {
@@ -33,16 +34,16 @@ const STICKER_CATEGORIES = [
 
 export const Messaging: React.FC = () => {
   const { user } = useAuth();
+  const { isE2EEReady, requiresRecovery, hasDbBackup, setupRecoveryBackup, recoverFromPIN } = useE2EE();
   const {
-    messages, setMessages, activeRoom, joinRoom, sendMessage,
+    messages, setMessages, isLoadingMessages, activeRoom, joinRoom, sendMessage,
     isConnected, typingUsers, startTyping, stopTyping,
-    addReaction, markAsRead, conversations, fetchConversations,
-    createConversation, searchMessages, getReplies
+    addReaction, markAsRead, markRoomAsRead, conversations, fetchConversations,
+    createConversation, searchMessages, getReplies, processIncomingMessage
   } = useChat();
 
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
   const [loadingRooms, setLoadingRooms] = useState(true);
-  const [loadingMessages, setLoadingMessages] = useState(false);
   const [activeTab, setActiveTab] = useState<'channels' | 'dms'>('channels');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<ChatMessage[]>([]);
@@ -72,6 +73,12 @@ export const Messaging: React.FC = () => {
   const [showDeleteRoomModal, setShowDeleteRoomModal] = useState(false);
   const [pendingRoomId, setPendingRoomId] = useState('');
   const [pendingRoomName, setPendingRoomName] = useState('');
+
+  // E2EE Modals
+  const [showSetupPinModal, setShowSetupPinModal] = useState(false);
+  const [pinInput, setPinInput] = useState('');
+  const [pinError, setPinError] = useState('');
+  const [isProcessingPin, setIsProcessingPin] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -111,7 +118,16 @@ export const Messaging: React.FC = () => {
         const res = await fetch('/api/messaging/rooms', { credentials: 'include' });
         if (res.ok) {
           const data = await res.json();
-          setRooms(data.rooms || []);
+          const pRooms = data.rooms || [];
+          for (const r of pRooms) {
+            if (r.lastMessage && r.lastMessage.encryptedContent) {
+              try {
+                const dec = await processIncomingMessage(r.lastMessage);
+                r.lastMessage.text = dec.text;
+              } catch (e) {}
+            }
+          }
+          setRooms(pRooms);
 
           // Check if we need to open a specific DM from notification click
           const openDMWithUserId = localStorage.getItem('openDMWithUserId');
@@ -165,40 +181,6 @@ export const Messaging: React.FC = () => {
     return () => window.removeEventListener('open_chat', handleOpenChatEvent);
   }, [createConversation, joinRoom]);
 
-  // Fetch Messages when Active Room changes
-  useEffect(() => {
-    if (!activeRoom) return;
-    setLoadingMessages(true);
-
-    const fetchMessages = async () => {
-      try {
-        const res = await fetch(`/api/messages?room=${activeRoom}`, { credentials: 'include' });
-        if (res.status === 403) {
-          const data = await res.json();
-          alert(data.error || 'Bạn cần nhập mã bảo mật để tham gia');
-          setMessages([]);
-          setLoadingMessages(false);
-          return;
-        }
-        if (res.ok) {
-          const data = await res.json();
-          const msgs = Array.isArray(data) ? data : (data.messages || []);
-          setMessages(msgs);
-          msgs.forEach((msg: ChatMessage) => {
-            if (!msg.isRead && msg.userId !== user?.id) {
-              markAsRead(msg.id, activeRoom);
-            }
-          });
-        }
-      } catch (err) {
-        console.error('Failed to fetch messages', err);
-        setMessages([]);
-      } finally {
-        setLoadingMessages(false);
-      }
-    };
-    fetchMessages();
-  }, [activeRoom, user?.id, markAsRead, setMessages]);
 
   const activeRoomData = rooms.find(r => r.id === activeRoom);
   const departmentId = user?.departmentId;
@@ -256,7 +238,6 @@ export const Messaging: React.FC = () => {
       }, 2000);
     }
   };
-
   // Fetch mention users when room changes
   useEffect(() => {
     if (!activeRoom) return;
@@ -274,6 +255,14 @@ export const Messaging: React.FC = () => {
     };
     fetchMentionUsers();
   }, [activeRoom]);
+
+  // Automatic Mark as Read when entering a room
+  useEffect(() => {
+    if (activeRoom) {
+      console.log('[Messaging] Auto marking room as read:', activeRoom);
+      markRoomAsRead(activeRoom);
+    }
+  }, [activeRoom, markRoomAsRead]);
 
   // Handle mention selection
   const handleMentionSelect = (selectedUser: any) => {
@@ -475,6 +464,43 @@ export const Messaging: React.FC = () => {
     if (room.type === 'GROUP' || room.type === 'channel') return Hash;
     return Shield;
   };
+
+  if (requiresRecovery) {
+    return (
+      <div className="flex-1 w-full h-full flex flex-col items-center justify-center bg-slate-50">
+        <div className="bg-white p-8 rounded-2xl shadow-xl max-w-sm w-full text-center">
+          <Shield className="w-16 h-16 text-blue-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-slate-800 mb-2">Khôi phục Mã hóa Cuối (E2EE)</h2>
+          <p className="text-sm text-slate-500 mb-6">Bạn đang đăng nhập trên thiết bị mới. Hãy nhập mã PIN 6 số mà bạn đã thiết lập để khôi phục khóa và tin nhắn bảo mật.</p>
+          
+          <input
+            type="password"
+            maxLength={6}
+            value={pinInput}
+            onChange={(e) => setPinInput(e.target.value.replace(/\D/g, ''))}
+            placeholder="PIN 6 số"
+            className="w-full text-center text-3xl tracking-[0.5em] font-mono bg-slate-100 border-none rounded-xl py-4 focus:ring-2 focus:ring-blue-200 mb-2"
+          />
+          {pinError && <p className="text-sm text-red-500 mb-4">{pinError}</p>}
+          
+          <button
+            disabled={pinInput.length !== 6 || isProcessingPin}
+            onClick={async () => {
+              setIsProcessingPin(true);
+              setPinError('');
+              const ok = await recoverFromPIN(pinInput);
+              if (!ok) setPinError('Mã PIN không chính xác hoặc dữ liệu lỗi.');
+              else setPinInput('');
+              setIsProcessingPin(false);
+            }}
+            className="w-full mt-2 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition disabled:opacity-50"
+          >
+            {isProcessingPin ? 'Đang khôi phục...' : 'Khôi phục ngay'}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 w-full h-full flex bg-white overflow-hidden">
@@ -693,11 +719,26 @@ export const Messaging: React.FC = () => {
             >
               <Search size={18} />
             </button>
-            <div className="flex items-center gap-1 px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg border border-emerald-100">
-              <Lock size={10} />
-              <span className="text-[10px] font-semibold">E2EE</span>
-            </div>
-            {isManager && activeRoomData && !activeRoomData.isPinned && (
+            {isE2EEReady && !hasDbBackup && (
+              <button 
+                onClick={() => { setPinInput(''); setPinError(''); setShowSetupPinModal(true); }}
+                className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg border border-blue-200 cursor-pointer transition-colors" title="Thiết lập mã PIN khôi phục">
+                <Shield size={10} />
+                <span className="text-[10px] font-semibold uppercase">Tạo PIN Backup</span>
+              </button>
+            )}
+            {isE2EEReady ? (
+              <div className="flex items-center gap-1 px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg border border-emerald-100" title="Đã bảo mật E2EE">
+                <Lock size={10} />
+                <span className="text-[10px] font-semibold">E2EE</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 px-2 py-1 bg-amber-50 text-amber-600 rounded-lg border border-amber-100" title="Chưa cấu hình E2EE. Tin nhắn có thể không an toàn.">
+                <Lock size={10} />
+                <span className="text-[10px] font-semibold">NO E2EE</span>
+              </div>
+            )}
+            {activeRoomData && !activeRoomData.isPinned && (user?.role === 'ADMIN' || user?.role === 'MANAGER' || activeRoomData.isDirectMessage) && (
               <button
                 onClick={() => {
                   setPendingRoomId(activeRoom);
@@ -705,7 +746,7 @@ export const Messaging: React.FC = () => {
                   setShowDeleteRoomModal(true);
                 }}
                 className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
-                title="Xóa kênh"
+                title="Xóa hộp thoại"
               >
                 <Trash2 size={18} />
               </button>
@@ -858,7 +899,10 @@ export const Messaging: React.FC = () => {
                 </button>
               </div>
               <p className="text-sm text-slate-600 mb-4">
-                Bạn có chắc muốn xóa phòng <strong>"{pendingRoomName}"</strong>? Tin nhắn trong phòng sẽ được giữ lại trong hệ thống.
+                Bạn có chắc muốn xóa <strong>"{pendingRoomName}"</strong>? 
+                {rooms.find(r => r.id === pendingRoomId)?.isDirectMessage 
+                  ? " Đoạn chat cá nhân sẽ bị xóa hoàn toàn khỏi cả 2 máy." 
+                  : " Tin nhắn trong phòng sẽ được lưu trữ mềm."}
               </p>
               <div className="flex gap-2">
                 <button
@@ -878,6 +922,49 @@ export const Messaging: React.FC = () => {
           </div>
         )}
 
+        {/* Setup PIN Backup Modal */}
+        {showSetupPinModal && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="bg-white rounded-xl shadow-2xl w-96 p-6 text-center">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-bold text-slate-800 mx-auto text-lg">Tạo mã PIN Bảo mật</h3>
+                <button onClick={() => setShowSetupPinModal(false)} className="text-slate-400 hover:text-slate-600 absolute right-6 top-6">
+                  <X size={18} />
+                </button>
+              </div>
+              <p className="text-sm text-slate-500 mb-6">Mã PIN gồm 6 số sẽ giúp bạn đăng nhập tin nhắn trên thiết bị khác mà không làm mất nội dung bảo mật (E2EE).</p>
+              
+              <input
+                type="password"
+                maxLength={6}
+                value={pinInput}
+                onChange={(e) => setPinInput(e.target.value.replace(/\D/g, ''))}
+                placeholder="Nhập 6 số"
+                className="w-full text-center text-3xl tracking-[0.5em] font-mono bg-slate-100 border-none rounded-xl py-4 focus:ring-2 focus:ring-blue-200 mb-2"
+              />
+              {pinError && <p className="text-sm text-red-500 mb-4">{pinError}</p>}
+              
+              <button
+                disabled={pinInput.length !== 6 || isProcessingPin}
+                onClick={async () => {
+                  setIsProcessingPin(true);
+                  setPinError('');
+                  const ok = await setupRecoveryBackup(pinInput);
+                  if (!ok) setPinError('Có lỗi khi tạo backup. Vui lòng thử lại sau.');
+                  else {
+                    alert('Sao lưu E2EE thành công! Hãy nhớ kỹ mã PIN này.');
+                    setShowSetupPinModal(false);
+                  }
+                  setIsProcessingPin(false);
+                }}
+                className="w-full mt-4 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition disabled:opacity-50"
+              >
+                {isProcessingPin ? 'Đang mã hóa...' : 'Xác nhận mã PIN'}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-5 space-y-3 bg-slate-50/50 flex flex-col">
           {!activeRoom ? (
@@ -885,7 +972,7 @@ export const Messaging: React.FC = () => {
               <MessageSquare className="w-14 h-14 mb-4 opacity-40" />
               <p className="text-sm font-medium text-slate-500">Chọn một kênh để bắt đầu trò chuyện</p>
             </div>
-          ) : loadingMessages ? (
+          ) : isLoadingMessages ? (
             <div className="flex-1 flex flex-col items-center justify-center min-h-[200px]">
               <div className="flex flex-col gap-3 w-full max-w-sm">
                 {[1, 2, 3].map((i) => (

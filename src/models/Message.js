@@ -6,8 +6,20 @@ const MessageSchema = new mongoose.Schema(
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     userName: { type: String, required: true },
 
-    // Message content
-    text: { type: String, required: true },
+    // E2EE Message Content
+    encryptedContent: [{
+      deviceId: { type: String }, // Target device
+      ciphertext: { type: String }, // Content encrypted for this device
+      iv: { type: String },
+      senderPublicKey: { type: String }
+    }],
+    groupCiphertext: { type: String }, // For groups
+    groupIv: { type: String },
+    senderDeviceId: { type: String }, // Device that sent this message
+
+    // Fallback/Legacy (optional now due to E2EE)
+    text: { type: String },
+    
     attachments: [{
       url: String,
       name: String,

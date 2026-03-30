@@ -47,16 +47,16 @@ export const DocumentContent: React.FC<DocumentContentProps> = ({
   const loadPreview = async () => {
     if (!doc) return;
 
-    // Get URL and make it absolute
-    const rawUrl = doc.url || (doc as any).fileUrl;
-    const url = getAbsoluteUrl(rawUrl);
+    // Get document ID and form secure stream URL
+    const docId = doc.id || (doc as any)._id;
+    const url = getAbsoluteUrl(`/api/documents/${docId}/stream`);
 
     console.log('[DocumentContent] Loading document:', doc.name);
-    console.log('[DocumentContent] Raw URL:', rawUrl);
-    console.log('[DocumentContent] Absolute URL:', url);
+    console.log('[DocumentContent] Document ID:', docId);
+    console.log('[DocumentContent] Stream URL:', url);
 
-    if (!url || url === '#' || url === '') {
-      setError('Tài liệu chưa có file để xem trước.');
+    if (!docId) {
+      setError('Tài liệu bị lỗi định dạng ID.');
       return;
     }
 

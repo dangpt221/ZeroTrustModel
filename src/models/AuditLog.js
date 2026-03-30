@@ -9,7 +9,7 @@ const AuditLogSchema = new mongoose.Schema(
     details: { type: String, default: '' },
     ip: { type: String },
     device: { type: String },
-    status: { type: String, enum: ['SUCCESS', 'FAILED', 'WARNING'], default: 'SUCCESS' },
+    status: { type: String, enum: ['SUCCESS', 'FAILED', 'FAILURE', 'WARNING', 'BLOCKED', 'ALERT', 'LOCKED', 'ACTIVE'], default: 'SUCCESS' },
     riskLevel: { type: String, enum: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'], default: 'LOW' },
     metadata: { type: Object },
   },

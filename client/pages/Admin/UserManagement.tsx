@@ -247,7 +247,10 @@ export const UserManagement: React.FC = () => {
             <div>
               <label className="text-xs font-bold text-slate-500 uppercase">Vai trò</label>
               <select value={filterRole} onChange={(e) => setFilterRole(e.target.value)} className="w-full mt-1 px-3 py-2 border border-slate-200 rounded-xl text-sm">
+                <option value="ALL">Tất cả</option>
                 <option value="STAFF">Staff</option>
+                <option value="MANAGER">Manager</option>
+                <option value="ADMIN">Admin</option>
               </select>
             </div>
             <div>
