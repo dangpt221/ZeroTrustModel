@@ -51,7 +51,7 @@ export function registerSocketHandlers(io) {
     // ===== SEND MESSAGE (with attachments support) =====
     socket.on('send_message', async (payload) => {
       try {
-        const { userId, userName, userRole, text, encryptedContent, senderDeviceId, room, parentMessageId, attachments } = payload;
+        const { userId, userName, userRole, text, encryptedContent, senderDeviceId, room, parentMessageId, attachments, senderSignPubKey } = payload;
         console.log('[Socket] send_message received - userId:', userId, 'userRole:', userRole, 'room:', room, 'text:', text?.substring?.(0, 30));
 
         // Parse @mentions
@@ -68,6 +68,7 @@ export function registerSocketHandlers(io) {
           text,
           encryptedContent,
           senderDeviceId,
+          senderSignPubKey,
           room: room || 'general',
           roomId: room || null,
           parentMessageId: parentMessageId || null,
@@ -101,6 +102,7 @@ export function registerSocketHandlers(io) {
           text: msg.text || '',
           encryptedContent: msg.encryptedContent,
           senderDeviceId: msg.senderDeviceId,
+          senderSignPubKey: msg.senderSignPubKey,
           room: msg.room || 'general',
           timestamp: msg.createdAt ? new Date(msg.createdAt).toISOString() : new Date().toISOString(),
           reactions: [],

@@ -81,7 +81,7 @@ export async function createApp() {
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com", "https://esm.sh"],
         styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-        imgSrc: ["'self'", "data:", "blob:", "http://localhost:*", "https://lh3.googleusercontent.com"],
+        imgSrc: ["'self'", "data:", "blob:", "http://localhost:*", "https://lh3.googleusercontent.com", "https://picsum.photos", "https://fastly.picsum.photos", "https://api.dicebear.com"],
         fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
         connectSrc: ["'self'", "https://esm.sh"],
         frameSrc: ["'none'"],

@@ -7,7 +7,13 @@ const DocumentVersionSchema = new mongoose.Schema({
   fileType: { type: String },
   uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   uploadedAt: { type: Date, default: Date.now },
-  changes: { type: String, default: '' }
+  changes: { type: String, default: '' },
+  encryptionMetadata: {
+    dataKey: { type: String, default: null },
+    iv: { type: String, default: null },
+    authTag: { type: String, default: null },
+    fileHash: { type: String, default: null }
+  }
 });
 
 const DocumentSchema = new mongoose.Schema(
@@ -52,6 +58,14 @@ const DocumentSchema = new mongoose.Schema(
     fileSize: { type: String, default: '' },
     fileType: { type: String, default: 'PDF' },
     url: { type: String, default: '' },
+
+    // Envelope Encryption Metadata
+    encryptionMetadata: {
+      dataKey: { type: String, default: null }, // Encrypted Data Key
+      iv: { type: String, default: null },
+      authTag: { type: String, default: null }, // AES-GCM Auth Tag
+      fileHash: { type: String, default: null } // SHA-256 for Integrity Check
+    },
 
     // Status & Workflow
     status: {

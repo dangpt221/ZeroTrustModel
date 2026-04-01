@@ -8,6 +8,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useE2EE } from '../context/E2EEContext';
 import { ChatMessage, ChatRoom, useChat } from '../hooks/useChat';
+import { DeviceManagementModal } from '../components/DeviceManagementModal';
 
 const formatTime = (timestamp: string) => {
   const date = new Date(timestamp);
@@ -77,6 +78,7 @@ export const Messaging: React.FC = () => {
 
   // E2EE Modals
   const [showSetupPinModal, setShowSetupPinModal] = useState(false);
+  const [showDeviceModal, setShowDeviceModal] = useState(false); // [PRO LEVEL] Device Management
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState('');
   const [isProcessingPin, setIsProcessingPin] = useState(false);
@@ -734,10 +736,13 @@ export const Messaging: React.FC = () => {
               </button>
             )}
             {isE2EEReady ? (
-              <div className="flex items-center gap-1 px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg border border-emerald-100" title="Đã bảo mật E2EE">
+              <button 
+                onClick={() => setShowDeviceModal(true)}
+                className="flex items-center gap-1 px-2 py-1 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg border border-emerald-100 transition-colors" title="Đã bảo mật E2EE - Bấm để Quản lý thiết bị"
+              >
                 <Lock size={10} />
-                <span className="text-[10px] font-semibold">E2EE</span>
-              </div>
+                <span className="text-[10px] font-semibold">E2EE DEVICES</span>
+              </button>
             ) : (
               <div className="flex items-center gap-1 px-2 py-1 bg-amber-50 text-amber-600 rounded-lg border border-amber-100" title="Chưa cấu hình E2EE. Tin nhắn có thể không an toàn.">
                 <Lock size={10} />
@@ -971,6 +976,11 @@ export const Messaging: React.FC = () => {
           </div>
         )}
 
+        {/* Device Management Modal ([PRO LEVEL]) */}
+        {showDeviceModal && (
+          <DeviceManagementModal onClose={() => setShowDeviceModal(false)} />
+        )}
+
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-5 space-y-3 bg-slate-50/50 flex flex-col">
           {!activeRoom ? (
@@ -1036,7 +1046,11 @@ export const Messaging: React.FC = () => {
                                 isMe ? 'bg-black/10 text-slate-700' : 'bg-slate-200/80 text-slate-600'
                               }`}>
                                 <p className="font-semibold truncate max-w-[200px] mb-0.5">{msg.parentMessageUserName || 'Người dùng'}</p>
-                                <p className="truncate max-w-[200px]">{msg.parentMessageText}</p>
+                                <p className="truncate max-w-[200px]">
+                                  {messages.find((m: any) => m.id === msg.parentMessageId)?.decryptedContent || 
+                                   messages.find((m: any) => m.id === msg.parentMessageId)?.text || 
+                                   msg.parentMessageText}
+                                </p>
                               </div>
                             </div>
                           )}

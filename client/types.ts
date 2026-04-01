@@ -139,6 +139,7 @@ export interface Document {
   id: string;
   title: string;
   description?: string;
+  encryptionMetadata?: any;
   departmentId?: string;
   departmentName?: string;
   projectId?: string;

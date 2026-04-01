@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { generateDeviceKeyPair, exportPublicKey, exportPrivateKey, importPrivateKey, getPublicKeyFromPrivate, encryptPrivateKeyWithPIN, decryptPrivateKeyWithPIN } from '../utils/e2ee';
+import { generateDeviceKeyPair, generateSignatureKeyPair, exportPublicKey, exportPrivateKey, importPrivateKey, getPublicKeyFromPrivate, encryptPrivateKeyWithPIN, decryptPrivateKeyWithPIN } from '../utils/e2ee';
 import { e2eeApi } from '../api';
 import { useAuth } from './AuthContext';
 
@@ -10,6 +10,8 @@ interface E2EEContextType {
   deviceId: string | null;
   privateKey: CryptoKey | null;
   publicKeyStr: string | null;
+  signaturePrivateKey: CryptoKey | null; // [PRO LEVEL]
+  signaturePublicKeyStr: string | null; // [PRO LEVEL]
   registerDevice: () => Promise<void>;
   getDevicePrivateKey: () => Promise<CryptoKey | null>;
   setupRecoveryBackup: (pin: string) => Promise<boolean>;
@@ -23,6 +25,8 @@ const E2EEContext = createContext<E2EEContextType>({
   deviceId: null,
   privateKey: null,
   publicKeyStr: null,
+  signaturePrivateKey: null,
+  signaturePublicKeyStr: null,
   registerDevice: async () => {},
   getDevicePrivateKey: async () => null,
   setupRecoveryBackup: async () => false,
@@ -39,12 +43,16 @@ export const E2EEProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [privateKey, setPrivateKey] = useState<CryptoKey | null>(null);
   const [publicKeyStr, setPublicKeyStr] = useState<string | null>(null);
+  const [signaturePrivateKey, setSignaturePrivateKey] = useState<CryptoKey | null>(null);
+  const [signaturePublicKeyStr, setSignaturePublicKeyStr] = useState<string | null>(null);
 
   const initLocalKeys = async () => {
     try {
       const storedDeviceId = localStorage.getItem(`e2ee_device_id_${user?.id}`);
       const storedPrivKey = localStorage.getItem(`e2ee_private_key_jwk_${user?.id}`);
       const storedPubKey = localStorage.getItem(`e2ee_public_key_b64_${user?.id}`);
+      const storedSignPrivKey = localStorage.getItem(`e2ee_sign_private_key_jwk_${user?.id}`);
+      const storedSignPubKey = localStorage.getItem(`e2ee_sign_public_key_b64_${user?.id}`);
 
       let hasBackupOnServer = false;
       try {
@@ -58,9 +66,11 @@ export const E2EEProvider: React.FC<{ children: React.ReactNode }> = ({ children
       let deviceIdToUse = storedDeviceId;
       let privKeyToUse: CryptoKey | null = null;
       let pubKeyStrToUse = storedPubKey;
+      let signPrivKeyToUse: CryptoKey | null = null;
+      let signPubKeyStrToUse = storedSignPubKey;
       let needsRegistration = false;
 
-      if (!storedPrivKey || !storedDeviceId || !storedPubKey) {
+      if (!storedPrivKey || !storedDeviceId || !storedPubKey || !storedSignPrivKey || !storedSignPubKey) {
         if (hasBackupOnServer) {
            console.log('[E2EE] Missing local keys but server has backup. Require PIN recovery.');
            setRequiresRecovery(true);
@@ -70,34 +80,45 @@ export const E2EEProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         // Generate new keys
         console.log('[E2EE] Generating new keys for device');
-        const keyPair = await generateDeviceKeyPair();
+        const keyPair = await generateDeviceKeyPair(true);
+        const signKeyPair = await generateSignatureKeyPair(true); // Cặp khóa chữ ký
         
         deviceIdToUse = crypto.randomUUID();
         const exportedPriv = await exportPrivateKey(keyPair.privateKey);
+        const exportedSignPriv = await exportPrivateKey(signKeyPair.privateKey);
+        
         pubKeyStrToUse = await exportPublicKey(keyPair.publicKey);
+        signPubKeyStrToUse = await exportPublicKey(signKeyPair.publicKey);
         
         localStorage.setItem(`e2ee_device_id_${user?.id}`, deviceIdToUse);
         localStorage.setItem(`e2ee_private_key_jwk_${user?.id}`, JSON.stringify(exportedPriv));
         localStorage.setItem(`e2ee_public_key_b64_${user?.id}`, pubKeyStrToUse);
+        localStorage.setItem(`e2ee_sign_private_key_jwk_${user?.id}`, JSON.stringify(exportedSignPriv));
+        localStorage.setItem(`e2ee_sign_public_key_b64_${user?.id}`, signPubKeyStrToUse);
         
         privKeyToUse = keyPair.privateKey;
+        signPrivKeyToUse = signKeyPair.privateKey;
         needsRegistration = true;
       } else {
         // Recover keys
         console.log('[E2EE] Recovering keys from local storage');
-        privKeyToUse = await importPrivateKey(JSON.parse(storedPrivKey));
+        privKeyToUse = await importPrivateKey(JSON.parse(storedPrivKey), "ECDH", true);
+        signPrivKeyToUse = await importPrivateKey(JSON.parse(storedSignPrivKey), "ECDSA", true);
         needsRegistration = true; // For MVP, ensure Server DB is up to date on page load
       }
 
       setDeviceId(deviceIdToUse);
       setPrivateKey(privKeyToUse);
       setPublicKeyStr(pubKeyStrToUse);
+      setSignaturePrivateKey(signPrivKeyToUse);
+      setSignaturePublicKeyStr(signPubKeyStrToUse);
 
       if (needsRegistration && isAuthenticated && deviceIdToUse && pubKeyStrToUse) {
         await e2eeApi.registerDevice({
           deviceId: deviceIdToUse,
           deviceName: navigator.userAgent.slice(0, 50),
-          publicKey: pubKeyStrToUse
+          publicKey: pubKeyStrToUse,
+          signaturePublicKey: signPubKeyStrToUse
         });
         console.log('[E2EE] Device registered securely on server');
         setIsE2EEReady(true);
@@ -158,19 +179,29 @@ export const E2EEProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const pubKeyStr = await exportPublicKey(recoveredPubKey);
       const exportedPrivJw = await window.crypto.subtle.exportKey("jwk", recoveredPrivKey);
 
+      // [PRO LEVEL] Sinh mới khoá Signature vì không cần Backup (Device Mới)
+      const signKeyPair = await generateSignatureKeyPair(true);
+      const signPubKeyStr = await exportPublicKey(signKeyPair.publicKey);
+      const exportedSignPrivJw = await window.crypto.subtle.exportKey("jwk", signKeyPair.privateKey);
+
       localStorage.setItem(`e2ee_device_id_${user?.id}`, newDeviceId);
       localStorage.setItem(`e2ee_private_key_jwk_${user?.id}`, JSON.stringify(exportedPrivJw));
       localStorage.setItem(`e2ee_public_key_b64_${user?.id}`, pubKeyStr);
+      localStorage.setItem(`e2ee_sign_private_key_jwk_${user?.id}`, JSON.stringify(exportedSignPrivJw));
+      localStorage.setItem(`e2ee_sign_public_key_b64_${user?.id}`, signPubKeyStr);
 
       setDeviceId(newDeviceId);
       setPrivateKey(recoveredPrivKey);
       setPublicKeyStr(pubKeyStr);
+      setSignaturePrivateKey(signKeyPair.privateKey);
+      setSignaturePublicKeyStr(signPubKeyStr);
       setRequiresRecovery(false);
 
       await e2eeApi.registerDevice({
         deviceId: newDeviceId,
         deviceName: navigator.userAgent.slice(0, 50),
-        publicKey: pubKeyStr
+        publicKey: pubKeyStr,
+        signaturePublicKey: signPubKeyStr
       });
 
       setIsE2EEReady(true);
@@ -189,6 +220,8 @@ export const E2EEProvider: React.FC<{ children: React.ReactNode }> = ({ children
       deviceId,
       privateKey,
       publicKeyStr,
+      signaturePrivateKey,
+      signaturePublicKeyStr,
       registerDevice,
       getDevicePrivateKey,
       setupRecoveryBackup,

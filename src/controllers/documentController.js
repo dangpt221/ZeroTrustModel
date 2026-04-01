@@ -10,6 +10,7 @@ import { verifyMFAForAction } from "../utils/sensitiveActionMFA.js";
 import { generateWatermarkData, logWatermarkedDownload } from "../utils/forensicWatermark.js";
 import { generateDocumentFingerprint, saveFingerprint } from "../utils/documentFingerprint.js";
 import { streamSecureDocument, streamWatermarkedPDF } from "../utils/secureStreaming.js";
+import { checkAnomalyAndAutoLock } from "../utils/anomalyDetection.js";
 import bcrypt from "bcryptjs";
 import fs from "fs";
 import path from "path";
@@ -297,7 +298,8 @@ export const createDocument = async (req, res, next) => {
       url,
       fileSize,
       fileType,
-      status
+      status,
+      encryptionMetadata
     } = req.body;
 
     const ownerId = req.user.id;
@@ -332,6 +334,7 @@ export const createDocument = async (req, res, next) => {
       isLocked,
       lockedAt,
       lockedBy,
+      encryptionMetadata,
       currentVersion: 1,
       versions: [{
         version: 1,
@@ -340,7 +343,8 @@ export const createDocument = async (req, res, next) => {
         fileType,
         uploadedBy: ownerId,
         uploadedAt: new Date(),
-        changes: 'Initial version'
+        changes: 'Initial version',
+        encryptionMetadata
       }]
     });
 
@@ -378,7 +382,8 @@ export const updateDocument = async (req, res, next) => {
       url,
       fileSize,
       fileType,
-      changes
+      changes,
+      encryptionMetadata
     } = req.body;
 
     const userId = req.user.id;
@@ -424,6 +429,9 @@ export const updateDocument = async (req, res, next) => {
       doc.url = url;
       doc.fileSize = fileSize || doc.fileSize;
       doc.fileType = fileType || doc.fileType;
+      if (encryptionMetadata) {
+        doc.encryptionMetadata = encryptionMetadata;
+      }
       doc.versions.push({
         version: doc.currentVersion,
         url,
@@ -431,7 +439,8 @@ export const updateDocument = async (req, res, next) => {
         fileType,
         uploadedBy: userId,
         uploadedAt: new Date(),
-        changes: changes || 'Updated file'
+        changes: changes || 'Updated file',
+        encryptionMetadata: encryptionMetadata || doc.encryptionMetadata
       });
     }
 
@@ -1221,6 +1230,15 @@ export const streamDocumentSecure = async (req, res, next) => {
     // === KIỂM TRA QUYỀN TRUY CẬP BẮT BUỘC ===
     const isOwner = doc.ownerId?.toString() === userId;
     const isAdmin = userRole === 'ADMIN';
+
+    // === ZERO TRUST BEHAVIOR ANALYSIS (ANOMALY DETECTION) ===
+    const anomalyStatus = await checkAnomalyAndAutoLock(userId, doc.sensitivity, userIp, req.headers['user-agent'] || 'Unknown');
+    if (anomalyStatus.locked) {
+      return res.status(403).json({
+        message: anomalyStatus.reason,
+        drm: { enabled: true, denied: true }
+      });
+    }
 
     // Nếu tài liệu bị khoá, yêu cầu phải có request đã duyệt (trừ admin)
     if (doc.isLocked && !isAdmin) {

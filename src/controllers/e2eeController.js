@@ -4,8 +4,11 @@ import { User } from '../models/User.js';
 // 1. Register a new device with its Public Key
 export const registerDevice = async (req, res) => {
   try {
-    const { deviceId, deviceName, publicKey } = req.body;
+    const { deviceId, deviceName, publicKey, signaturePublicKey } = req.body;
     const userId = req.user.id; // Assumes requireAuth middleware is used
+
+    const userAgent = req.headers['user-agent'] || 'Unknown/Device';
+    const ipAddress = req.ip || req.connection.remoteAddress || 'Unknown IP';
 
     if (!deviceId || !publicKey) {
       return res.status(400).json({ message: 'Missing deviceId or publicKey' });
@@ -17,7 +20,10 @@ export const registerDevice = async (req, res) => {
     if (device) {
       // Update existing device's key (e.g., if re-installed but same ID)
       device.publicKey = publicKey;
+      if (signaturePublicKey) device.signaturePublicKey = signaturePublicKey;
       device.deviceName = deviceName || device.deviceName;
+      device.ipAddress = ipAddress;
+      device.userAgent = userAgent;
       device.isActive = true;
       device.lastActiveAt = new Date();
       await device.save();
@@ -27,7 +33,10 @@ export const registerDevice = async (req, res) => {
         userId,
         deviceId,
         deviceName,
-        publicKey
+        ipAddress,
+        userAgent,
+        publicKey,
+        signaturePublicKey
       });
       await device.save();
     }
@@ -52,7 +61,7 @@ export const getPublicKeys = async (req, res) => {
     const devices = await Device.find({ 
       userId: { $in: userIds },
       isActive: true 
-    }).select('userId deviceId publicKey deviceName');
+    }).select('userId deviceId publicKey signaturePublicKey deviceName');
 
     // Group by userId for easier client processing
     const keysByUser = {};
@@ -122,5 +131,54 @@ export const getBackup = async (req, res) => {
   } catch (error) {
     console.error('Error in E2EE getBackup:', error);
     res.status(500).json({ message: 'Server error retrieving backup' });
+  }
+};
+
+// ==================== DEVICE MANAGEMENT ====================
+
+// 6. Lấy danh sách thiết bị của bản thân
+export const getMyDevices = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const devices = await Device.find({ userId }).sort({ lastActiveAt: -1 }).select('deviceId deviceName ipAddress userAgent isActive lastActiveAt createdAt');
+    res.json({ devices });
+  } catch (err) {
+    console.error('get devices error', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// 7. Revoke thiết bị (Đăng xuất khỏi E2EE)
+export const revokeDevice = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { deviceId } = req.params;
+    
+    await Device.deleteOne({ userId, deviceId });
+    
+    res.json({ success: true, message: 'Thiết bị đã bị hủy quyền thành công' });
+  } catch (err) {
+    console.error('revoke device error', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// 8. Rename thiết bị 
+export const renameDevice = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { deviceId } = req.params;
+    const { deviceName } = req.body;
+    
+    if (!deviceName || deviceName.trim().length === 0) {
+      return res.status(400).json({ message: 'Tên thiết bị không được để trống' });
+    }
+
+    await Device.updateOne({ userId, deviceId }, { deviceName: deviceName.trim().slice(0, 100) });
+    
+    res.json({ success: true, message: 'Thiết bị đã được đổi tên thành công' });
+  } catch (err) {
+    console.error('rename device error', err);
+    res.status(500).json({ message: 'Server error' });
   }
 };

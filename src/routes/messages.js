@@ -116,6 +116,7 @@ export function registerMessageRoutes(router) {
             text: lastMessage.text,
             encryptedContent: lastMessage.encryptedContent || null,
             senderDeviceId: lastMessage.senderDeviceId || null,
+            senderSignPubKey: lastMessage.senderSignPubKey || null,
             timestamp: lastMessage.createdAt,
             userId: lastMessage.userId?.toString()
           } : null,
@@ -202,6 +203,7 @@ export function registerMessageRoutes(router) {
             text: m.text || '',
             encryptedContent: m.encryptedContent || null,
             senderDeviceId: m.senderDeviceId || null,
+            senderSignPubKey: m.senderSignPubKey || null,
             room: m.room || 'general',
             timestamp: m.createdAt ? new Date(m.createdAt).toISOString() : new Date().toISOString(),
             reactions: m.reactions || [],
@@ -227,7 +229,7 @@ export function registerMessageRoutes(router) {
   router.post('/messages', requireAuth, async (req, res, next) => {
     try {
       const io = req.app.get('io');
-      const { text, encryptedContent, senderDeviceId, room, parentMessageId } = req.body;
+      const { text, encryptedContent, senderDeviceId, room, parentMessageId, senderSignPubKey } = req.body;
 
       if (!text?.trim() && (!encryptedContent || encryptedContent.length === 0)) {
         return res.status(400).json({ error: 'Message text or encrypted content is required' });
@@ -249,6 +251,7 @@ export function registerMessageRoutes(router) {
         text: text?.trim() || '',
         encryptedContent,
         senderDeviceId,
+        senderSignPubKey,
         room: room || 'general',
         roomId: room || null,
         parentMessageId: parentMessageId || null,
@@ -280,6 +283,7 @@ export function registerMessageRoutes(router) {
         text: msg.text || '',
         encryptedContent: msg.encryptedContent || null,
         senderDeviceId: msg.senderDeviceId || null,
+        senderSignPubKey: msg.senderSignPubKey || null,
         room: msg.room || 'general',
         timestamp: msg.createdAt ? new Date(msg.createdAt).toISOString() : new Date().toISOString(),
         reactions: [],

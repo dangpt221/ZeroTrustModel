@@ -618,7 +618,7 @@ export const chatManagementApi = {
 
 // ==================== E2EE API ====================
 export const e2eeApi = {
-  registerDevice: (data: { deviceId: string; deviceName: string; publicKey: string }) =>
+  registerDevice: (data: { deviceId: string; deviceName: string; publicKey: string; signaturePublicKey?: string }) =>
     apiRequest<{ message: string; device: any }>('/e2ee/device/register', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -638,4 +638,18 @@ export const e2eeApi = {
 
   recoverBackup: () =>
     apiRequest<{ encryptedMasterKey: string; masterKeySalt: string; masterKeyIv: string }>('/e2ee/backup/recover'),
+
+  getMyDevices: () =>
+    apiRequest<{ devices: any[] }>('/e2ee/devices'),
+
+  revokeDevice: (deviceId: string) =>
+    apiRequest<{ success: boolean; message: string }>(`/e2ee/devices/${deviceId}`, {
+      method: 'DELETE',
+    }),
+
+  renameDevice: (deviceId: string, deviceName: string) =>
+    apiRequest<{ success: boolean; message: string }>(`/e2ee/devices/${deviceId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ deviceName })
+    })
 };

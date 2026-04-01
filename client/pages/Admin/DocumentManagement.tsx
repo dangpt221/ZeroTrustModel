@@ -197,6 +197,7 @@ export const DocumentManagement: React.FC = () => {
       let fileUrl = formData.url || '#';
       let fileSize = formData.fileSize;
       let fileType = formData.fileType;
+      let encryptionMetadata = undefined;
 
       // Upload file if selected
       if (selectedFile) {
@@ -204,6 +205,7 @@ export const DocumentManagement: React.FC = () => {
         fileUrl = uploadResult.url;
         fileSize = String(uploadResult.fileSize);
         fileType = uploadResult.fileType;
+        encryptionMetadata = uploadResult.encryptionMetadata;
       }
 
       const created = await documentsApi.create({
@@ -215,7 +217,8 @@ export const DocumentManagement: React.FC = () => {
         sensitivity: formData.sensitivity,
         classification: formData.classification,
         securityLevel: formData.securityLevel,
-        url: fileUrl
+        url: fileUrl,
+        encryptionMetadata
       });
 
       setDocs([...docs, created]);

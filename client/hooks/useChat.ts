@@ -3,7 +3,7 @@ import { io, Socket } from 'socket.io-client';
 import { useAuth } from '../context/AuthContext';
 import { notificationsApi, e2eeApi } from '../api';
 import { useE2EE } from '../context/E2EEContext';
-import { encryptMessage, decryptMessage, importPublicKey, importPrivateKey, deriveActiveAesKey } from '../utils/e2ee';
+import { encryptMessage, decryptMessage, importPublicKey, importPrivateKey, deriveActiveAesKey, generateEphemeralRatchet, processEphemeralRatchet, signMessage, verifySignature } from '../utils/e2ee';
 
 export interface ChatAttachment {
   url: string;
@@ -33,6 +33,8 @@ export interface ChatMessage {
   hasAttachments?: boolean;
   mentions?: string[];
   highlightedText?: string;
+  senderSignPubKey?: string; // [PRO LEVEL]
+  decryptedContent?: string; // Client side ONLY
 }
 
 export interface ChatRoom {
@@ -106,14 +108,23 @@ export function useChat() {
          if (myEnc) {
             try {
               // We need private key
-              const storedPrivKey = localStorage.getItem(`e2ee_private_key_jwk_${userRef.current?.id}`);
-              if (storedPrivKey) {
-                 const privKey = await importPrivateKey(JSON.parse(storedPrivKey));
-                 const senderPub = await importPublicKey(myEnc.senderPublicKey);
-                 const aesKey = await deriveActiveAesKey(privKey, senderPub);
-                 const decryptedText = await decryptMessage(aesKey, myEnc.ciphertext, myEnc.iv);
-                 return { ...msg, text: decryptedText };
-              } else {
+               const storedPrivKey = localStorage.getItem(`e2ee_private_key_jwk_${userRef.current?.id}`);
+               if (storedPrivKey) {
+                  const privKey = await importPrivateKey(JSON.parse(storedPrivKey), "ECDH", true);
+                  
+                  // [PRO LEVEL] Double Ratchet - Derived from ephemeral
+                  const aesKey = await processEphemeralRatchet(privKey, myEnc.senderPublicKey);
+                  
+                  // [PRO LEVEL] ECDSA Verification
+                  if (myEnc.signature && msg.senderSignPubKey) {
+                    const senderSignPubKey = await importPublicKey(msg.senderSignPubKey, "ECDSA");
+                    const isValid = await verifySignature(senderSignPubKey, myEnc.signature, myEnc.ciphertext);
+                    if (!isValid) return { ...msg, text: '⚠️ [Cảnh báo an ninh] Chữ ký số không hợp lệ! Tin nhắn giả mạo.' };
+                  }
+
+                  const decryptedText = await decryptMessage(aesKey, myEnc.ciphertext, myEnc.iv);
+                  return { ...msg, text: decryptedText };
+               } else {
                  return { ...msg, text: '[Lỗi Debug: Mất Private Key trong LocalStorage]' };
               }
             } catch (err: any) {
@@ -329,8 +340,10 @@ export function useChat() {
     const currentDeviceId = localStorage.getItem(`e2ee_device_id_${currentUser.id}`);
     const storedPrivKey = localStorage.getItem(`e2ee_private_key_jwk_${currentUser.id}`);
     const currentPubKeyStr = localStorage.getItem(`e2ee_public_key_b64_${currentUser.id}`);
+    const currentSignPrivKey = localStorage.getItem(`e2ee_sign_private_key_jwk_${currentUser.id}`);
+    const currentSignPubKey = localStorage.getItem(`e2ee_sign_public_key_b64_${currentUser.id}`);
 
-    if (currentDeviceId && storedPrivKey && currentPubKeyStr) {
+    if (currentDeviceId && storedPrivKey && currentPubKeyStr && currentSignPrivKey) {
       try {
         // Fetch room members
         const res = await fetch(`/api/messaging/rooms/${roomId}/members`, { credentials: 'include' });
@@ -344,23 +357,33 @@ export function useChat() {
            const publicKeys = keysRes.keys;
 
            // Encrypt
-           const myPriv = await importPrivateKey(JSON.parse(storedPrivKey));
-           if (myPriv && publicKeys) {
+           const signPriv = await importPrivateKey(JSON.parse(currentSignPrivKey), "ECDSA", true);
+
+           if (publicKeys) {
              encryptedContent = [];
              for (const uid in publicKeys) {
                for (const device of publicKeys[uid]) {
                   try {
-                    const theirPub = await importPublicKey(device.publicKey);
-                    const aesKey = await deriveActiveAesKey(myPriv, theirPub);
-                    const { ciphertext, iv } = await encryptMessage(aesKey, text);
+                    const theirPub = await importPublicKey(device.publicKey, "ECDH");
+                    
+                    // [PRO LEVEL] Generate Ephemeral Key for this message
+                    const { sharedSecret, ephemeralPubKeyB64 } = await generateEphemeralRatchet(theirPub);
+                    const { ciphertext, iv } = await encryptMessage(sharedSecret, text);
+                    
+                    // [PRO LEVEL] Sign Ciphertext
+                    const signature = await signMessage(signPriv, ciphertext);
+
                     encryptedContent.push({
                        deviceId: device.deviceId,
-                       ciphertext, iv, senderPublicKey: currentPubKeyStr
+                       ciphertext, 
+                       iv, 
+                       senderPublicKey: ephemeralPubKeyB64,
+                       signature
                     });
                   } catch (e) { console.warn('Could not encrypt for device', device.deviceId); }
                }
              }
-             fallbackText = "[Tin nhắn được bảo mật mã hóa đầu cuối]";
+             fallbackText = "[Tin nhắn được bảo mật mã hóa đầu cuối / Đã thay chìa khóa Ephemeral]";
            }
         }
       } catch (err) {
@@ -378,7 +401,8 @@ export function useChat() {
         senderDeviceId: currentDeviceId,
         room: roomId,
         parentMessageId,
-        attachments
+        attachments,
+        senderSignPubKey: localStorage.getItem(`e2ee_sign_public_key_b64_${currentUser.id}`) // Kèm key xác minh chữ ký
       });
       // Create chat notification for admin if sender is MANAGER or STAFF
       if (currentUser.role === 'MANAGER' || currentUser.role === 'STAFF') {
@@ -393,7 +417,7 @@ export function useChat() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ text: fallbackText, encryptedContent, senderDeviceId: currentDeviceId, room: roomId, parentMessageId })
+        body: JSON.stringify({ text: fallbackText, encryptedContent, senderDeviceId: currentDeviceId, room: roomId, parentMessageId, senderSignPubKey: localStorage.getItem(`e2ee_sign_public_key_b64_${currentUser.id}`) })
       }).then(async res => {
         if (res.ok) {
           const data = await res.json();

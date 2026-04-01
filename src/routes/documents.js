@@ -62,11 +62,13 @@ router.post("/documents/upload", requireAuth, upload.single('file'), async (req,
       return res.status(400).json({ message: "No file uploaded" });
     }
 
-    // Tự động mã hóa file sau khi upload
+    // Tự động mã hóa file bằng Envelope Encryption + Sinh Hash
     const { encryptFile } = await import('../utils/encryption.js');
     const encryptedFilename = `encrypted_${req.file.filename}`;
     const encryptedPath = path.join(uploadsDir, encryptedFilename);
-    await encryptFile(req.file.path, encryptedPath);
+
+    // Metadata chứa dataKey(bị mã hóa), iv, authTag, fileHash
+    const encryptionMetadata = await encryptFile(req.file.path, encryptedPath);
 
     // Xóa file gốc (không mã hóa) ngay lập tức — hacker không thể đọc
     fs.unlinkSync(req.file.path);
@@ -80,7 +82,8 @@ router.post("/documents/upload", requireAuth, upload.single('file'), async (req,
       fileSize: fs.statSync(encryptedPath).size,
       fileType: path.extname(req.file.originalname).slice(1).toUpperCase(),
       encrypted: true,
-      algorithm: 'AES-256-GCM'
+      algorithm: 'AES-256-GCM',
+      encryptionMetadata // Gửi metadata về để lúc Submit tạo Document gửi lên lại
     });
   } catch (err) {
     console.error('[UPLOAD ERROR]', err);
@@ -101,11 +104,11 @@ router.post("/documents/:id/upload", requireAuth, upload.single('file'), async (
       return res.status(400).json({ message: "No file uploaded" });
     }
 
-    // Tự động mã hóa file sau khi upload
+    // Tự động mã hóa file sau khi upload (Envelope Encryption)
     const { encryptFile } = await import('../utils/encryption.js');
     const encryptedFilename = `encrypted_${req.file.filename}`;
     const encryptedPath = path.join(uploadsDir, encryptedFilename);
-    await encryptFile(req.file.path, encryptedPath);
+    const encryptionMetadata = await encryptFile(req.file.path, encryptedPath);
 
     // Xóa file gốc ngay lập tức
     fs.unlinkSync(req.file.path);
@@ -117,7 +120,8 @@ router.post("/documents/:id/upload", requireAuth, upload.single('file'), async (
       fileSize: fs.statSync(encryptedPath).size,
       fileType: path.extname(req.file.originalname).slice(1).toUpperCase(),
       encrypted: true,
-      algorithm: 'AES-256-GCM'
+      algorithm: 'AES-256-GCM',
+      encryptionMetadata
     });
   } catch (err) {
     console.error('[UPLOAD VERSION ERROR]', err);

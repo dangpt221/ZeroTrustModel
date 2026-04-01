@@ -1,8 +1,18 @@
-export const generateDeviceKeyPair = async (): Promise<CryptoKeyPair> => {
+// 1. Sinh khoá chính cho Key Exchange (ECDH)
+export const generateDeviceKeyPair = async (extractable = true): Promise<CryptoKeyPair> => {
   return await window.crypto.subtle.generateKey(
     { name: "ECDH", namedCurve: "P-256" },
-    true,
+    extractable, // [SECURITY FIX] Cho phép đổi thành false để dùng với IndexedDB
     ["deriveKey", "deriveBits"]
+  );
+};
+
+// 1.5. Sinh khoá phụ cho Digital Signature (ECDSA)
+export const generateSignatureKeyPair = async (extractable = true): Promise<CryptoKeyPair> => {
+  return await window.crypto.subtle.generateKey(
+    { name: "ECDSA", namedCurve: "P-256" },
+    extractable,
+    ["sign", "verify"]
   );
 };
 
@@ -16,7 +26,7 @@ export const exportPrivateKey = async (privateKey: CryptoKey): Promise<JsonWebKe
   return await window.crypto.subtle.exportKey("jwk", privateKey);
 };
 
-export const importPublicKey = async (base64Key: string): Promise<CryptoKey> => {
+export const importPublicKey = async (base64Key: string, algo: "ECDH" | "ECDSA" = "ECDH"): Promise<CryptoKey> => {
   const binaryDer = window.atob(base64Key);
   const binaryDerBuffer = new Uint8Array(binaryDer.length);
   for (let i = 0; i < binaryDer.length; i++) {
@@ -25,9 +35,9 @@ export const importPublicKey = async (base64Key: string): Promise<CryptoKey> => 
   return window.crypto.subtle.importKey(
     "spki",
     binaryDerBuffer,
-    { name: "ECDH", namedCurve: "P-256" },
+    { name: algo, namedCurve: "P-256" },
     true,
-    []
+    algo === "ECDH" ? [] : ["verify"]
   );
 };
 
@@ -43,13 +53,13 @@ export const getPublicKeyFromPrivate = async (privateKey: CryptoKey): Promise<Cr
   );
 };
 
-export const importPrivateKey = async (jwkKey: JsonWebKey): Promise<CryptoKey> => {
+export const importPrivateKey = async (jwkKey: JsonWebKey, algo: "ECDH" | "ECDSA" = "ECDH", extractable = true): Promise<CryptoKey> => {
   return await window.crypto.subtle.importKey(
     "jwk",
     jwkKey,
-    { name: "ECDH", namedCurve: "P-256" },
-    true,
-    ["deriveKey", "deriveBits"]
+    { name: algo, namedCurve: "P-256" },
+    extractable,
+    algo === "ECDH" ? ["deriveKey", "deriveBits"] : ["sign"]
   );
 };
 
@@ -63,14 +73,69 @@ export const deriveActiveAesKey = async (myPrivateKey: CryptoKey, theirPublicKey
   );
 };
 
+// ==================== DOUBLE RATCHET (SIMPLIFIED) ====================
+
+export const generateEphemeralRatchet = async (receiverStaticPubKey: CryptoKey) => {
+  const ephemeralPair = await generateDeviceKeyPair(false); // [FORWARD SECRECY] Xóa key ngay sau khi dùng xong
+  const sharedSecret = await deriveActiveAesKey(ephemeralPair.privateKey, receiverStaticPubKey);
+  const ephemeralPubKeyB64 = await exportPublicKey(ephemeralPair.publicKey);
+  return { sharedSecret, ephemeralPubKeyB64 };
+};
+
+export const processEphemeralRatchet = async (myStaticPrivateKey: CryptoKey, senderEphemeralPubKeyB64: string) => {
+  const senderPubKey = await importPublicKey(senderEphemeralPubKeyB64, "ECDH");
+  return deriveActiveAesKey(myStaticPrivateKey, senderPubKey);
+};
+
+// ==================== SIGNATURE & INTEGRITY LOGIC ====================
+
+export const signMessage = async (privateKeyECDSA: CryptoKey, dataStr: string): Promise<string> => {
+  const dataBytes = new TextEncoder().encode(dataStr);
+  const signatureBuffer = await window.crypto.subtle.sign(
+    { name: "ECDSA", hash: { name: "SHA-256" } },
+    privateKeyECDSA,
+    dataBytes
+  );
+  return window.btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(signatureBuffer))));
+};
+
+export const verifySignature = async (publicKeyECDSA: CryptoKey, signatureB64: string, dataStr: string): Promise<boolean> => {
+  try {
+    const signatureBytes = window.atob(signatureB64);
+    const signatureBuffer = new Uint8Array(signatureBytes.length);
+    for (let i = 0; i < signatureBytes.length; i++) signatureBuffer[i] = signatureBytes.charCodeAt(i);
+
+    const dataBytes = new TextEncoder().encode(dataStr);
+
+    return await window.crypto.subtle.verify(
+      { name: "ECDSA", hash: { name: "SHA-256" } },
+      publicKeyECDSA,
+      signatureBuffer,
+      dataBytes
+    );
+  } catch (err) {
+    return false;
+  }
+};
+
 export const encryptMessage = async (aesKey: CryptoKey, plaintext: string) => {
   const iv = window.crypto.getRandomValues(new Uint8Array(12));
-  const encodedText = new TextEncoder().encode(plaintext);
+  
+  // [METADATA PADDING] Chèn byte rác để mọi tin nhắn đều dài bằng bội số của 256 bytes
+  const plainBytes = new TextEncoder().encode(plaintext);
+  const targetLength = Math.ceil((plainBytes.length + 1) / 256) * 256;
+  const paddingLength = targetLength - plainBytes.length - 1;
+  const paddingBytes = window.crypto.getRandomValues(new Uint8Array(paddingLength));
+  
+  const paddedBytes = new Uint8Array(targetLength);
+  paddedBytes.set(plainBytes, 0);
+  paddedBytes.set([0], plainBytes.length); // Null byte làm vách ngăn
+  paddedBytes.set(paddingBytes, plainBytes.length + 1);
 
   const ciphertextBuffer = await window.crypto.subtle.encrypt(
     { name: "AES-GCM", iv: iv },
     aesKey,
-    encodedText
+    paddedBytes
   );
 
   return {
@@ -94,7 +159,13 @@ export const decryptMessage = async (aesKey: CryptoKey, ciphertextBase64: string
       aesKey,
       ciphertextBuffer
     );
-    return new TextDecoder().decode(decryptedBuffer);
+    
+    // [METADATA PADDING] Loại bỏ byte rác sau vách ngăn Null
+    const paddedArray = new Uint8Array(decryptedBuffer);
+    const nullIdx = paddedArray.indexOf(0);
+    const plainArray = nullIdx !== -1 ? paddedArray.slice(0, nullIdx) : paddedArray;
+    
+    return new TextDecoder().decode(plainArray);
   } catch (error) {
     console.warn("Decryption failed", error);
     return "[Nội dung bị mã hóa không thể giải mã trên thiết bị này]";
@@ -128,8 +199,11 @@ const deriveKeyFromPIN = async (pin: string, salt: Uint8Array): Promise<CryptoKe
   );
 };
 
-// 2. Encrypt the generated PrivateKey using the derived PIN key
-export const encryptPrivateKeyWithPIN = async (pin: string, privateKey: CryptoKey) => {
+// 2. Encrypt the generated PrivateKey using the derived PIN/Passphrase key
+export const encryptPrivateKeyWithPIN = async (passphrase: string, privateKey: CryptoKey) => {
+  if (passphrase.length < 12) {
+    console.warn("Cảnh báo: Passphrase yếu. Đề nghị định dạng >= 12 ký tự để phòng chống Brute-force.");
+  }
   const salt = window.crypto.getRandomValues(new Uint8Array(16));
   const iv = window.crypto.getRandomValues(new Uint8Array(12));
   
@@ -139,7 +213,7 @@ export const encryptPrivateKeyWithPIN = async (pin: string, privateKey: CryptoKe
   const encodedJwk = new TextEncoder().encode(jwkString);
 
   // Derive AES key
-  const aesKey = await deriveKeyFromPIN(pin, salt);
+  const aesKey = await deriveKeyFromPIN(passphrase, salt);
 
   // Encrypt the JWK
   const ciphertextBuffer = await window.crypto.subtle.encrypt(
@@ -155,9 +229,9 @@ export const encryptPrivateKeyWithPIN = async (pin: string, privateKey: CryptoKe
   };
 };
 
-// 3. Decrypt the MasterKey back to a PrivateKey using the PIN
+// 3. Decrypt the MasterKey back to a PrivateKey using the Passphrase
 export const decryptPrivateKeyWithPIN = async (
-  pin: string, 
+  passphrase: string, 
   encryptedMasterKeyB64: string, 
   masterKeySaltB64: string, 
   masterKeyIvB64: string
@@ -176,8 +250,8 @@ export const decryptPrivateKeyWithPIN = async (
     const cipherBuffer = new Uint8Array(cipherBytes.length);
     for (let i = 0; i < cipherBytes.length; i++) cipherBuffer[i] = cipherBytes.charCodeAt(i);
 
-    // Derive the same AES key from PIN
-    const aesKey = await deriveKeyFromPIN(pin, saltBuffer);
+    // Derive the same AES key from Passphrase
+    const aesKey = await deriveKeyFromPIN(passphrase, saltBuffer);
 
     // Decrypt the payload
     const decryptedBuffer = await window.crypto.subtle.decrypt(

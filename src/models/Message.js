@@ -11,7 +11,8 @@ const MessageSchema = new mongoose.Schema(
       deviceId: { type: String }, // Target device
       ciphertext: { type: String }, // Content encrypted for this device
       iv: { type: String },
-      senderPublicKey: { type: String }
+      senderPublicKey: { type: String }, // Ephemeral / Static ECDH key chủ gửi để giải mã
+      signature: { type: String } // [PRO LEVEL] Chữ ký số ECDSA chống Spoofing
     }],
     groupCiphertext: { type: String }, // For groups
     groupIv: { type: String },

@@ -4,7 +4,10 @@ import {
   registerDevice, 
   getPublicKeys, 
   setupBackup, 
-  getBackup 
+  getBackup,
+  getMyDevices,
+  revokeDevice,
+  renameDevice
 } from '../controllers/e2eeController.js';
 
 const router = express.Router();
@@ -14,6 +17,9 @@ router.use(requireAuth);
 
 // Device Registry Routes
 router.post('/device/register', registerDevice);
+router.get('/devices', getMyDevices);
+router.delete('/devices/:deviceId', revokeDevice);
+router.patch('/devices/:deviceId', renameDevice);
 router.post('/keys/users', getPublicKeys); // Uses POST to allow array of userIds in body
 
 // Backup Routes
