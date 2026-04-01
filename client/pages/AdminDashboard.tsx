@@ -23,15 +23,7 @@ import { auditLogsApi, usersApi } from '../api';
 import { AuditLog } from '../types';
 import { useNavigate } from 'react-router-dom';
 
-const chartData = [
-  { name: 'Mon', users: 400, alerts: 24 },
-  { name: 'Tue', users: 520, alerts: 18 },
-  { name: 'Wed', users: 480, alerts: 30 },
-  { name: 'Thu', users: 610, alerts: 15 },
-  { name: 'Fri', users: 590, alerts: 22 },
-  { name: 'Sat', users: 380, alerts: 8 },
-  { name: 'Sun', users: 410, alerts: 12 },
-];
+
 
 export const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -110,8 +102,62 @@ export const AdminDashboard: React.FC = () => {
     a.click();
   };
 
-  const onlineUsers = users?.filter && users.filter((u: any) => u.status === 'ACTIVE').length || 0;
-  const securityAlerts = auditLogs?.filter && auditLogs.filter((l: any) => l.riskLevel === 'HIGH').length || 0;
+  const onlineUsers = users?.filter ? users.filter((u: any) => u.status === 'ACTIVE').length : 0;
+  
+  const now = Date.now();
+  const oneDay = 24 * 60 * 60 * 1000;
+  const newUsersCount = users?.filter ? users.filter((u: any) => u.createdAt && (now - new Date(u.createdAt).getTime() <= oneDay)).length : 0;
+  const prevUsersCount = users?.filter ? users.filter((u: any) => u.createdAt && (now - new Date(u.createdAt).getTime() > oneDay) && (now - new Date(u.createdAt).getTime() <= 2 * oneDay)).length : 0;
+  const usersTrend = prevUsersCount === 0 ? (newUsersCount > 0 ? 100 : 0) : ((newUsersCount - prevUsersCount) / prevUsersCount * 100).toFixed(1);
+
+  const securityAlerts = auditLogs?.filter ? auditLogs.filter((l: any) => l.riskLevel === 'HIGH').length : 0;
+  const prevAlerts = auditLogs?.filter ? auditLogs.filter((l: any) => l.riskLevel === 'HIGH' && (now - new Date(l.timestamp).getTime() > oneDay) && (now - new Date(l.timestamp).getTime() <= 2 * oneDay)).length : 0;
+  const currentAlerts24h = auditLogs?.filter ? auditLogs.filter((l: any) => l.riskLevel === 'HIGH' && (now - new Date(l.timestamp).getTime() <= oneDay)).length : 0;
+  const alertsTrend = prevAlerts === 0 ? (currentAlerts24h > 0 ? 100 : 0) : ((currentAlerts24h - prevAlerts) / prevAlerts * 100).toFixed(1);
+
+  const generateChartData = () => {
+    if (!auditLogs || !Array.isArray(auditLogs) || auditLogs.length === 0) {
+      const daysStr = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const today = new Date();
+      return Array.from({length: 7}).map((_, i) => {
+        const d = new Date(today);
+        d.setDate(d.getDate() - (6 - i));
+        return { name: daysStr[d.getDay()], users: 0, alerts: 0 };
+      });
+    }
+
+    const daysStr = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const data = [];
+    const today = new Date();
+    
+    for(let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      d.setHours(0,0,0,0);
+      const nextD = new Date(d);
+      nextD.setDate(nextD.getDate() + 1);
+      
+      const activityCount = auditLogs.filter((l: any) => {
+        if(!l.timestamp) return false;
+        const logTime = new Date(l.timestamp).getTime();
+        return logTime >= d.getTime() && logTime < nextD.getTime();
+      }).length;
+      
+      const alertsCount = auditLogs.filter((l: any) => {
+        if(!l.timestamp) return false;
+         const logTime = new Date(l.timestamp).getTime();
+         return logTime >= d.getTime() && logTime < nextD.getTime() && (l.riskLevel === 'HIGH' || l.riskLevel === 'MEDIUM');
+      }).length;
+      
+      data.push({
+        name: daysStr[d.getDay()],
+        users: activityCount,
+        alerts: alertsCount
+      });
+    }
+    return data;
+  };
+  const dynamicChartData = generateChartData();
 
   const formatTime = (ts: any) => {
     try {
@@ -151,30 +197,19 @@ export const AdminDashboard: React.FC = () => {
       className="space-y-8"
     >
       {/* Header Info */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Hệ thống Giám sát Zero Trust</h2>
-          <p className="text-slate-500 mt-1">Hôm nay: {new Date().toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
-        </div>
-        <div className="flex gap-3">
-          <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm">
-            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-            <span className="text-sm font-semibold text-slate-600">Hệ thống: Ổn định</span>
-          </div>
-          <button onClick={handleVulnerabilityScan} disabled={scanning} className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-5 py-2.5 rounded-xl font-bold shadow-lg shadow-blue-500/20 transition-all active:scale-95 text-sm flex items-center gap-2">
-            {scanning ? <RefreshCw size={18} className="animate-spin" /> : <Zap size={18} />} {scanning ? 'Đang quét...' : 'Quét lỗ hổng'}
-          </button>
-        </div>
+      <div>
+        <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Hệ thống Giám sát Zero Trust</h2>
+        <p className="text-slate-500 mt-1">Hôm nay: {new Date().toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <motion.div variants={itemVariants}>
           <AdminStatsCard
-            title="Người dùng trực tuyến"
+            title="Tài khoản hoạt động"
             value={loading ? '...' : onlineUsers.toString()}
-            trend="12.5%"
-            isPositive={true}
+            trend={`${usersTrend}%`}
+            isPositive={Number(usersTrend) >= 0}
             icon={<Users size={24} />}
             color="bg-blue-600"
           />
@@ -182,9 +217,9 @@ export const AdminDashboard: React.FC = () => {
         <motion.div variants={itemVariants}>
           <AdminStatsCard
             title="User mới (24h)"
-            value={loading ? '...' : '48'}
-            trend="5.2%"
-            isPositive={true}
+            value={loading ? '...' : newUsersCount.toString()}
+            trend={`${usersTrend}%`}
+            isPositive={Number(usersTrend) >= 0}
             icon={<UserPlus size={24} />}
             color="bg-emerald-500"
           />
@@ -193,22 +228,13 @@ export const AdminDashboard: React.FC = () => {
           <AdminStatsCard
             title="Cảnh báo bảo mật"
             value={loading ? '...' : securityAlerts.toString()}
-            trend="2.4%"
-            isPositive={false}
+            trend={`${alertsTrend}%`}
+            isPositive={Number(alertsTrend) <= 0}
             icon={<ShieldCheck size={24} />}
             color="bg-rose-500"
           />
         </motion.div>
-        <motion.div variants={itemVariants}>
-          <AdminStatsCard
-            title="Tốc độ phản hồi"
-            value="14ms"
-            trend="8.1%"
-            isPositive={true}
-            icon={<Activity size={24} />}
-            color="bg-violet-500"
-          />
-        </motion.div>
+
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -230,7 +256,7 @@ export const AdminDashboard: React.FC = () => {
           </div>
           <div className="h-[350px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData}>
+              <AreaChart data={dynamicChartData}>
                 <defs>
                   <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1} />
@@ -260,7 +286,7 @@ export const AdminDashboard: React.FC = () => {
             {auditLogs?.filter && auditLogs.filter(l => l.riskLevel === 'HIGH' || l.riskLevel === 'MEDIUM').slice(0, 4).map(log => (
               <AdminAlertCard
                 key={log.id}
-                level={log.riskLevel}
+                level={log.riskLevel as 'HIGH' | 'MEDIUM' | 'LOW'}
                 message={log.details}
                 time={formatTime(log.timestamp)}
               />

@@ -74,17 +74,9 @@ export const ManagerDashboard: React.FC = () => {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-        <div>
-          <h2 className="text-3xl font-black text-slate-800 tracking-tight uppercase italic text-sky-600">Manager Insights</h2>
-          <p className="text-slate-500 text-sm font-medium">Báo cáo thời gian thực về tình trạng an ninh và hoạt động của bộ phận</p>
-        </div>
-        <div className="flex gap-2">
-           <div className="bg-sky-50 px-4 py-2.5 rounded-2xl border border-sky-100 flex items-center gap-2">
-            <Activity size={18} className="text-sky-500" />
-            <span className="text-[11px] font-black uppercase tracking-widest text-sky-700">System Status: Active</span>
-          </div>
-        </div>
+      <div>
+        <h2 className="text-3xl font-black text-slate-800 tracking-tight uppercase italic text-sky-600">Manager Insights</h2>
+        <p className="text-slate-500 text-sm font-medium">Báo cáo thời gian thực về tình trạng an ninh và hoạt động của bộ phận</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
