@@ -7,6 +7,7 @@ import * as userController from "../controllers/userController.js";
 import { User } from "../models/User.js";
 import { requireAuth, requireRole, requirePermission } from "../middleware/auth.js";
 import { Role } from "../models/Role.js";
+import * as roleController from "../controllers/roleController.js";
 
 // Avatar upload setup
 const __filename = fileURLToPath(import.meta.url);
@@ -71,114 +72,21 @@ router.post("/users/upload-avatar", requireAuth, avatarUpload.single('avatar'), 
 // ============ ROLE & PERMISSION ROUTES ============
 
 // Get all roles
-router.get("/admin/roles", requireAuth, requirePermission(["ROLE_VIEW", "USER_VIEW"]), async (req, res, next) => {
-  try {
-    const roles = await Role.find().lean();
-    res.json(roles.map((r) => ({
-      id: r._id.toString(),
-      name: r.name,
-      description: r.description,
-      permissions: r.permissions || [],
-      color: r.color || 'bg-blue-500'
-    })));
-  } catch (err) { next(err); }
-});
+router.get("/admin/roles", requireAuth, requirePermission(["ROLE_VIEW", "USER_VIEW"]), roleController.getAllRoles);
 
 // Create new role
-router.post("/admin/roles", requireAuth, requirePermission(["ROLE_MANAGE"]), async (req, res, next) => {
-  try {
-    const { name, description, permissions, color } = req.body;
-    const role = await Role.create({ name, description, permissions: permissions || [], color });
-    res.status(201).json({
-      id: role._id.toString(),
-      name: role.name,
-      description: role.description,
-      permissions: role.permissions,
-      color: role.color || 'bg-blue-500'
-    });
-  } catch (err) {
-    if (err.code === 11000) {
-      return res.status(400).json({ message: "Vai trò đã tồn tại" });
-    }
-    next(err);
-  }
-});
+router.post("/admin/roles", requireAuth, requirePermission(["ROLE_MANAGE"]), roleController.createRole);
 
 // Update role
-router.put("/admin/roles/:id", requireAuth, requirePermission(["ROLE_MANAGE"]), async (req, res, next) => {
-  try {
-    const { name, description, permissions, color } = req.body;
-    const role = await Role.findByIdAndUpdate(
-      req.params.id,
-      { name, description, permissions: permissions || [], color },
-      { new: true }
-    );
-    if (!role) return res.status(404).json({ message: "Vai trò không tồn tại" });
-    res.json({
-      id: role._id.toString(),
-      name: role.name,
-      description: role.description,
-      permissions: role.permissions,
-      color: role.color
-    });
-  } catch (err) { next(err); }
-});
+router.put("/admin/roles/:id", requireAuth, requirePermission(["ROLE_MANAGE"]), roleController.updateRole);
 
 // Delete role
-router.delete("/admin/roles/:id", requireAuth, requirePermission(["ROLE_MANAGE"]), async (req, res, next) => {
-  try {
-    const role = await Role.findByIdAndDelete(req.params.id);
-    if (!role) return res.status(404).json({ message: "Vai trò không tồn tại" });
-    res.json({ success: true, message: "Vai trò đã được xóa" });
-  } catch (err) { next(err); }
-});
+router.delete("/admin/roles/:id", requireAuth, requirePermission(["ROLE_MANAGE"]), roleController.deleteRole);
 
 // Get all permissions (defined system-wide)
-router.get("/admin/permissions", requireAuth, requirePermission(["ROLE_VIEW", "ROLE_MANAGE", "USER_VIEW"]), async (req, res) => {
-  res.json([
-    // User Management
-    { id: "USER_VIEW", name: "Xem người dùng", code: "USER_VIEW", description: "Xem danh sách người dùng" },
-    { id: "USER_CREATE", name: "Tạo người dùng", code: "USER_CREATE", description: "Tạo mới người dùng" },
-    { id: "USER_EDIT", name: "Sửa người dùng", code: "USER_EDIT", description: "Chỉnh sửa thông tin người dùng" },
-    { id: "USER_DELETE", name: "Xóa người dùng", code: "USER_DELETE", description: "Xóa người dùng" },
-    { id: "USER_APPROVE", name: "Phê duyệt người dùng", code: "USER_APPROVE", description: "Phê duyệt đăng ký mới" },
+router.get("/admin/permissions", requireAuth, requirePermission(["ROLE_VIEW", "ROLE_MANAGE", "USER_VIEW"]), roleController.getAllPermissions);
 
-    // Role Management
-    { id: "ROLE_VIEW", name: "Xem vai trò", code: "ROLE_VIEW", description: "Xem danh sách vai trò" },
-    { id: "ROLE_MANAGE", name: "Quản lý vai trò", code: "ROLE_MANAGE", description: "Tạo/sửa/xóa vai trò" },
-
-    // Department Management
-    { id: "DEPT_VIEW", name: "Xem phòng ban", code: "DEPT_VIEW", description: "Xem danh sách phòng ban" },
-    { id: "DEPT_CREATE", name: "Tạo phòng ban", code: "DEPT_CREATE", description: "Tạo mới phòng ban" },
-    { id: "DEPT_EDIT", name: "Sửa phòng ban", code: "DEPT_EDIT", description: "Chỉnh sửa phòng ban" },
-    { id: "DEPT_DELETE", name: "Xóa phòng ban", code: "DEPT_DELETE", description: "Xóa phòng ban" },
-
-    // Project Management
-    { id: "PROJECT_VIEW", name: "Xem dự án", code: "PROJECT_VIEW", description: "Xem danh sách dự án" },
-    { id: "PROJECT_CREATE", name: "Tạo dự án", code: "PROJECT_CREATE", description: "Tạo mới dự án" },
-    { id: "PROJECT_EDIT", name: "Sửa dự án", code: "PROJECT_EDIT", description: "Chỉnh sửa dự án" },
-    { id: "PROJECT_DELETE", name: "Xóa dự án", code: "PROJECT_DELETE", description: "Xóa dự án" },
-
-    // Document Management
-    { id: "DOC_VIEW", name: "Xem tài liệu", code: "DOC_VIEW", description: "Xem tài liệu" },
-    { id: "DOC_UPLOAD", name: "Tải lên tài liệu", code: "DOC_UPLOAD", description: "Tải lên tài liệu mới" },
-    { id: "DOC_APPROVE", name: "Phê duyệt tài liệu", code: "DOC_APPROVE", description: "Phê duyệt tài liệu" },
-    { id: "DOC_DELETE", name: "Xóa tài liệu", code: "DOC_DELETE", description: "Xóa tài liệu" },
-
-    // Attendance
-    { id: "ATTENDANCE_VIEW", name: "Xem chấm công", code: "ATTENDANCE_VIEW", description: "Xem lịch sử chấm công" },
-    { id: "ATTENDANCE_MANAGE", name: "Quản lý chấm công", code: "ATTENDANCE_MANAGE", description: "Quản lý chấm công" },
-
-    // Audit Logs
-    { id: "AUDIT_VIEW", name: "Xem nhật ký", code: "AUDIT_VIEW", description: "Xem nhật ký hoạt động" },
-
-    // Zero Trust Settings
-    { id: "ZT_VIEW", name: "Xem cấu hình bảo mật", code: "ZT_VIEW", description: "Xem cấu hình Zero Trust" },
-    { id: "ZT_MANAGE", name: "Quản lý bảo mật", code: "ZT_MANAGE", description: "Thay đổi cấu hình bảo mật" },
-
-    // Notifications
-    { id: "NOTIF_SEND", name: "Gửi thông báo", code: "NOTIF_SEND", description: "Gửi thông báo hệ thống" },
-  ]);
-});
+// Get users by role
+router.get("/admin/roles/:roleName/users", requireAuth, requirePermission(["ROLE_VIEW", "USER_VIEW"]), roleController.getUsersByRole);
 
 export default router;

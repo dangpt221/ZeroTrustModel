@@ -10,6 +10,11 @@ import { DocumentViewerModal } from '../../components/Staff/DocumentViewerModal'
 
 export const DocumentManagement: React.FC = () => {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
+  const hasApprovePerm = isAdmin || user?.permissions?.includes('DOC_APPROVE');
+  const hasUploadPerm = isAdmin || user?.permissions?.includes('DOC_UPLOAD');
+  const hasDeletePerm = isAdmin || user?.permissions?.includes('DOC_DELETE');
+  const hasEditPerm = isAdmin || user?.permissions?.includes('DOC_EDIT');
 
   // Helper to get user name safely
   const getUserName = (user: any) => {
@@ -420,7 +425,7 @@ export const DocumentManagement: React.FC = () => {
                           )}
                         </div>
                         {/* Reset Access Button - Only show if has failed attempts */}
-                        {(doc as any).failedAttempts >= 3 && (
+                        {(doc as any).failedAttempts >= 3 && hasEditPerm && (
                           <button
                             onClick={() => handleResetAccess(doc)}
                             className="ml-1 p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
@@ -430,13 +435,15 @@ export const DocumentManagement: React.FC = () => {
                           </button>
                         )}
                         {/* Settings Button */}
-                        <button
-                          onClick={() => setSecurityModalDoc(doc)}
-                          className="ml-1 p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                          title="Cài đặt bảo mật"
-                        >
-                          <Shield size={14} />
-                        </button>
+                        {hasEditPerm && (
+                          <button
+                            onClick={() => setSecurityModalDoc(doc)}
+                            className="ml-1 p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                            title="Cài đặt bảo mật"
+                          >
+                            <Shield size={14} />
+                          </button>
+                        )}
                       </div>
                     </td>
                     <td className="px-8 py-5 text-sm font-bold text-slate-600">
@@ -447,12 +454,14 @@ export const DocumentManagement: React.FC = () => {
                         <button onClick={() => setViewingDoc(doc)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 focus:ring-2 focus:ring-blue-100 rounded-xl transition-all">
                           <Eye size={18} />
                         </button>
-                        <button
-                          onClick={() => handleDelete(doc.id)}
-                          className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 focus:ring-2 focus:ring-rose-100 rounded-xl transition-all"
-                        >
-                          <MoreVertical size={18} />
-                        </button>
+                        {hasDeletePerm && (
+                          <button
+                            onClick={() => handleDelete(doc.id)}
+                            className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 focus:ring-2 focus:ring-rose-100 rounded-xl transition-all"
+                          >
+                            <MoreVertical size={18} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </motion.tr>
@@ -809,7 +818,7 @@ export const DocumentManagement: React.FC = () => {
                       )}
                     </div>
 
-                    {request.status === 'PENDING' && (
+                    {request.status === 'PENDING' && hasApprovePerm && (
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleApproveRequest(request._id || request.id)}
@@ -826,7 +835,7 @@ export const DocumentManagement: React.FC = () => {
                       </div>
                     )}
 
-                    {request.status === 'APPROVED' && (
+                    {request.status === 'APPROVED' && hasApprovePerm && (
                       <button
                         onClick={() => handleRevokeAccess(request._id || request.id)}
                         className="px-3 py-1.5 bg-amber-500 text-white text-sm rounded-lg font-medium hover:bg-amber-600 transition-colors"

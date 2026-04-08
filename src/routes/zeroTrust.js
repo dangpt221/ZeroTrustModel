@@ -1,4 +1,4 @@
-import { requireAuth, requireRole } from '../middleware/auth.js';
+import { requireAuth, requirePermission, requireRole } from '../middleware/auth.js';
 import { ZeroTrustConfig } from '../models/ZeroTrustConfig.js';
 
 async function getOrCreateConfig() {
@@ -10,7 +10,7 @@ async function getOrCreateConfig() {
 }
 
 export function registerZeroTrustRoutes(router) {
-  router.get('/zero-trust/config', requireAuth, async (_req, res, next) => {
+  router.get('/zero-trust/config', requireAuth, requirePermission(['ZT_VIEW', 'ZT_MANAGE']), async (_req, res, next) => {
     try {
       const cfg = await getOrCreateConfig();
       res.json({
@@ -33,7 +33,7 @@ export function registerZeroTrustRoutes(router) {
   router.put(
     '/zero-trust/config',
     requireAuth,
-    requireRole(['ADMIN']),
+    requirePermission(['ZT_MANAGE']),
     async (req, res, next) => {
       try {
         const cfg = await getOrCreateConfig();

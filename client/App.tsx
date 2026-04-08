@@ -71,31 +71,31 @@ const App: React.FC = () => {
 
           {/* Admin Routes */}
           <Route path="/admin/users" element={
-            <PrivateRoute roles={[UserRole.ADMIN]} permissions={['USER_VIEW']}>
+            <PrivateRoute roles={[UserRole.ADMIN]} permissions={['USER_VIEW', 'USER_CREATE', 'USER_EDIT', 'USER_DELETE', 'USER_APPROVE']}>
               <Layout><UserManagement /></Layout>
             </PrivateRoute>
           } />
 
           <Route path="/admin/roles" element={
-            <PrivateRoute roles={[UserRole.ADMIN]} permissions={['ROLE_VIEW', 'USER_VIEW']}>
+            <PrivateRoute roles={[UserRole.ADMIN]} permissions={['ROLE_VIEW', 'ROLE_MANAGE']}>
               <Layout><RoleManagement /></Layout>
             </PrivateRoute>
           } />
 
           <Route path="/admin/departments" element={
-            <PrivateRoute roles={[UserRole.ADMIN]} permissions={['DEPT_VIEW']}>
+            <PrivateRoute roles={[UserRole.ADMIN]} permissions={['DEPT_VIEW', 'DEPT_CREATE', 'DEPT_EDIT', 'DEPT_DELETE']}>
               <Layout><DepartmentManagement /></Layout>
             </PrivateRoute>
           } />
 
           <Route path="/admin/documents" element={
-            <PrivateRoute roles={[UserRole.ADMIN]} permissions={['DOC_VIEW']}>
+            <PrivateRoute roles={[UserRole.ADMIN]} permissions={['DOC_VIEW', 'DOC_APPROVE', 'DOC_EDIT', 'DOC_DELETE', 'DOC_UPLOAD']}>
               <Layout><DocumentManagement /></Layout>
             </PrivateRoute>
           } />
 
           <Route path="/admin/zero-trust" element={
-            <PrivateRoute roles={[UserRole.ADMIN]} permissions={['ZT_VIEW']}>
+            <PrivateRoute roles={[UserRole.ADMIN]} permissions={['ZT_VIEW', 'ZT_MANAGE']}>
               <Layout><ZeroTrustSettings /></Layout>
             </PrivateRoute>
           } />

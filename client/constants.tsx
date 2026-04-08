@@ -37,16 +37,16 @@ export const COLORS = {
 };
 
 export const ADMIN_NAVIGATION = [
-  { name: 'Tổng quan Dashboard', icon: <LayoutDashboard size={20} />, path: '/', permission: '' },
-  { name: 'Quản lý người dùng', icon: <Users size={20} />, path: '/admin/users', permission: 'USER_VIEW' },
-  { name: 'Vai trò & Phân quyền', icon: <ShieldCheck size={20} />, path: '/admin/roles', permission: 'ROLE_VIEW' },
-  { name: 'Quản lý bộ phận', icon: <Building2 size={20} />, path: '/admin/departments', permission: 'DEPT_VIEW' },
-  { name: 'Quản lý tài liệu', icon: <FolderLock size={20} />, path: '/admin/documents', permission: 'DOC_VIEW' },
-  { name: 'Nhắn tin nội bộ', icon: <MessageCircle size={20} />, path: '/messaging', permission: '' },
-  { name: 'Quản lý Chat nội bộ', icon: <MessageSquare size={20} />, path: '/admin/chat', permission: 'ROLE_VIEW' }, // using ROLE_VIEW temporarily
-  { name: 'Giám sát SOC Log', icon: <Activity size={20} />, path: '/audit-logs', permission: 'AUDIT_VIEW' },
-  { name: 'Cấu hình Zero Trust', icon: <Fingerprint size={20} />, path: '/admin/zero-trust', permission: 'ZT_VIEW' },
-  { name: 'Quản lý thông báo', icon: <Bell size={20} />, path: '/admin/notifications', permission: 'NOTIF_SEND' },
+  { name: 'Tổng quan Dashboard', icon: <LayoutDashboard size={20} />, path: '/', permissions: [] },
+  { name: 'Quản lý người dùng', icon: <Users size={20} />, path: '/admin/users', permissions: ['USER_VIEW', 'USER_CREATE', 'USER_EDIT', 'USER_DELETE', 'USER_APPROVE'] },
+  { name: 'Vai trò & Phân quyền', icon: <ShieldCheck size={20} />, path: '/admin/roles', permissions: ['ROLE_VIEW', 'ROLE_MANAGE'] },
+  { name: 'Quản lý bộ phận', icon: <Building2 size={20} />, path: '/admin/departments', permissions: ['DEPT_VIEW', 'DEPT_CREATE', 'DEPT_EDIT', 'DEPT_DELETE'] },
+  { name: 'Quản lý tài liệu', icon: <FolderLock size={20} />, path: '/admin/documents', permissions: ['DOC_VIEW', 'DOC_UPLOAD', 'DOC_APPROVE', 'DOC_DELETE'] },
+  { name: 'Nhắn tin nội bộ', icon: <MessageCircle size={20} />, path: '/messaging', permissions: [] },
+  { name: 'Quản lý Chat nội bộ', icon: <MessageSquare size={20} />, path: '/admin/chat', permissions: ['ROLE_VIEW'] }, // using ROLE_VIEW temporarily
+  { name: 'Giám sát SOC Log', icon: <Activity size={20} />, path: '/audit-logs', permissions: ['AUDIT_VIEW'] },
+  { name: 'Cấu hình Zero Trust', icon: <Fingerprint size={20} />, path: '/admin/zero-trust', permissions: ['ZT_VIEW', 'ZT_MANAGE'] },
+  { name: 'Quản lý thông báo', icon: <Bell size={20} />, path: '/admin/notifications', permissions: ['NOTIF_SEND'] },
 ];
 
 export const MANAGER_NAVIGATION = [

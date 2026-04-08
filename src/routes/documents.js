@@ -1,5 +1,5 @@
 import express from "express";
-import { requireAuth, requireRole } from "../middleware/auth.js";
+import { requireAuth, requirePermission } from "../middleware/auth.js";
 import * as documentController from "../controllers/documentController.js";
 import multer from "multer";
 import path from "path";
@@ -44,9 +44,9 @@ const upload = multer({
 const router = express.Router();
 
 // Document requests
-router.get("/documents/requests", requireAuth, requireRole(["ADMIN", "MANAGER"]), documentController.getDocumentRequests);
-router.put("/documents/requests/:id", requireAuth, requireRole(["ADMIN", "MANAGER"]), documentController.updateDocumentRequest);
-router.post("/documents/requests/:id/revoke", requireAuth, requireRole(["ADMIN"]), documentController.revokeDocumentRequest);
+router.get("/documents/requests", requireAuth, requirePermission(["DOC_APPROVE"]), documentController.getDocumentRequests);
+router.put("/documents/requests/:id", requireAuth, requirePermission(["DOC_APPROVE"]), documentController.updateDocumentRequest);
+router.post("/documents/requests/:id/revoke", requireAuth, requirePermission(["DOC_APPROVE"]), documentController.revokeDocumentRequest);
 router.post("/documents/:id/request", requireAuth, documentController.createDocumentRequest);
 router.get("/documents/requests/my", requireAuth, documentController.getMyRequests);
 
@@ -92,7 +92,7 @@ router.post("/documents/upload", requireAuth, upload.single('file'), async (req,
 });
 
 // Create document (with or without file)
-router.post("/documents", requireAuth, requireRole(["ADMIN", "MANAGER", "STAFF"]), documentController.createDocument);
+router.post("/documents", requireAuth, requirePermission(["DOC_UPLOAD"]), documentController.createDocument);
 
 // Update - ADMIN/MANAGER can update any, STAFF can update own draft
 router.put("/documents/:id", requireAuth, documentController.updateDocument);
@@ -130,22 +130,22 @@ router.post("/documents/:id/upload", requireAuth, upload.single('file'), async (
 });
 
 // Delete - ADMIN/MANAGER
-router.delete("/documents/:id", requireAuth, requireRole(["ADMIN", "MANAGER"]), documentController.deleteDocument);
+router.delete("/documents/:id", requireAuth, requirePermission(["DOC_DELETE"]), documentController.deleteDocument);
 
 // Approval workflow - ADMIN/MANAGER only
-router.post("/documents/:id/approve", requireAuth, requireRole(["ADMIN", "MANAGER"]), documentController.approveDocument);
-router.post("/documents/:id/reject", requireAuth, requireRole(["ADMIN", "MANAGER"]), documentController.rejectDocument);
+router.post("/documents/:id/approve", requireAuth, requirePermission(["DOC_APPROVE"]), documentController.approveDocument);
+router.post("/documents/:id/reject", requireAuth, requirePermission(["DOC_APPROVE"]), documentController.rejectDocument);
 
 // Download tracking
 router.get("/documents/:id/download", requireAuth, documentController.downloadDocument);
 
 // Statistics - ADMIN/MANAGER
-router.get("/documents-stats/stats", requireAuth, requireRole(["ADMIN", "MANAGER"]), documentController.getDocumentStats);
+router.get("/documents-stats/stats", requireAuth, requirePermission(["DOC_VIEW"]), documentController.getDocumentStats);
 
 // Password protection - ADMIN only
-router.post("/documents/:id/password", requireAuth, requireRole(["ADMIN"]), documentController.setDocumentPassword);
-router.post("/documents/:id/lock", requireAuth, requireRole(["ADMIN"]), documentController.toggleDocumentLock);
-router.post("/documents/:id/reset-access", requireAuth, requireRole(["ADMIN"]), documentController.resetDocumentAccess);
+router.post("/documents/:id/password", requireAuth, requirePermission(["DOC_EDIT"]), documentController.setDocumentPassword);
+router.post("/documents/:id/lock", requireAuth, requirePermission(["DOC_EDIT"]), documentController.toggleDocumentLock);
+router.post("/documents/:id/reset-access", requireAuth, requirePermission(["DOC_EDIT"]), documentController.resetDocumentAccess);
 
 // Verify password for document access
 router.post("/documents/:id/verify", requireAuth, documentController.verifyDocumentPassword);
@@ -156,11 +156,11 @@ router.post("/documents/:id/verify", requireAuth, documentController.verifyDocum
 router.post("/documents/sensitive-action/verify", requireAuth, documentController.verifySensitiveActionMFA);
 
 // Rate limit stats (Admin)
-router.get("/documents/rate-limit/stats", requireAuth, requireRole(["ADMIN"]), documentController.getDownloadRateLimitStats);
-router.post("/documents/rate-limit/reset", requireAuth, requireRole(["ADMIN"]), documentController.resetDownloadRateLimitAdmin);
+router.get("/documents/rate-limit/stats", requireAuth, requirePermission(["AUDIT_VIEW"]), documentController.getDownloadRateLimitStats);
+router.post("/documents/rate-limit/reset", requireAuth, requirePermission(["ZT_MANAGE"]), documentController.resetDownloadRateLimitAdmin);
 
 // Encrypted file upload
-router.post("/documents/upload/encrypted", requireAuth, requireRole(["ADMIN", "MANAGER"]), upload.single('file'), documentController.encryptUploadedFile);
+router.post("/documents/upload/encrypted", requireAuth, requirePermission(["DOC_UPLOAD"]), upload.single('file'), documentController.encryptUploadedFile);
 
 // Encrypted download (decrypts on-the-fly)
 router.get("/documents/:id/download/encrypted", requireAuth, documentController.decryptAndDownload);
@@ -180,7 +180,7 @@ router.post("/documents/secure-link", requireAuth, documentController.createSecu
 router.get("/documents/secure-download", documentController.secureDownloadWithToken);
 
 // Verify leaked document
-router.post("/documents/verify-leak", requireAuth, requireRole(["ADMIN"]), documentController.verifyLeakedDocument);
+router.post("/documents/verify-leak", requireAuth, requirePermission(["AUDIT_VIEW"]), documentController.verifyLeakedDocument);
 
 // Emergency lock status
 router.get("/documents/emergency-status", requireAuth, documentController.getEmergencyStatus);

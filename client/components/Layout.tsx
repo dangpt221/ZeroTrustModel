@@ -57,8 +57,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   // that are not already in their default navigation array.
   if ((isManager || isMember) && user.permissions && user.permissions.length > 0) {
     ADMIN_NAVIGATION.forEach((adminItem: any) => {
-      // If the admin item requires a permission, and the user has it
-      if (adminItem.permission && user.permissions?.includes(adminItem.permission)) {
+      // If the admin item requires any permission, and the user has at least one of them
+      const hasPerm = adminItem.permissions && adminItem.permissions.length > 0 && adminItem.permissions.some((p: string) => user.permissions?.includes(p));
+      if (hasPerm) {
         // Only push if their navigation doesn't already have it
         if (!navigation.find(n => n.path === adminItem.path)) {
           navigation.push(adminItem);
