@@ -24,6 +24,8 @@ export function registerZeroTrustRoutes(router) {
         ipWhitelist: cfg.ipWhitelist,
         deviceTrustThreshold: cfg.deviceTrustThreshold,
         geofencingEnabled: cfg.geofencingEnabled,
+        geoBlockingEnabled: cfg.geoBlockingEnabled,
+        allowedCountries: cfg.allowedCountries,
       });
     } catch (err) {
       next(err);
@@ -46,7 +48,9 @@ export function registerZeroTrustRoutes(router) {
           alertOnNewDevice,
           ipWhitelist,
           deviceTrustThreshold,
-          geofencingEnabled
+          geofencingEnabled,
+          geoBlockingEnabled,
+          allowedCountries
         } = req.body;
 
         if (mfaRequired !== undefined) cfg.mfaRequired = mfaRequired;
@@ -58,6 +62,8 @@ export function registerZeroTrustRoutes(router) {
         if (ipWhitelist !== undefined) cfg.ipWhitelist = ipWhitelist;
         if (deviceTrustThreshold !== undefined) cfg.deviceTrustThreshold = deviceTrustThreshold;
         if (geofencingEnabled !== undefined) cfg.geofencingEnabled = geofencingEnabled;
+        if (geoBlockingEnabled !== undefined) cfg.geoBlockingEnabled = geoBlockingEnabled;
+        if (allowedCountries !== undefined) cfg.allowedCountries = allowedCountries;
 
         await cfg.save();
         res.json({

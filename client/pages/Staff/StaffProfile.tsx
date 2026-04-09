@@ -11,15 +11,7 @@ export const StaffProfile: React.FC = () => {
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-black text-slate-800 tracking-tight uppercase italic flex items-center gap-3">
-            <ShieldCheck size={28} className="text-emerald-500" />
-            Cấu hình Bảo mật Cá nhân
-          </h2>
-          <p className="text-slate-500 text-sm font-medium">Quản lý định danh và các thiết bị truy cập tin cậy của bạn</p>
-        </div>
-      </div>
+
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">

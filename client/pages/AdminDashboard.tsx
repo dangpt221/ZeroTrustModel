@@ -137,18 +137,18 @@ export const AdminDashboard: React.FC = () => {
       const nextD = new Date(d);
       nextD.setDate(nextD.getDate() + 1);
       
-      const activityCount = auditLogs.filter((l: any) => {
-        if(!l.timestamp) return false;
+      let activityCount = auditLogs.filter((l: any) => {
+        if(!l.timestamp || !l.action) return false;
         const logTime = new Date(l.timestamp).getTime();
-        return logTime >= d.getTime() && logTime < nextD.getTime();
+        return logTime >= d.getTime() && logTime < nextD.getTime() && String(l.action).includes('LOGIN');
       }).length;
       
       const alertsCount = auditLogs.filter((l: any) => {
-        if(!l.timestamp) return false;
+         if(!l.timestamp) return false;
          const logTime = new Date(l.timestamp).getTime();
          return logTime >= d.getTime() && logTime < nextD.getTime() && (l.riskLevel === 'HIGH' || l.riskLevel === 'MEDIUM');
       }).length;
-      
+
       data.push({
         name: daysStr[d.getDay()],
         users: activityCount,
@@ -259,18 +259,22 @@ export const AdminDashboard: React.FC = () => {
               <AreaChart data={dynamicChartData}>
                 <defs>
                   <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1} />
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2} />
                     <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="colorAlerts" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
+                <YAxis dataKey="users" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} domain={[0, 'dataMax + 10']} />
                 <Tooltip
                   contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                 />
-                <Area type="monotone" dataKey="users" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorUsers)" />
-                <Area type="monotone" dataKey="alerts" stroke="#ef4444" strokeWidth={2} fillOpacity={0} />
+                <Area type="monotone" dataKey="users" stroke="#3b82f6" strokeWidth={4} fillOpacity={1} fill="url(#colorUsers)" activeDot={{ r: 6, strokeWidth: 0 }} />
+                <Area type="monotone" dataKey="alerts" stroke="#ef4444" strokeWidth={3} fillOpacity={1} fill="url(#colorAlerts)" activeDot={{ r: 6, strokeWidth: 0, fill: '#ef4444' }} />
               </AreaChart>
             </ResponsiveContainer>
           </div>

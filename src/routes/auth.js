@@ -12,6 +12,7 @@ import {
   securityCheck
 } from '../middleware/securityMiddleware.js';
 import { User } from '../models/User.js';
+import { ZeroTrustConfig } from '../models/ZeroTrustConfig.js';
 import { sendOTP } from '../utils/emailService.js';
 
 const ONLINE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
@@ -39,7 +40,8 @@ function toClientUser(user) {
     departmentId: user.departmentId?._id?.toString() || user.departmentId || null,
     lastActiveAt: user.lastActiveAt ? new Date(user.lastActiveAt).toISOString() : null,
     isOnline: !!isOnline,
-    permissions: user.customRoles?.flatMap(r => r.permissions || []) || []
+    permissions: user.customRoles?.flatMap(r => r.permissions || []) || [],
+    hasPasswordSet: user.hasPasswordSet !== false // Default true unless explicitly false (Google Auth)
   };
 }
 
@@ -162,11 +164,19 @@ export function registerAuthRoutes(router) {
         return res.status(401).json({ message: 'Invalid credentials' });
       }
 
-      // Risk assessment before login completion
+      // Assess Login Risk
       const { riskScore, riskFactors } = await assessLoginRisk(req, user);
 
-      // Always force OTP for every login (Zero Trust)
-      const shouldForceOTP = true;
+      let ztConfig;
+      try {
+        ztConfig = await ZeroTrustConfig.findOne();
+      } catch (e) {
+        console.error("Error fetching ZeroTrustConfig", e);
+      }
+      
+      const globalMfa = ztConfig?.mfaRequired || false;
+      const adminMfa = (ztConfig?.mfaRequiredForAdmins && user.role === 'ADMIN');
+      const shouldForceOTP = user.mfaEnabled || globalMfa || adminMfa;
 
       if (shouldForceOTP) {
         // Generate a 6-digit OTP
@@ -264,8 +274,17 @@ export function registerAuthRoutes(router) {
         const lastActive = user.lastActiveAt ? new Date(user.lastActiveAt).getTime() : 0;
         if (Date.now() - lastActive > 60 * 1000) {
           user.lastActiveAt = now;
-          await user.save();
         }
+
+        // Automatic DB fix for legacy Google users
+        if (user.googleId && user.hasPasswordSet !== false) {
+          const isPlaceholder = await bcrypt.compare('google_oauth_placeholder', user.passwordHash);
+          if (isPlaceholder) {
+            user.hasPasswordSet = false;
+          }
+        }
+        
+        await user.save();
       } catch (saveErr) {
         console.error('[auth/me] save error:', saveErr);
       }
@@ -283,23 +302,37 @@ export function registerAuthRoutes(router) {
     }
   });
 
-  // Update current user profile
   router.put('/auth/profile', requireAuth, async (req, res) => {
     try {
-      const { name, avatar, currentPassword, newPassword } = req.body;
+      const { name, avatar, currentPassword, newPassword, mfaEnabled } = req.body;
       const user = await User.findById(req.user.id);
 
-      if (currentPassword && newPassword) {
-        const ok = await bcrypt.compare(currentPassword, user.passwordHash);
-        if (!ok) {
-          return res.status(400).json({ message: 'Current password is incorrect' });
+      if (newPassword) {
+        if (user.hasPasswordSet === false) {
+            // First time setting password (User registered with Google Auth)
+            user.passwordHash = await bcrypt.hash(newPassword, 10);
+            user.hasPasswordSet = true;
+        } else {
+            // Standard password change
+            if (!currentPassword) {
+                return res.status(400).json({ message: 'Vui lòng nhập mật khẩu hiện tại' });
+            }
+            const ok = await bcrypt.compare(currentPassword, user.passwordHash);
+            if (!ok) {
+                return res.status(400).json({ message: 'Mật khẩu hiện tại không chính xác' });
+            }
+            user.passwordHash = await bcrypt.hash(newPassword, 10);
         }
-        user.passwordHash = await bcrypt.hash(newPassword, 10);
       }
 
       if (name) user.name = name;
       if (avatar !== undefined) user.avatar = avatar;
+      if (typeof mfaEnabled === 'boolean') user.mfaEnabled = mfaEnabled;
       await user.save();
+
+      // Refresh token if MFA status or other sensitive info changed
+      const newToken = signUserToken(user);
+      setAuthCookie(res, newToken);
 
       res.json(toClientUser(user));
     } catch (err) {

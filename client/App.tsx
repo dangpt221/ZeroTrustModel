@@ -182,22 +182,6 @@ const DashboardSelectorProfileWrapper: React.FC = () => {
   
   return (
     <div className="max-w-6xl mx-auto space-y-8">
-      {/* Premium Profile Header */}
-      <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm flex items-center gap-6 animate-in fade-in slide-in-from-top-4 duration-700">
-        <div className="relative">
-          <img src={user?.avatar} className="w-24 h-24 rounded-3xl object-cover ring-4 ring-blue-50" alt="Avatar" />
-          <div className="absolute -bottom-2 -right-2 bg-emerald-500 w-6 h-6 rounded-full border-4 border-white flex items-center justify-center">
-            <div className="w-2 h-2 bg-white rounded-full animate-ping"></div>
-          </div>
-        </div>
-        <div>
-          <h2 className="text-3xl font-black text-slate-800 tracking-tight">{user?.name}</h2>
-          <p className="text-blue-600 font-bold uppercase tracking-widest text-xs mt-1 bg-blue-50 inline-block px-3 py-1 rounded-lg">
-            {user?.role} Profile
-          </p>
-        </div>
-      </div>
-
       {user?.role === UserRole.STAFF ? <StaffProfile /> : <ManagerProfile />}
     </div>
   );

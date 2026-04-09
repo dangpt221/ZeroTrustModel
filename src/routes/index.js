@@ -17,6 +17,7 @@ import passport from "../configs/passport.js";
 import honeytokenRouter from "./honeytoken.js";
 import emergencyLockRouter from "./emergencyLock.js";
 import e2eeRouter from "./e2eeRoutes.js";
+import searchRouter from "./search.js";
 
 export function registerRoutes(app, io) {
   const router = express.Router();
@@ -77,6 +78,7 @@ export function registerRoutes(app, io) {
   router.use(honeytokenRouter);
   router.use(emergencyLockRouter);
   router.use('/e2ee', e2eeRouter);
+  router.use(searchRouter);
 
   app.use("/api", router);
 }

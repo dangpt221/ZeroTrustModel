@@ -14,7 +14,7 @@ async function main() {
 
     httpServer.listen(PORT, '0.0.0.0', () => {
       console.log('\n');
-      console.log('  🚀  Nexus Zero Trust API  — READY');
+      console.log('Nexus Zero Trust API  — READY');
       console.log('');
       console.log(`  http://localhost:${PORT}   `);
       console.log('   MongoDB + Express + Socket.io ');
@@ -34,7 +34,7 @@ async function main() {
     process.on('SIGINT', () => shutdown('SIGINT'));
 
   } catch (err) {
-    console.error('❌ Failed to start server:', err);
+    console.error('Failed to start server:', err);
     process.exit(1);
   }
 }

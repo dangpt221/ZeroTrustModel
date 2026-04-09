@@ -24,6 +24,7 @@ export interface User {
   device: string;
   mfaEnabled: boolean;
   googleId?: string;
+  hasPasswordSet?: boolean;
   isLocked?: boolean;
   knownDevices?: string[];
   lastActiveAt?: string;

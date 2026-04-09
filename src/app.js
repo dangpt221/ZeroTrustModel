@@ -18,6 +18,7 @@ import xss from 'xss-clean';
 import { connectDB } from './configs/db.js';
 import passport from './configs/passport.js';
 import { errorHandler, notFound } from './middleware/auth.js';
+import { ipFilterMiddleware } from './middleware/ipFilter.js';
 import { registerRoutes } from './routes/index.js';
 import { registerSocketHandlers } from './services/socket.js';
 
@@ -110,6 +111,9 @@ export async function createApp() {
     }
   }));
   app.use(xss());
+
+  // IP Filter & Geo-blocking middleware for APIs
+  app.use('/api', ipFilterMiddleware);
 
   // Serve uploaded files
   app.use('/uploads', express.static(path.join(__dirname, '../uploads')));

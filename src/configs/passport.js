@@ -44,7 +44,8 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
           isApproved: false, // Require Admin approval
           mfaEnabled: false,
           status: 'PENDING', // Treat as new registration needing approval
-          trustScore: 50 // Default trust score for new unverified devices
+          trustScore: 50, // Default trust score for new unverified devices
+          hasPasswordSet: false
         });
 
         // Notify all admins about the new registration

@@ -142,7 +142,7 @@ export const usersApi = {
     }),
 
   // Profile management
-  updateProfile: (data: { name?: string; avatar?: string }) =>
+  updateProfile: (data: { name?: string; avatar?: string; mfaEnabled?: boolean }) =>
     apiRequest<User>('/auth/profile', {
       method: 'PUT',
       body: JSON.stringify(data),

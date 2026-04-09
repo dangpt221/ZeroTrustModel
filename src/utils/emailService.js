@@ -6,6 +6,11 @@ import nodemailer from 'nodemailer';
  * @param {string} otp 
  */
 export async function sendOTP(email, otp) {
+  // DEV MODE ONLY: ALWAYS print the OTP clearly to the terminal for local testing
+  console.log(`\n========================================`);
+  console.log(`🔑 DEV OTP CODE FOR ${email}: ${otp}`);
+  console.log(`========================================\n`);
+
   // Use Gmail SMTP
   const transporter = nodemailer.createTransport({
     service: 'gmail',

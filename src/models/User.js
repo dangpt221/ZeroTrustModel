@@ -12,6 +12,7 @@ const UserSchema = new mongoose.Schema(
     },
     customRoles: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Role' }],
     googleId: { type: String, unique: true, sparse: true },
+    hasPasswordSet: { type: Boolean, default: true },
     avatar: { type: String },
     departmentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Department' },
     isLocked: { type: Boolean, default: false },

@@ -1,8 +1,9 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { usersApi } from '../../api';
-import { ShieldCheck, Smartphone, Save, UserCircle, Upload } from 'lucide-react';
+import { usersApi, e2eeApi } from '../../api';
+import { ShieldCheck, Save, UserCircle, Upload } from 'lucide-react';
+import { DeviceList } from '../../components/Staff/DeviceList';
 
 export const ManagerProfile: React.FC = () => {
   const { user, checkSession } = useAuth();
@@ -12,8 +13,14 @@ export const ManagerProfile: React.FC = () => {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>(user?.avatar || '');
   const [saving, setSaving] = useState(false);
+  const [mfaSaving, setMfaSaving] = useState(false);
+  const [deviceCount, setDeviceCount] = useState(0);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    e2eeApi.getMyDevices().then(res => setDeviceCount(res.devices?.length || 0)).catch(console.error);
+  }, []);
 
   if (!user) return null;
 
@@ -59,6 +66,20 @@ export const ManagerProfile: React.FC = () => {
     }
   };
 
+  const handleToggleMFA = async () => {
+    if (confirm(`Bạn có chắc chắn muốn ${user.mfaEnabled ? 'TẮT' : 'BẬT'} Xác thực 2 lớp (Email OTP)?`)) {
+      setMfaSaving(true);
+      try {
+        await usersApi.updateProfile({ mfaEnabled: !user.mfaEnabled });
+        await checkSession();
+      } catch (err) {
+        alert('Lỗi khi thay đổi cấu hình MFA.');
+      } finally {
+        setMfaSaving(false);
+      }
+    }
+  };
+
   const trustColor = user.trustScore >= 80 ? 'emerald' : user.trustScore >= 50 ? 'amber' : 'red';
   const trustBg = trustColor === 'emerald' ? 'bg-emerald-50 border-emerald-100' : trustColor === 'amber' ? 'bg-amber-50 border-amber-100' : 'bg-red-50 border-red-100';
   const trustText = trustColor === 'emerald' ? 'text-emerald-600' : trustColor === 'amber' ? 'text-amber-600' : 'text-red-600';
@@ -67,21 +88,7 @@ export const ManagerProfile: React.FC = () => {
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
 
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-black text-slate-800 tracking-tight uppercase italic flex items-center gap-3">
-            <ShieldCheck size={28} className="text-emerald-500" />
-            Hồ sơ & Bảo mật
-          </h2>
-          <p className="text-slate-500 text-sm font-medium">Quản lý thông tin cá nhân và cài đặt bảo mật tài khoản</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className={`text-xs font-bold px-3 py-1.5 rounded-xl border ${trustBg} ${trustText}`}>
-            Trust Score: {user.trustScore}%
-          </span>
-        </div>
-      </div>
+
 
       {message && (
         <div className={`p-4 rounded-2xl text-sm font-semibold ${
@@ -230,14 +237,21 @@ export const ManagerProfile: React.FC = () => {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-slate-600 font-medium">Xác thực 2 yếu tố</span>
-                <span className={`text-xs font-bold px-2.5 py-1 rounded-xl ${user.mfaEnabled ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
-                  {user.mfaEnabled ? 'Bật' : 'Tắt'}
-                </span>
+                <button 
+                  type="button"
+                  disabled={mfaSaving}
+                  onClick={handleToggleMFA}
+                  className={`text-xs font-bold px-2.5 py-1 rounded-xl transition-all ${
+                    mfaSaving ? 'opacity-50 cursor-wait' : 'hover:scale-105 active:scale-95'
+                  } ${user.mfaEnabled ? 'bg-emerald-100 text-emerald-700 shadow-[0_0_10px_rgba(16,185,129,0.2)]' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                >
+                  {mfaSaving ? 'Đang lưu...' : user.mfaEnabled ? 'Bật' : 'Tắt'}
+                </button>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-slate-600 font-medium">Thiết bị đã đăng ký</span>
                 <span className="text-xs font-bold px-2.5 py-1 rounded-xl bg-blue-100 text-blue-700">
-                  {user.knownDevices?.length || 0} thiết bị
+                  {deviceCount} thiết bị
                 </span>
               </div>
               <div className="flex items-center justify-between">
@@ -255,26 +269,8 @@ export const ManagerProfile: React.FC = () => {
             </div>
           </div>
 
-          {/* Known Devices */}
-          <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm space-y-4">
-            <h4 className="font-bold text-slate-800 flex items-center gap-2">
-              <Smartphone size={18} className="text-blue-500" />
-              Thiết bị đã biết
-            </h4>
-            {(user.knownDevices || []).length === 0 ? (
-              <p className="text-sm text-slate-400 italic">Chưa có thiết bị nào được đăng ký</p>
-            ) : (
-              <div className="space-y-3">
-                {(user.knownDevices || []).map((device: any, idx: number) => (
-                  <div key={idx} className="p-3 bg-slate-50 rounded-xl">
-                    <p className="text-xs font-semibold text-slate-700">{device.name || 'Thiết bị không xác định'}</p>
-                    <p className="text-[10px] text-slate-400 mt-0.5">{device.browser} • {device.os}</p>
-                    <p className="text-[10px] text-slate-400">{device.lastUsed ? new Date(device.lastUsed).toLocaleDateString('vi-VN') : 'Không rõ'}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          {/* Live Device List connected to E2EE API */}
+          <DeviceList />
         </div>
       </div>
     </div>

@@ -7,7 +7,11 @@ import {
   Settings,
   Shield,
   User,
-  UserCheck
+  UserCheck,
+  FolderKanban,
+  Building2,
+  FileText,
+  Loader2
 } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -167,17 +171,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Header */}
         <header className="h-20 shrink-0 bg-white border-b border-slate-100 flex items-center justify-between px-8 z-40 lg:px-10">
-          <div className={`flex items-center bg-slate-100/80 rounded-2xl px-5 py-2.5 w-[450px] max-w-full focus-within:ring-2 transition-all border border-transparent ${isMember ? 'focus-within:ring-emerald-100 focus-within:border-emerald-200' : isManager ? 'focus-within:ring-sky-100 focus-within:border-sky-200' : 'focus-within:ring-blue-100 focus-within:border-blue-200'}`}>
-             <Search size={18} className={`mr-3 transition-colors ${isMember ? 'text-emerald-500' : isManager ? 'text-sky-500' : 'text-blue-500'}`} />
-             <input
-               type="text"
-               placeholder="Tìm kiếm tài nguyên bảo mật..."
-               className="bg-transparent border-none outline-none text-[15px] w-full font-medium placeholder:text-slate-400 text-slate-700"
-             />
-             <button className="p-1 hover:bg-slate-200 rounded-lg text-slate-400 hover:text-slate-600 transition-colors hidden sm:block">
-                <span className="text-[10px] font-bold border border-slate-300 rounded px-1.5 py-0.5">/</span>
-             </button>
-          </div>
+          <GlobalSearch isMember={isMember} isManager={isManager} />
 
           {/* Right - Profile & Notifications */}
           <div className="flex-1 flex items-center justify-end gap-6 min-w-0">
@@ -423,3 +417,166 @@ const ChatBadge: React.FC = () => {
     </div>
   );
 };
+
+// Global Search Component
+const GlobalSearch: React.FC<{ isMember: boolean, isManager: boolean }> = ({ isMember, isManager }) => {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
+
+  // Keyboard shortcut (Ctrl + / or Cmd + K)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey && e.key === '/') || (e.metaKey && e.key === 'k')) {
+        e.preventDefault();
+        inputRef.current?.focus();
+        setIsOpen(true);
+      }
+      if (e.key === 'Escape') {
+        setIsOpen(false);
+        inputRef.current?.blur();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Click outside to close
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Debounced API Search
+  useEffect(() => {
+    if (!query.trim()) {
+      setResults([]);
+      setIsOpen(false);
+      return;
+    }
+    
+    setIsOpen(true);
+    setLoading(true);
+    const delayDebounceFn = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`, { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          setResults(data.results || []);
+        }
+      } catch (err) {
+        console.error('Search API error:', err);
+      } finally {
+        setLoading(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [query]);
+
+  const selectResult = (link: string) => {
+    setIsOpen(false);
+    setQuery('');
+    setResults([]);
+    
+    if (link.startsWith('http')) {
+      window.open(link, '_blank');
+    } else {
+      navigate(link);
+    }
+  };
+
+  const ringColor = isMember ? 'focus-within:ring-emerald-100 focus-within:border-emerald-200' : isManager ? 'focus-within:ring-sky-100 focus-within:border-sky-200' : 'focus-within:ring-blue-100 focus-within:border-blue-200';
+  const iconColor = isMember ? 'text-emerald-500' : isManager ? 'text-sky-500' : 'text-blue-500';
+
+  const getIcon = (type: string) => {
+    switch (type) {
+      case 'USER': return <User size={18} className="text-blue-500" />;
+      case 'PROJECT': return <FolderKanban size={18} className="text-emerald-500" />;
+      case 'DEPARTMENT': return <Building2 size={18} className="text-sky-500" />;
+      case 'DOCUMENT': return <FileText size={18} className="text-amber-500" />;
+      default: return <Search size={18} />;
+    }
+  };
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <div className={`flex items-center bg-slate-100/80 rounded-2xl px-5 py-2.5 w-[450px] max-w-full focus-within:ring-2 transition-all border border-transparent ${ringColor}`}>
+        <Search size={18} className={`mr-3 transition-colors ${iconColor}`} />
+        <input
+          ref={inputRef}
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onFocus={() => query.trim() && setIsOpen(true)}
+          placeholder="Tìm kiếm tài nguyên bảo mật..."
+          className="bg-transparent border-none outline-none text-[15px] w-full font-medium placeholder:text-slate-400 text-slate-700"
+        />
+        <button 
+          onClick={() => inputRef.current?.focus()}
+          className="p-1 hover:bg-slate-200 rounded-lg text-slate-400 hover:text-slate-600 transition-colors hidden sm:flex items-center justify-center gap-1 min-w-[30px]"
+        >
+          {loading ? <Loader2 size={12} className="animate-spin text-slate-500" /> : <span className="text-[10px] font-bold border border-slate-300 rounded px-1.5 py-0.5">/</span>}
+        </button>
+      </div>
+
+      <AnimatePresence>
+        {isOpen && query.trim() && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            transition={{ duration: 0.15 }}
+            className="absolute top-full left-0 mt-3 w-[450px] max-w-full bg-white/95 backdrop-blur-xl border border-slate-100 rounded-3xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] overflow-hidden z-50 p-2"
+          >
+            {loading && results.length === 0 ? (
+              <div className="p-8 flex flex-col items-center justify-center gap-3">
+                <Loader2 size={24} className="animate-spin text-slate-400" />
+                <p className="text-sm font-semibold text-slate-500 tracking-wide">Đang quét hệ thống Zero Trust...</p>
+              </div>
+            ) : results.length > 0 ? (
+              <div className="max-h-[350px] overflow-y-auto pr-1 custom-scrollbar">
+                {results.map((res: any) => (
+                  <button
+                    key={`${res.type}-${res.id}`}
+                    onClick={() => selectResult(res.link)}
+                    className="w-full text-left flex items-start gap-3 p-3 hover:bg-slate-50 rounded-xl transition-colors group"
+                  >
+                    <div className="p-2 bg-slate-100 rounded-lg group-hover:bg-white group-hover:shadow-sm transition-all">
+                      {getIcon(res.type)}
+                    </div>
+                    <div className="flex-1 overflow-hidden">
+                      <p className="text-sm font-bold text-slate-800 truncate">{res.label}</p>
+                      <p className="text-[11px] text-slate-400 truncate mt-0.5 font-medium">{res.subtitle}</p>
+                    </div>
+                    <div className="text-[9px] font-black uppercase tracking-widest text-slate-300 group-hover:text-slate-400 mt-1">
+                      {res.type}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : !loading && results.length === 0 ? (
+              <div className="p-8 text-center">
+                <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                  <Shield size={24} className="text-slate-300" />
+                </div>
+                <p className="text-sm font-bold text-slate-600">Không tìm thấy tài nguyên</p>
+                <p className="text-xs text-slate-400 mt-1 font-medium">Bạn có thể không có quyền truy cập</p>
+              </div>
+            ) : null}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+

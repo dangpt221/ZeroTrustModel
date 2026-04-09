@@ -1,5 +1,16 @@
 import { User } from "../models/User.js";
 import bcrypt from "bcryptjs";
+import { Attendance } from "../models/Attendance.js";
+import { Device } from "../models/Device.js";
+import { DocumentRequest } from "../models/DocumentRequest.js";
+import { Notification } from "../models/Notification.js";
+import { Message } from "../models/Message.js";
+import { Project } from "../models/Project.js";
+import { Department } from "../models/Department.js";
+import { Task } from "../models/Task.js";
+import { Team } from "../models/Team.js";
+import { ChatRoom } from "../models/ChatRoom.js";
+import { RoomKeyDistribution } from "../models/RoomKeyDistribution.js";
 
 // Get all users (admin)
 export const getAllUsers = async (req, res, next) => {
@@ -180,7 +191,47 @@ export const deleteUser = async (req, res, next) => {
     const { id } = req.params;
     const user = await User.findByIdAndDelete(id);
     if (!user) return res.status(404).json({ message: "User not found" });
-    res.json({ success: true, message: "User deleted" });
+
+    // CASCADING DELETE LOGIC (Preserving Document and AuditLog)
+    
+    // 1. Hard Deletions (Delete records owned by user)
+    await Attendance.deleteMany({ userId: id });
+    await Device.deleteMany({ userId: id });
+    await DocumentRequest.deleteMany({ requesterId: id });
+    await Notification.deleteMany({ userId: id });
+    await Message.deleteMany({ userId: id });
+    await RoomKeyDistribution.deleteMany({ userId: id });
+
+    // 2. Unlinks (Remove user from arrays or unset responsibilities)
+    // - Department
+    await Department.updateMany({ managerId: id }, { $unset: { managerId: "" } });
+    
+    // - Project
+    await Project.updateMany({ managerId: id }, { $unset: { managerId: "" } });
+    await Project.updateMany({ members: id }, { $pull: { members: id } });
+    
+    // - Task
+    await Task.updateMany({ assignedTo: id }, { $unset: { assignedTo: "", assignedToName: "" } });
+    
+    // - Team
+    await Team.updateMany({ leaderId: id }, { $unset: { leaderId: "" } });
+    await Team.updateMany({ memberIds: id }, { $pull: { memberIds: id } });
+    
+    // - ChatRoom
+    await ChatRoom.updateMany(
+      { 'members.userId': id },
+      { $pull: { members: { userId: id }, participants: id } }
+    );
+    await ChatRoom.updateMany(
+      { createdBy: id },
+      { $unset: { createdBy: "" } }
+    );
+    await ChatRoom.updateMany(
+      { relatedUserId: id },
+      { $unset: { relatedUserId: "" } }
+    );
+
+    res.json({ success: true, message: "User deleted and related data cleaned up successfully" });
   } catch (err) {
     next(err);
   }
