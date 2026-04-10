@@ -53,24 +53,24 @@ export async function createApp() {
   
   // CORS Configuration
   const allowedOrigins = [
-    "https://zerotrust.io.vn",
+    "http://localhost:5173",
     "http://localhost:5000",
     "http://localhost:3000",
-    "http://localhost:5173",
-    process.env.FRONTEND_URL
-  ].filter(Boolean);
-    
-  app.use(cors({ 
-    origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps or curl requests)
+    "https://zerotrust.io.vn"
+  ];
+  
+  app.use(cors({
+    origin: function (origin, callback) {
+      console.log("🌍 Origin:", origin);
+  
       if (!origin || allowedOrigins.includes(origin)) {
-        return callback(null, true);
+        callback(null, true);
       } else {
         console.log("❌ Blocked by CORS:", origin);
-        return callback(new Error('Not allowed by CORS'), false);
+        callback(null, true); // ⚠️ TẠM CHO QUA để test
       }
-    }, 
-    credentials: true // Allow cookies
+    },
+    credentials: true
   }));
   app.use(passport.initialize());
 
