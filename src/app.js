@@ -52,19 +52,23 @@ export async function createApp() {
   app.use(cookieParser());
   
   // CORS Configuration
-  const allowedOrigins = process.env.NODE_ENV === 'production' 
-    ? [process.env.FRONTEND_URL || 'http://localhost:5000']
-    : ['http://localhost:5000', 'http://localhost:5173'];
+  const allowedOrigins = [
+    "https://zerotrust.io.vn",
+    "http://localhost:5000",
+    "http://localhost:3000",
+    "http://localhost:5173",
+    process.env.FRONTEND_URL
+  ].filter(Boolean);
     
   app.use(cors({ 
     origin: (origin, callback) => {
       // Allow requests with no origin (like mobile apps or curl requests)
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.indexOf(origin) === -1) {
-        var msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-        return callback(new Error(msg), false);
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      } else {
+        console.log("❌ Blocked by CORS:", origin);
+        return callback(new Error('Not allowed by CORS'), false);
       }
-      return callback(null, true);
     }, 
     credentials: true // Allow cookies
   }));
