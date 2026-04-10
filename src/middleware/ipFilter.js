@@ -37,6 +37,12 @@ export const ipFilterMiddleware = async (req, res, next) => {
     }
 
     const clientIpString = clientIp.toString();
+    const range = clientIp.range();
+
+    // Always allow loopback (localhost) requests to prevent locking out local development & internal services
+    if (range === 'loopback') {
+      return next();
+    }
 
     // 1. IP WHITELIST CHECK (INTRANET)
     if (!config.allowExternalIP) {

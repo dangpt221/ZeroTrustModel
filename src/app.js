@@ -80,12 +80,12 @@ export async function createApp() {
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com", "https://esm.sh"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com", "https://esm.sh", "https://accounts.google.com"],
         styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
         imgSrc: ["'self'", "data:", "blob:", "http://localhost:*", "https://lh3.googleusercontent.com", "https://picsum.photos", "https://fastly.picsum.photos", "https://api.dicebear.com", "https://www.gstatic.com"],
         fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
-        connectSrc: ["'self'", "https://esm.sh"],
-        frameSrc: ["'none'"],
+        connectSrc: ["'self'", "https://esm.sh", "https://accounts.google.com", "ws://localhost:5000", "ws://localhost:5173", "wss://localhost:5000"],
+        frameSrc: ["'self'", "https://accounts.google.com"],
         objectSrc: ["'none'"],
         upgradeInsecureRequests: [],
       },
