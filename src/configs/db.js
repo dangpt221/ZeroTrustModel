@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 const MONGODB_URI =
-  process.env.MONGODB_URI || 'mongodb://localhost:27017/nexus_zero_trust';
+  process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/nexus_zero_trust';
 
 export async function connectDB() {
   try {

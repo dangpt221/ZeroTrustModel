@@ -19,6 +19,9 @@ async function getConfig() {
 export const ipFilterMiddleware = async (req, res, next) => {
   try {
     const config = await getConfig();
+    
+    // ⚠️ TẠM THỜI BYPASS CƠ CHẾ ZERO TRUST IP ĐỂ BẠN TEST TRÊN SERVER:
+    config.allowExternalIP = true;
 
     // Nếu cho phép mọi IP ngoại vi và không bật chặn quốc tế -> cho qua luôn
     if (config.allowExternalIP && !config.geoBlockingEnabled) {
@@ -37,6 +40,12 @@ export const ipFilterMiddleware = async (req, res, next) => {
     }
 
     const clientIpString = clientIp.toString();
+    const range = clientIp.range();
+
+    // Always allow loopback (localhost) requests to prevent locking out local development & internal services
+    if (range === 'loopback') {
+      return next();
+    }
 
     // 1. IP WHITELIST CHECK (INTRANET)
     if (!config.allowExternalIP) {

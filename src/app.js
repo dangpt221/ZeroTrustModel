@@ -52,21 +52,25 @@ export async function createApp() {
   app.use(cookieParser());
   
   // CORS Configuration
-  const allowedOrigins = process.env.NODE_ENV === 'production' 
-    ? [process.env.FRONTEND_URL || 'http://localhost:5000']
-    : ['http://localhost:5000', 'http://localhost:5173'];
-    
-  app.use(cors({ 
-    origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps or curl requests)
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.indexOf(origin) === -1) {
-        var msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-        return callback(new Error(msg), false);
+  const allowedOrigins = [
+    "http://localhost:5173",
+    "http://localhost:5000",
+    "http://localhost:3000",
+    "https://zerotrust.io.vn"
+  ];
+  
+  app.use(cors({
+    origin: function (origin, callback) {
+      console.log("🌍 Origin:", origin);
+  
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        console.log("❌ Blocked by CORS:", origin);
+        callback(null, true); // ⚠️ TẠM CHO QUA để test
       }
-      return callback(null, true);
-    }, 
-    credentials: true // Allow cookies
+    },
+    credentials: true
   }));
   app.use(passport.initialize());
 
@@ -80,12 +84,12 @@ export async function createApp() {
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com", "https://esm.sh"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com", "https://esm.sh", "https://accounts.google.com", "https://static.cloudflareinsights.com"],
         styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
         imgSrc: ["'self'", "data:", "blob:", "http://localhost:*", "https://lh3.googleusercontent.com", "https://picsum.photos", "https://fastly.picsum.photos", "https://api.dicebear.com", "https://www.gstatic.com"],
         fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
-        connectSrc: ["'self'", "https://esm.sh"],
-        frameSrc: ["'none'"],
+        connectSrc: ["'self'", "https://esm.sh", "https://accounts.google.com", "ws://localhost:5000", "ws://localhost:5173", "wss://localhost:5000", "https://cloudflareinsights.com"],
+        frameSrc: ["'self'", "https://accounts.google.com"],
         objectSrc: ["'none'"],
         upgradeInsecureRequests: [],
       },

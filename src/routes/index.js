@@ -23,32 +23,37 @@ export function registerRoutes(app, io) {
   const router = express.Router();
 
   // Google OAuth routes - must be BEFORE authMiddleware
-  router.get("/auth/google", passport.authenticate("google", { scope: ["profile", "email"], session: false }));
+  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+    router.get("/auth/google", passport.authenticate("google", { scope: ["profile", "email"], session: false }));
 
-  // Google OAuth Callback - with proper token generation
-  router.get(
-    "/auth/google/callback",
-    passport.authenticate("google", { session: false, failureRedirect: "/#/login?error=GoogleAuthFailed" }),
-    async (req, res) => {
-      try {
-        const user = req.user;
-        const { signUserToken, setAuthCookie } = await import('../middleware/auth.js');
+    // Google OAuth Callback - with proper token generation
+    router.get(
+      "/auth/google/callback",
+      passport.authenticate("google", { session: false, failureRedirect: "/#/login?error=GoogleAuthFailed" }),
+      async (req, res) => {
+        try {
+          const user = req.user;
+          const { signUserToken, setAuthCookie } = await import('../middleware/auth.js');
 
-        if (!user || user.isLocked) {
-          return res.redirect("/#/login?error=AccountLocked");
+          if (!user || user.isLocked) {
+            return res.redirect("/#/login?error=AccountLocked");
+          }
+
+          // Generate JWT token
+          const token = signUserToken(user);
+          setAuthCookie(res, token);
+
+          res.redirect("/#/");
+        } catch (err) {
+          console.error('OAuth callback error:', err);
+          res.redirect("/#/login?error=InternalError");
         }
-
-        // Generate JWT token
-        const token = signUserToken(user);
-        setAuthCookie(res, token);
-
-        res.redirect("/#/");
-      } catch (err) {
-        console.error('OAuth callback error:', err);
-        res.redirect("/#/login?error=InternalError");
       }
-    }
-  );
+    );
+  } else {
+    // If not configured, provide a friendly endpoint so the frontend doesn't crash the server
+    router.get("/auth/google", (req, res) => res.status(503).json({ error: "Google Login is not configured on this server." }));
+  }
 
   // Auth middleware for all other routes
   router.use(authMiddleware);
