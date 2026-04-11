@@ -125,28 +125,28 @@ export const Login: React.FC = () => {
 
       <div className="w-full max-w-md z-10 space-y-8">
         <div className="flex flex-col items-center text-center space-y-4">
-          <div className="w-20 h-20 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl flex items-center justify-center shadow-2xl shadow-blue-500/40 transform -rotate-3 hover:rotate-0 transition-transform duration-500">
-            <Shield className="text-white" size={40} />
+          <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl md:rounded-3xl flex items-center justify-center shadow-2xl shadow-blue-500/40 transform -rotate-3 hover:rotate-0 transition-transform duration-500">
+            <Shield className="text-white w-8 h-8 md:w-10 md:h-10" />
           </div>
           <div>
-            <h1 className="text-3xl font-black text-white tracking-tighter uppercase italic">Nexus Zero Trust</h1>
-            <p className="text-slate-400 font-medium text-sm">Hệ thống quản lý định danh & truy cập bảo mật</p>
+            <h1 className="text-2xl md:text-3xl font-black text-white tracking-tighter uppercase italic">Nexus Zero Trust</h1>
+            <p className="text-slate-400 font-medium text-xs md:text-sm mt-1">Hệ thống quản lý định danh & truy cập bảo mật</p>
           </div>
         </div>
 
-        <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-10 rounded-[40px] shadow-2xl relative overflow-hidden">
+        <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-6 md:p-10 rounded-[30px] md:rounded-[40px] shadow-2xl relative overflow-hidden">
           {/* Internal gradient line */}
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent opacity-50"></div>
 
           {/* Zero Trust Security Badge */}
-          <div className="absolute top-4 right-4">
+          <div className="absolute top-4 right-4 hidden sm:block">
             <div className="flex items-center gap-1.5 bg-blue-500/10 border border-blue-500/20 rounded-full px-2 py-1">
               <Shield size={12} className="text-blue-400" />
               <span className="text-[9px] font-bold text-blue-400 uppercase tracking-wider">Zero Trust</span>
             </div>
           </div>
 
-          <h2 className="text-xl font-bold text-white mb-8 text-center">
+          <h2 className="text-lg md:text-xl font-bold text-white mb-6 md:mb-8 text-center pt-2 sm:pt-0">
             {needsMFA ? 'Xác thực hai lớp' : 'Đăng nhập hệ thống'}
           </h2>
 
@@ -187,7 +187,7 @@ export const Login: React.FC = () => {
                       required
                       value={formData.email}
                       onChange={handleInputChange}
-                      className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-600 font-medium"
+                      className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 md:py-4 pl-12 pr-4 text-white text-sm md:text-base focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-600 font-medium"
                       placeholder="admin@nexus.com hoặc member@nexus.com"
                     />
                   </div>
@@ -206,7 +206,7 @@ export const Login: React.FC = () => {
                       required
                       value={formData.password}
                       onChange={handleInputChange}
-                      className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-600 font-medium"
+                      className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 md:py-4 pl-12 pr-4 text-white text-sm md:text-base focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-600 font-medium"
                       placeholder="••••••••"
                     />
                   </div>
@@ -248,7 +248,7 @@ export const Login: React.FC = () => {
                     maxLength={6}
                     value={formData.mfaCode}
                     onChange={(e) => setFormData(prev => ({ ...prev, mfaCode: e.target.value.replace(/\D/g, '') }))}
-                    className="w-full bg-white/5 border-2 border-white/10 rounded-2xl py-5 text-center text-3xl tracking-[0.4em] font-mono font-black text-white focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                    className="w-full bg-white/5 border-2 border-white/10 rounded-2xl py-4 md:py-5 text-center text-2xl md:text-3xl tracking-[0.3em] md:tracking-[0.4em] font-mono font-black text-white focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
                     placeholder="000000"
                     autoFocus
                   />

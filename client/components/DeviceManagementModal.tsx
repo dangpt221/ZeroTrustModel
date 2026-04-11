@@ -94,7 +94,7 @@ export const DeviceManagementModal = ({ onClose }: { onClose: () => void }) => {
 
   return (
     <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/50">
-      <div className="bg-white rounded-xl shadow-2xl w-[500px] p-6 max-h-[80vh] flex flex-col">
+      <div className="bg-white rounded-xl shadow-2xl w-[500px] p-4 md:p-6 max-h-[80vh] flex flex-col">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <Smartphone className="w-6 h-6 text-blue-600" />
@@ -110,7 +110,7 @@ export const DeviceManagementModal = ({ onClose }: { onClose: () => void }) => {
         </p>
 
         {loading ? (
-          <div className="flex-1 flex items-center justify-center p-8">
+          <div className="flex-1 flex items-center justify-center p-4 md:p-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           </div>
         ) : error ? (
@@ -118,7 +118,7 @@ export const DeviceManagementModal = ({ onClose }: { onClose: () => void }) => {
             <AlertTriangle size={16} /> {error}
           </div>
         ) : devices.length === 0 ? (
-          <div className="text-center p-8 text-slate-500 text-sm">Chưa có thiết bị nào</div>
+          <div className="text-center p-4 md:p-8 text-slate-500 text-sm">Chưa có thiết bị nào</div>
         ) : (
           <div className="flex-1 overflow-y-auto space-y-3">
             {devices.map(device => {

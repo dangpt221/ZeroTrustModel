@@ -159,10 +159,7 @@ export const HoneytokenManagement: React.FC = () => {
     <div className="space-y-6 animate-in fade-in duration-700">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-black text-slate-800 tracking-tight uppercase italic">Honeytoken</h2>
-          <p className="text-slate-500 text-sm font-medium">File bait — phát hiện xâm nhập dữ liệu sớm nhất</p>
-        </div>
+        
         <div className="flex gap-3">
           <button
             onClick={loadTokens}
@@ -274,19 +271,19 @@ export const HoneytokenManagement: React.FC = () => {
         <table className="w-full text-left">
           <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-widest">
             <tr>
-              <th className="px-8 py-5">Honeytoken</th>
-              <th className="px-8 py-5">Loại</th>
-              <th className="px-8 py-5">Trạng thái</th>
-              <th className="px-8 py-5">Trigger</th>
-              <th className="px-8 py-5">Hết hạn</th>
-              <th className="px-8 py-5">Ngày tạo</th>
-              <th className="px-8 py-5 text-right">Hành động</th>
+              <th className="px-4 md:px-8 py-5">Honeytoken</th>
+              <th className="px-4 md:px-8 py-5">Loại</th>
+              <th className="px-4 md:px-8 py-5">Trạng thái</th>
+              <th className="px-4 md:px-8 py-5">Trigger</th>
+              <th className="px-4 md:px-8 py-5">Hết hạn</th>
+              <th className="px-4 md:px-8 py-5">Ngày tạo</th>
+              <th className="px-4 md:px-8 py-5 text-right">Hành động</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
             {filteredTokens.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-8 py-16 text-center text-slate-400">
+                <td colSpan={7} className="px-4 md:px-8 py-16 text-center text-slate-400">
                   <Bug size={32} className="mx-auto mb-2 opacity-30" />
                   <p className="text-sm">Không tìm thấy honeytoken nào</p>
                 </td>
@@ -294,7 +291,7 @@ export const HoneytokenManagement: React.FC = () => {
             ) : (
               filteredTokens.map(token => (
                 <tr key={token._id || token.id} className="hover:bg-emerald-50/20 transition-colors group">
-                  <td className="px-8 py-5">
+                  <td className="px-4 md:px-8 py-5">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-slate-100 text-slate-400 group-hover:bg-emerald-100 group-hover:text-emerald-600 rounded-xl transition-all">
                         {token.triggered ? <Bug size={18} className="text-rose-500" /> : <Shield size={18} />}
@@ -305,13 +302,13 @@ export const HoneytokenManagement: React.FC = () => {
                       </div>
                     </div>
                   </td>
-                  <td className="px-8 py-5">
+                  <td className="px-4 md:px-8 py-5">
                     <span className={`text-[10px] font-black px-2 py-1 rounded-full uppercase flex items-center gap-1 ${getTypeColor(token.type)}`}>
                       {getTypeIcon(token.type)}
                       {token.type.replace('_', ' ')}
                     </span>
                   </td>
-                  <td className="px-8 py-5">
+                  <td className="px-4 md:px-8 py-5">
                     {token.isExpired ? (
                       <span className="text-[10px] font-black px-2 py-1 rounded-full bg-slate-100 text-slate-400">
                         Hết hạn
@@ -330,24 +327,24 @@ export const HoneytokenManagement: React.FC = () => {
                       </span>
                     )}
                   </td>
-                  <td className="px-8 py-5">
+                  <td className="px-4 md:px-8 py-5">
                     <span className={`text-sm font-black ${token.triggerCount > 0 ? 'text-rose-600' : 'text-slate-400'}`}>
                       {token.triggerCount || 0}
                     </span>
                   </td>
-                  <td className="px-8 py-5">
+                  <td className="px-4 md:px-8 py-5">
                     <span className="text-xs text-slate-500">
                       {token.expiresAt
                         ? new Date(token.expiresAt).toLocaleDateString('vi-VN')
                         : 'Không có'}
                     </span>
                   </td>
-                  <td className="px-8 py-5">
+                  <td className="px-4 md:px-8 py-5">
                     <span className="text-xs text-slate-500">
                       {new Date(token.createdAt).toLocaleDateString('vi-VN')}
                     </span>
                   </td>
-                  <td className="px-8 py-5 text-right">
+                  <td className="px-4 md:px-8 py-5 text-right">
                     <div className="flex justify-end gap-1">
                       <button
                         onClick={() => { setSelectedToken(token); setShowDetailModal(true); }}
@@ -525,7 +522,7 @@ export const HoneytokenManagement: React.FC = () => {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-6 text-slate-400 bg-slate-50 rounded-xl">
+                <div className="text-center py-4 md:py-6 text-slate-400 bg-slate-50 rounded-xl">
                   <Shield size={24} className="mx-auto mb-1 opacity-30" />
                   <p className="text-xs">Chưa có ai truy cập honeytoken này</p>
                 </div>

@@ -104,17 +104,17 @@ export const Dashboard: React.FC = () => {
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="px-10 pb-10 space-y-8"
+      className="px-4 sm:px-6 lg:px-10 pb-6 lg:pb-10 space-y-4 lg:space-y-8"
     >
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {projectStats.map((stat) => (
           <motion.div
             key={stat.name}
             variants={itemVariants}
-            className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-5 premium-card"
+            className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 sm:gap-5 premium-card"
           >
-            <div className={`w-12 h-12 ${stat.color} text-white rounded-xl flex items-center justify-center shadow-lg shadow-opacity-20`}>
+            <div className={`w-10 h-10 sm:w-12 sm:h-12 ${stat.color} text-white rounded-xl flex items-center justify-center shadow-lg shadow-opacity-20 flex-shrink-0`}>
               {stat.icon}
             </div>
             <div>
@@ -125,16 +125,16 @@ export const Dashboard: React.FC = () => {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-8">
         {/* Progress Bar Chart */}
-        <motion.div variants={itemVariants} className="lg:col-span-2 bg-white p-8 rounded-2xl shadow-sm border border-slate-100 premium-card">
-          <div className="flex items-center justify-between mb-8">
+        <motion.div variants={itemVariants} className="lg:col-span-2 bg-white p-4 sm:p-6 lg:p-8 rounded-2xl shadow-sm border border-slate-100 premium-card">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 sm:mb-8">
             <h3 className="font-bold text-slate-800 flex items-center gap-2">
               <TrendingUp size={20} className="text-blue-500" />
               Project Completion Progress
             </h3>
           </div>
-          <div className="h-80">
+          <div className="h-[250px] sm:h-80">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -151,12 +151,12 @@ export const Dashboard: React.FC = () => {
         </motion.div>
 
         {/* Task Distribution Pie Chart */}
-        <motion.div variants={itemVariants} className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 premium-card">
-          <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-8">
+        <motion.div variants={itemVariants} className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl shadow-sm border border-slate-100 premium-card">
+          <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-6 sm:mb-8">
             <Target size={20} className="text-blue-500" />
             Active Task Distribution
           </h3>
-          <div className="h-64">
+          <div className="h-[200px] sm:h-64">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -187,7 +187,7 @@ export const Dashboard: React.FC = () => {
 
       {/* Recent Projects List */}
       <motion.div variants={itemVariants} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden premium-card">
-        <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+        <div className="p-4 sm:p-6 border-b border-slate-100 flex items-center justify-between">
           <h3 className="font-bold text-slate-800">My Active Projects</h3>
           <Link to="/projects" className="text-blue-600 text-sm font-semibold hover:underline flex items-center">
             View All <ChevronRight size={16} />
@@ -197,28 +197,28 @@ export const Dashboard: React.FC = () => {
           <table className="w-full text-left">
             <thead className="bg-slate-50 text-slate-500 text-xs font-semibold uppercase tracking-wider">
               <tr>
-                <th className="px-6 py-4">Project Name</th>
-                <th className="px-6 py-4">Manager</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4">Progress</th>
-                <th className="px-6 py-4">Deadline</th>
-                <th className="px-6 py-4 text-right">Action</th>
+                <th className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">Project Name</th>
+                <th className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">Manager</th>
+                <th className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">Status</th>
+                <th className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">Progress</th>
+                <th className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">Deadline</th>
+                <th className="px-4 sm:px-6 py-3 sm:py-4 text-right whitespace-nowrap">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {userProjects.map((project) => (
                 <tr key={project.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-6 py-4">
+                  <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                     <div className="font-semibold text-slate-800">{project.title}</div>
                     <div className="text-xs text-slate-400">{project.department}</div>
                   </td>
-                  <td className="px-6 py-4 text-sm text-slate-600">
+                  <td className="px-4 sm:px-6 py-3 sm:py-4 text-sm text-slate-600 whitespace-nowrap">
                     <div className="flex items-center gap-2">
                       <img src={`https://picsum.photos/seed/${project.managerId}/200`} className="w-6 h-6 rounded-full" />
                       PM
                     </div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                     <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full ${project.status === ProjectStatus.IN_PROGRESS ? 'bg-blue-50 text-blue-600' :
                         project.status === ProjectStatus.COMPLETED ? 'bg-green-50 text-green-600' :
                           'bg-slate-100 text-slate-600'
@@ -226,13 +226,13 @@ export const Dashboard: React.FC = () => {
                       {project.status.replace('_', ' ')}
                     </span>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="w-32 bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                  <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+                    <div className="w-24 sm:w-32 bg-slate-100 h-1.5 rounded-full overflow-hidden">
                       <div className="bg-blue-500 h-full" style={{ width: `${project.progress}%` }}></div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-sm text-slate-500">{project.endDate}</td>
-                  <td className="px-6 py-4 text-right">
+                  <td className="px-4 sm:px-6 py-3 sm:py-4 text-sm text-slate-500 whitespace-nowrap">{project.endDate}</td>
+                  <td className="px-4 sm:px-6 py-3 sm:py-4 text-right whitespace-nowrap">
                     <Link to={`/projects/${project.id}`} className="p-2 hover:bg-slate-100 rounded-lg inline-block text-slate-400 hover:text-blue-600">
                       <ChevronRight size={20} />
                     </Link>

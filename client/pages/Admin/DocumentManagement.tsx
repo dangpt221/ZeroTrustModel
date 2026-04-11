@@ -247,10 +247,7 @@ export const DocumentManagement: React.FC = () => {
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-black text-slate-800 tracking-tight uppercase italic">Toàn văn tài liệu</h2>
-          <p className="text-slate-500 text-sm font-medium">Kiểm soát mức độ nhạy cảm và nhật ký truy cập dữ liệu hệ thống</p>
-        </div>
+        
         <div className="flex gap-3">
           <button
             onClick={() => setShowRequests(!showRequests)}
@@ -297,7 +294,7 @@ export const DocumentManagement: React.FC = () => {
 
       {/* Filter Panel */}
       {isFilterOpen && (
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-lg animate-in slide-in-from-top-2">
+        <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-200 shadow-lg animate-in slide-in-from-top-2">
           <div className="flex items-center justify-between mb-4">
             <h4 className="font-bold text-slate-800">Lọc tài liệu</h4>
             <button onClick={clearFilters} className="text-sm text-blue-600 hover:underline">Xóa bộ lọc</button>
@@ -341,12 +338,12 @@ export const DocumentManagement: React.FC = () => {
           <table className="w-full text-left min-w-[900px]">
             <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 text-xs font-bold uppercase tracking-widest">
             <tr>
-              <th className="px-8 py-6">Tài liệu / Định dạng</th>
-              <th className="px-8 py-6">Bộ phận</th>
-              <th className="px-8 py-6">Phân loại bảo mật</th>
-              <th className="px-8 py-6">Bảo mật</th>
-              <th className="px-8 py-6">Người sở hữu</th>
-              <th className="px-8 py-6 text-right">Quyền hạn</th>
+              <th className="px-4 md:px-8 py-4 md:py-6">Tài liệu / Định dạng</th>
+              <th className="px-4 md:px-8 py-4 md:py-6">Bộ phận</th>
+              <th className="px-4 md:px-8 py-4 md:py-6">Phân loại bảo mật</th>
+              <th className="px-4 md:px-8 py-4 md:py-6">Bảo mật</th>
+              <th className="px-4 md:px-8 py-4 md:py-6">Người sở hữu</th>
+              <th className="px-4 md:px-8 py-4 md:py-6 text-right">Quyền hạn</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
@@ -374,7 +371,7 @@ export const DocumentManagement: React.FC = () => {
                     transition={{ duration: 0.3, delay: index * 0.05 }}
                     className="hover:bg-blue-50/40 transition-all duration-300 group hover:-translate-y-0.5"
                   >
-                    <td className="px-8 py-5">
+                    <td className="px-4 md:px-8 py-5">
                       <div className="flex items-center gap-4">
                         <div className="p-3 bg-slate-100 text-slate-400 group-hover:bg-blue-100 group-hover:text-blue-600 rounded-2xl transition-all shadow-sm group-hover:shadow">
                           <FileText size={20} />
@@ -385,12 +382,12 @@ export const DocumentManagement: React.FC = () => {
                         </div>
                       </div>
                     </td>
-                    <td className="px-8 py-5">
+                    <td className="px-4 md:px-8 py-5">
                       <span className="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-lg uppercase tracking-wider">
                         {doc.departmentName || '-'}
                       </span>
                     </td>
-                    <td className="px-8 py-5">
+                    <td className="px-4 md:px-8 py-5">
                       <div className="flex items-center gap-2">
                         <div className={`w-2 h-2 rounded-full ${
                           doc.sensitivity === 'CRITICAL' ? 'bg-rose-500 shadow-rose-500/50 shadow blur-[1px]' :
@@ -404,7 +401,7 @@ export const DocumentManagement: React.FC = () => {
                         </span>
                       </div>
                     </td>
-                    <td className="px-8 py-5">
+                    <td className="px-4 md:px-8 py-5">
                       <div className="flex items-center gap-1">
                         {/* Security Level Badge */}
                         <span className={`text-xs font-bold px-3 py-1.5 rounded-lg uppercase tracking-wider ${
@@ -446,10 +443,10 @@ export const DocumentManagement: React.FC = () => {
                         )}
                       </div>
                     </td>
-                    <td className="px-8 py-5 text-sm font-bold text-slate-600">
+                    <td className="px-4 md:px-8 py-5 text-sm font-bold text-slate-600">
                       {doc.ownerName || doc.ownerId ? `U-${doc.ownerId?.slice(-4)}` : '-'}
                     </td>
-                    <td className="px-8 py-5 text-right">
+                    <td className="px-4 md:px-8 py-5 text-right">
                       <div className="flex justify-end gap-1">
                         <button onClick={() => setViewingDoc(doc)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 focus:ring-2 focus:ring-blue-100 rounded-xl transition-all">
                           <Eye size={18} />
@@ -500,7 +497,7 @@ export const DocumentManagement: React.FC = () => {
           {/* File Upload */}
           <div>
             <label className="text-xs font-bold text-slate-500 uppercase">Tai file len</label>
-            <div className={`mt-1 border-2 border-dashed rounded-xl p-6 text-center transition-colors ${
+            <div className={`mt-1 border-2 border-dashed rounded-xl p-4 md:p-6 text-center transition-colors ${
               selectedFile ? 'border-blue-500 bg-blue-50' : 'border-slate-300 hover:border-blue-400'
             }`}>
               <input
@@ -780,9 +777,9 @@ export const DocumentManagement: React.FC = () => {
           </div>
 
           {requestLoading ? (
-            <div className="p-8 text-center text-slate-400 bg-slate-50 rounded-xl font-medium">Đang tải...</div>
+            <div className="p-4 md:p-8 text-center text-slate-400 bg-slate-50 rounded-xl font-medium">Đang tải...</div>
           ) : requests.length === 0 ? (
-            <div className="p-8 text-center text-slate-400 bg-slate-50 rounded-xl font-medium">Không có yêu cầu nào</div>
+            <div className="p-4 md:p-8 text-center text-slate-400 bg-slate-50 rounded-xl font-medium">Không có yêu cầu nào</div>
           ) : (
             <div className="divide-y divide-slate-100 bg-white border border-slate-100 rounded-xl overflow-hidden shadow-sm max-h-[60vh] overflow-y-auto">
               {requests.map((request: any) => (

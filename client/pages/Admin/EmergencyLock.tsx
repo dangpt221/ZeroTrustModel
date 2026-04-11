@@ -134,10 +134,7 @@ export const EmergencyLock: React.FC = () => {
     <div className="space-y-6 animate-in fade-in duration-700">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-black text-slate-800 tracking-tight uppercase italic">Khóa khẩn cấp</h2>
-          <p className="text-slate-500 text-sm font-medium">Giám sát và kiểm soát các tình huống khẩn cấp</p>
-        </div>
+        
         <button
           onClick={loadData}
           className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all"
@@ -148,7 +145,7 @@ export const EmergencyLock: React.FC = () => {
       </div>
 
       {/* Emergency Status Card */}
-      <div className={`rounded-[32px] border-2 p-8 transition-all ${
+      <div className={`rounded-[32px] border-2 p-4 md:p-8 transition-all ${
         status?.isLocked
           ? 'bg-rose-50 border-rose-200 animate-pulse'
           : 'bg-emerald-50 border-emerald-200'
@@ -238,7 +235,7 @@ export const EmergencyLock: React.FC = () => {
       {/* Anomaly Detection */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Anomaly Stats */}
-        <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-8">
+        <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-4 md:p-8">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <div className="p-3 bg-amber-100 text-amber-600 rounded-xl">
@@ -292,7 +289,7 @@ export const EmergencyLock: React.FC = () => {
         </div>
 
         {/* Active Download Links */}
-        <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-8">
+        <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-4 md:p-8">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-3 bg-sky-100 text-sky-600 rounded-xl">
               <Link2 size={24} />
@@ -339,7 +336,7 @@ export const EmergencyLock: React.FC = () => {
       </div>
 
       {/* Active Streaming Sessions */}
-      <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-8">
+      <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-4 md:p-8">
         <div className="flex items-center gap-3 mb-6">
           <div className="p-3 bg-emerald-100 text-emerald-600 rounded-xl">
             <Activity size={24} />

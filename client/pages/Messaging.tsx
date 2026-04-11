@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  ChevronRight, Hash, Lock, MessageCircle, MessageSquare,
+  ArrowLeft, ChevronRight, Hash, Lock, MessageCircle, MessageSquare,
   MoreVertical, Pin, Plus, Search, Send, Shield, Smile,
   Trash2, Users, Wifi, WifiOff, X
 } from 'lucide-react';
@@ -471,7 +471,7 @@ export const Messaging: React.FC = () => {
   if (requiresRecovery) {
     return (
       <div className="flex-1 w-full h-full flex flex-col items-center justify-center bg-slate-50">
-        <div className="bg-white p-8 rounded-2xl shadow-xl max-w-sm w-full text-center">
+        <div className="bg-white p-4 md:p-8 rounded-2xl shadow-xl max-w-sm w-full text-center">
           <Shield className="w-16 h-16 text-blue-500 mx-auto mb-4" />
           <h2 className="text-xl font-bold text-slate-800 mb-2">Khôi phục Mã hóa Cuối (E2EE)</h2>
           <p className="text-sm text-slate-500 mb-6">Bạn đang đăng nhập trên thiết bị mới. Hãy nhập mã PIN 6 số mà bạn đã thiết lập để khôi phục khóa và tin nhắn bảo mật.</p>
@@ -506,9 +506,9 @@ export const Messaging: React.FC = () => {
   }
 
   return (
-    <div className="flex-1 w-full h-full flex bg-white overflow-hidden">
+    <div className="flex-1 w-full h-full flex bg-white overflow-hidden relative">
       {/* Sidebar */}
-      <div className="w-72 border-r border-slate-200 flex flex-col bg-slate-50 shrink-0">
+      <div className={`w-full md:w-72 border-r border-slate-200 flex-col bg-slate-50 shrink-0 ${activeRoom ? 'hidden md:flex' : 'flex'}`}>
         {/* Header */}
         <div className="px-4 py-3 border-b border-slate-200 bg-white">
           <div className="flex items-center justify-between mb-3">
@@ -703,11 +703,17 @@ export const Messaging: React.FC = () => {
       </div>
 
       {/* Chat Area */}
-      <div className="flex-1 flex flex-col bg-white min-w-0">
+      <div className={`flex-1 flex-col bg-white min-w-0 ${!activeRoom ? 'hidden md:flex' : 'flex'} absolute md:relative inset-0 md:inset-auto`}>
         {/* Chat Header */}
-        <div className="h-16 px-5 border-b border-slate-200 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <div className={`p-2 ${themeIconBg} ${themeText} rounded-lg`}>
+        <div className="h-16 px-3 md:px-5 border-b border-slate-200 flex items-center justify-between shrink-0 bg-white">
+          <div className="flex items-center gap-2 md:gap-3">
+            <button
+              onClick={() => joinRoom('')}
+              className="md:hidden p-2 -ml-1 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <div className={`p-2 ${themeIconBg} ${themeText} rounded-lg hidden md:block`}>
               <Hash size={18} />
             </div>
             <div>
@@ -936,7 +942,7 @@ export const Messaging: React.FC = () => {
         {/* Setup PIN Backup Modal */}
         {showSetupPinModal && (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50">
-            <div className="bg-white rounded-xl shadow-2xl w-96 p-6 text-center">
+            <div className="bg-white rounded-xl shadow-2xl w-96 p-4 md:p-6 text-center">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-bold text-slate-800 mx-auto text-lg">Tạo mã PIN Bảo mật</h3>
                 <button onClick={() => setShowSetupPinModal(false)} className="text-slate-400 hover:text-slate-600 absolute right-6 top-6">

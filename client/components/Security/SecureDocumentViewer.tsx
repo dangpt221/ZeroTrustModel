@@ -143,7 +143,7 @@ export const SecureDocumentViewer: React.FC<SecureDocumentViewerProps> = ({
       {/* Main container */}
       <div className="relative bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap border-b border-slate-100 bg-slate-50">
           <div className="flex items-center gap-3">
             <div className={`w-3 h-3 rounded-full ${isHighSecurity ? 'bg-rose-500 animate-pulse' : 'bg-green-500'}`} />
             <div>
@@ -174,7 +174,7 @@ export const SecureDocumentViewer: React.FC<SecureDocumentViewerProps> = ({
 
         {/* Document area */}
         <div
-          className="flex-1 overflow-auto p-6 relative"
+          className="flex-1 overflow-auto p-4 md:p-6 relative"
           onMouseLeave={handleMouseLeave}
           onContextMenu={handleContextMenu}
         >
@@ -213,7 +213,7 @@ export const SecureDocumentViewer: React.FC<SecureDocumentViewerProps> = ({
               />
             ) : document.content ? (
               <div
-                className="prose max-w-none p-8 bg-white rounded-lg border border-slate-200 min-h-[400px]"
+                className="prose max-w-none p-4 md:p-8 bg-white rounded-lg border border-slate-200 min-h-[400px]"
                 onContextMenu={handleContextMenu}
                 onCopy={handleCopy}
               >
@@ -285,7 +285,7 @@ const PrintProtection: React.FC = () => {
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[100]">
-      <div className="bg-white rounded-2xl p-8 max-w-md text-center shadow-2xl">
+      <div className="bg-white rounded-2xl p-4 md:p-8 max-w-md text-center shadow-2xl">
         <div className="text-5xl mb-4">🖨️</div>
         <h3 className="text-xl font-bold text-slate-800 mb-2">Cảnh Báo In Ấn</h3>
         <p className="text-slate-600 mb-4">

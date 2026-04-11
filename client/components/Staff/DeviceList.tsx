@@ -60,7 +60,7 @@ export const DeviceList: React.FC = () => {
   };
 
   return (
-    <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm space-y-6">
+    <div className="bg-white p-4 md:p-8 rounded-[32px] border border-slate-100 shadow-sm space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
           <Monitor size={16} className="text-emerald-500" /> Thiết bị được tin cậy

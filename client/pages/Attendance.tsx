@@ -115,7 +115,7 @@ export const Attendance: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8">
         {/* Main Action Card */}
         <div className="lg:col-span-1">
           <div className="bg-white rounded-[40px] border border-slate-100 shadow-xl overflow-hidden p-10 text-center space-y-8 relative">
@@ -190,7 +190,7 @@ export const Attendance: React.FC = () => {
 
         {/* History Card */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white rounded-[40px] border border-slate-100 shadow-sm p-8">
+          <div className="bg-white rounded-[40px] border border-slate-100 shadow-sm p-4 md:p-8">
             <div className="flex justify-between items-center mb-8 px-2">
               <h3 className="font-black text-slate-800 text-xs uppercase tracking-[0.2em] flex items-center gap-2">
                 <History size={18} className="text-blue-600" /> Nhật ký chấm công
@@ -259,7 +259,7 @@ export const Attendance: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-amber-50 p-8 rounded-[40px] border border-amber-100 flex gap-6 items-start">
+          <div className="bg-amber-50 p-4 md:p-8 rounded-[40px] border border-amber-100 flex gap-6 items-start">
             <div className="p-3 bg-amber-100 text-amber-600 rounded-2xl shrink-0">
               <AlertCircle size={24} />
             </div>

@@ -22,7 +22,7 @@ export const DocumentAccessRequestModal: React.FC<DocumentAccessRequestModalProp
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onClose}></div>
       <div className="bg-white w-full max-w-md rounded-[32px] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 duration-300">
-        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-amber-50/30">
+        <div className="p-4 md:p-6 border-b border-slate-100 flex justify-between items-center bg-amber-50/30">
           <div className="flex items-center gap-3 text-amber-600">
             <ShieldAlert size={24} />
             <h3 className="text-lg font-black uppercase italic tracking-tight">Yêu cầu truy cập JIT</h3>
@@ -32,7 +32,7 @@ export const DocumentAccessRequestModal: React.FC<DocumentAccessRequestModalProp
           </button>
         </div>
 
-        <div className="p-8 space-y-6">
+        <div className="p-4 md:p-8 space-y-6">
           <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
             <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Tài liệu yêu cầu</p>
             <p className="text-sm font-bold text-slate-800">{document.name}</p>

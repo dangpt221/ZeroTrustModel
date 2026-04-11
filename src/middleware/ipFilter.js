@@ -40,7 +40,9 @@ export const ipFilterMiddleware = async (req, res, next) => {
 
     // 1. IP WHITELIST CHECK (INTRANET)
     if (!config.allowExternalIP) {
-      let isWhitelisted = false;
+      const range = clientIp.range();
+      let isWhitelisted = (range === 'loopback');
+
       for (const allowRule of config.ipWhitelist) {
         try {
           if (allowRule.includes('/')) {

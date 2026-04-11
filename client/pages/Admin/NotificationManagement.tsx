@@ -166,10 +166,7 @@ export const NotificationManagement: React.FC = () => {
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-black text-slate-800 tracking-tight uppercase italic">Quản lý thông báo</h2>
-          <p className="text-slate-500 text-sm">Gửi thông báo và cập nhật cho nhân sự</p>
-        </div>
+        
         <div className="flex gap-3">
           <button
             onClick={handleRefresh}
@@ -195,7 +192,7 @@ export const NotificationManagement: React.FC = () => {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+        <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-100 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="p-3 bg-blue-100 text-blue-600 rounded-xl">
               <Bell size={20} />
@@ -206,7 +203,7 @@ export const NotificationManagement: React.FC = () => {
             </div>
           </div>
         </div>
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+        <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-100 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="p-3 bg-amber-100 text-amber-600 rounded-xl">
               <AlertTriangle size={20} />
@@ -219,7 +216,7 @@ export const NotificationManagement: React.FC = () => {
             </div>
           </div>
         </div>
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+        <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-100 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="p-3 bg-red-100 text-red-600 rounded-xl">
               <AlertTriangle size={20} />
@@ -232,7 +229,7 @@ export const NotificationManagement: React.FC = () => {
             </div>
           </div>
         </div>
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+        <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-100 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="p-3 bg-emerald-100 text-emerald-600 rounded-xl">
               <Users size={20} />
@@ -286,7 +283,7 @@ export const NotificationManagement: React.FC = () => {
 
       {/* Notification List */}
       <div className="bg-white rounded-[32px] shadow-sm border border-slate-100 overflow-hidden">
-        <div className="p-6 border-b border-slate-100">
+        <div className="p-4 md:p-6 border-b border-slate-100">
           <h3 className="font-bold text-slate-800">
             Lịch sử thông báo đã gửi
             <span className="ml-2 text-sm font-normal text-slate-400">
@@ -296,14 +293,14 @@ export const NotificationManagement: React.FC = () => {
         </div>
         <div className="divide-y divide-slate-50">
           {loading ? (
-            <div className="p-8 text-center text-slate-400">Đang tải...</div>
+            <div className="p-4 md:p-8 text-center text-slate-400">Đang tải...</div>
           ) : filteredNotifications.length === 0 ? (
-            <div className="p-8 text-center text-slate-400">
+            <div className="p-4 md:p-8 text-center text-slate-400">
               {searchTerm || filterType !== 'ALL' ? 'Không tìm thấy thông báo nào' : 'Chưa có thông báo nào'}
             </div>
           ) : (
             filteredNotifications.map((notif) => (
-              <div key={notif.id} className="p-6 hover:bg-slate-50 transition-colors group">
+              <div key={notif.id} className="p-4 md:p-6 hover:bg-slate-50 transition-colors group">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-start gap-4 flex-1">
                     <div className={`p-2 rounded-xl ${getTypeBadge(notif.type)}`}>

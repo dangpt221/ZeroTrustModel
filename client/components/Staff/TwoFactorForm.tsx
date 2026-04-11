@@ -17,7 +17,7 @@ export const TwoFactorForm: React.FC<TwoFactorFormProps> = ({ isOpen, onClose, o
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose}></div>
-      <div className="bg-white w-full max-w-sm rounded-[40px] shadow-2xl relative z-10 p-8 animate-in zoom-in-95 duration-300">
+      <div className="bg-white w-full max-w-sm rounded-[40px] shadow-2xl relative z-10 p-4 md:p-8 animate-in zoom-in-95 duration-300">
         <button onClick={onClose} className="absolute top-6 right-6 text-slate-400 hover:text-slate-600">
           <X size={24} />
         </button>

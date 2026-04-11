@@ -21,7 +21,7 @@ export const SecurityTips: React.FC = () => {
   const tip = TIPS[currentTip];
 
   return (
-    <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
+    <div className="bg-white p-4 md:p-8 rounded-[40px] border border-slate-100 shadow-sm relative overflow-hidden group transition-all hover:shadow-md">
       <div className="flex items-center gap-3 mb-4">
         <div className="p-2 bg-slate-50 rounded-xl">
           {tip.icon}

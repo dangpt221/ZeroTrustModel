@@ -53,7 +53,7 @@ export const StaffDashboard: React.FC = () => {
 
   if (!user?.departmentId && user?.role !== 'ADMIN') {
     return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center p-8 animate-in fade-in zoom-in duration-700">
+      <div className="min-h-[60vh] flex flex-col items-center justify-center p-4 md:p-8 animate-in fade-in zoom-in duration-700">
         <div className="w-24 h-24 bg-amber-50 text-amber-500 rounded-[32px] flex items-center justify-center mb-8 border border-amber-100 shadow-sm relative overflow-hidden group">
           <div className="absolute inset-0 bg-amber-400/5 translate-y-12 group-hover:translate-y-0 transition-transform duration-700"></div>
           <Users size={40} className="relative z-10" />
@@ -62,7 +62,7 @@ export const StaffDashboard: React.FC = () => {
         <p className="text-slate-500 text-center mt-3 max-w-sm leading-relaxed">
           Tài khoản của bạn đã được kích hoạt, nhưng chưa được phân công vào bộ phận cụ thể. 
         </p>
-        <div className="mt-8 p-6 bg-blue-50 border border-blue-100 rounded-2xl flex items-start gap-4 max-w-md">
+        <div className="mt-8 p-4 md:p-6 bg-blue-50 border border-blue-100 rounded-2xl flex items-start gap-4 max-w-md">
           <Zap className="text-blue-600 shrink-0 mt-1" size={20} />
           <p className="text-sm text-blue-700 leading-relaxed font-medium">
             Vui lòng liên hệ với quản trị viên (Admin) hoặc quản lý bộ phận để được phân quyền vào dự án và truy cập tài liệu.
@@ -96,8 +96,8 @@ export const StaffDashboard: React.FC = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-100 shadow-sm">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center">
               <LayoutGrid size={24} />
@@ -108,7 +108,7 @@ export const StaffDashboard: React.FC = () => {
             </div>
           </div>
         </div>
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+        <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-100 shadow-sm">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-violet-100 text-violet-600 rounded-xl flex items-center justify-center">
               <FileText size={24} />
@@ -119,7 +119,7 @@ export const StaffDashboard: React.FC = () => {
             </div>
           </div>
         </div>
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+        <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-100 shadow-sm">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center">
               <CheckCircle2 size={24} />
@@ -130,7 +130,7 @@ export const StaffDashboard: React.FC = () => {
             </div>
           </div>
         </div>
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+        <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-100 shadow-sm">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center">
               <Clock size={24} />
@@ -143,10 +143,10 @@ export const StaffDashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8">
         {/* Projects */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+          <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-100 shadow-sm">
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-bold text-slate-800">Dự án của tôi</h3>
               <Link to="/" className="text-blue-600 text-sm font-semibold flex items-center gap-1">
@@ -179,7 +179,7 @@ export const StaffDashboard: React.FC = () => {
           </div>
 
           {/* Documents */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+          <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-100 shadow-sm">
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-bold text-slate-800">Tài liệu</h3>
             </div>
@@ -240,7 +240,7 @@ export const StaffDashboard: React.FC = () => {
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Teams */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+          <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-100 shadow-sm">
             <div className="flex items-center gap-2 mb-4">
               <Users size={18} className="text-blue-500" />
               <h3 className="font-bold text-slate-800">Đội ngũ của tôi</h3>
@@ -295,7 +295,7 @@ export const StaffDashboard: React.FC = () => {
           </div>
 
           {/* Personal Info */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+          <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-100 shadow-sm">
             <h3 className="font-bold text-slate-800 mb-4">Thông tin cá nhân</h3>
             <div className="space-y-3">
               <div>

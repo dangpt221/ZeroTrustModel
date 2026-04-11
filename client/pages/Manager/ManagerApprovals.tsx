@@ -163,12 +163,12 @@ export const ManagerApprovals: React.FC = () => {
           <table className="w-full text-left">
             <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-widest">
               <tr>
-                <th className="px-6 py-4">Người yêu cầu</th>
-                <th className="px-6 py-4">Tài liệu</th>
-                <th className="px-6 py-4">Lý do</th>
-                <th className="px-6 py-4">Thời gian yêu cầu</th>
-                <th className="px-6 py-4">Trạng thái</th>
-                <th className="px-6 py-4 text-right">Hành động</th>
+                <th className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">Người yêu cầu</th>
+                <th className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">Tài liệu</th>
+                <th className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">Lý do</th>
+                <th className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">Thời gian yêu cầu</th>
+                <th className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">Trạng thái</th>
+                <th className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-right">Hành động</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -188,7 +188,7 @@ export const ManagerApprovals: React.FC = () => {
                   const docName = getDoc(req.documentId);
                   return (
                     <tr key={req.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-6 py-4">
+                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                         <div className="flex items-center gap-3">
                           <img
                             src={user?.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + req.userId}
@@ -201,16 +201,16 @@ export const ManagerApprovals: React.FC = () => {
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                         <div className="flex items-center gap-2">
                           <FileText size={16} className="text-slate-400 shrink-0" />
                           <span className="text-sm text-slate-600">{docName}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-slate-600 max-w-xs">
+                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-slate-600 max-w-xs">
                         <span className="line-clamp-2" title={req.reason}>{req.reason || '—'}</span>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                         <div>
                           <p className="text-xs font-medium text-slate-700">
                             {req.createdAt ? new Date(req.createdAt).toLocaleString('vi-VN') : '—'}
@@ -222,7 +222,7 @@ export const ManagerApprovals: React.FC = () => {
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full ${
                           req.status === 'PENDING'
                             ? 'bg-amber-50 text-amber-600'
@@ -236,7 +236,7 @@ export const ManagerApprovals: React.FC = () => {
                           {req.status === 'PENDING' ? 'Chờ duyệt' : req.status === 'APPROVED' ? 'Đã duyệt' : 'Từ chối'}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-right">
                         {req.status === 'PENDING' ? (
                           <div className="flex justify-end gap-2">
                             <button

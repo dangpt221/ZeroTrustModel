@@ -53,7 +53,7 @@ export const ManagerDashboard: React.FC = () => {
 
   if (!user?.departmentId && !isAdmin) {
     return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center p-8 animate-in fade-in zoom-in duration-700">
+      <div className="min-h-[60vh] flex flex-col items-center justify-center p-4 md:p-8 animate-in fade-in zoom-in duration-700">
         <div className="w-24 h-24 bg-sky-50 text-sky-500 rounded-[32px] flex items-center justify-center mb-8 border border-sky-100 shadow-sm relative overflow-hidden group">
           <div className="absolute inset-0 bg-sky-400/5 translate-y-12 group-hover:translate-y-0 transition-transform duration-700"></div>
           <ShieldAlert size={40} className="relative z-10" />
@@ -62,7 +62,7 @@ export const ManagerDashboard: React.FC = () => {
         <p className="text-slate-500 text-center mt-3 max-w-sm leading-relaxed">
           Tài khoản quản lý của bạn đã được kích hoạt, nhưng chưa được gán vào bộ phận cụ thể để quản lý.
         </p>
-        <div className="mt-8 p-6 bg-sky-50 border border-sky-100 rounded-2xl flex items-start gap-4 max-w-md">
+        <div className="mt-8 p-4 md:p-6 bg-sky-50 border border-sky-100 rounded-2xl flex items-start gap-4 max-w-md">
           <AlertCircle className="text-sky-600 shrink-0 mt-1" size={20} />
           <p className="text-sm text-sky-700 leading-relaxed font-medium">
             Vui lòng liên hệ với Quản trị viên hệ thống để được gán vào phòng ban tương ứng.
@@ -74,12 +74,9 @@ export const ManagerDashboard: React.FC = () => {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
-      <div>
-        <h2 className="text-3xl font-black text-slate-800 tracking-tight uppercase italic text-sky-600">Manager Insights</h2>
-        <p className="text-slate-500 text-sm font-medium">Báo cáo thời gian thực về tình trạng an ninh và hoạt động của bộ phận</p>
-      </div>
+      
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StaffStatsCard
           title="Tổng nhân viên"
           value={loading ? '...' : departmentStaff.length.toString()}
@@ -115,9 +112,9 @@ export const ManagerDashboard: React.FC = () => {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-8">
         {/* Projects Overview */}
-        <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
+        <div className="bg-white p-4 md:p-8 rounded-3xl border border-slate-100 shadow-sm">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-bold text-slate-800">Dự án của bộ phận</h3>
             <Link to="/manager/projects" className="text-blue-600 text-sm font-semibold flex items-center gap-1">
@@ -155,7 +152,7 @@ export const ManagerDashboard: React.FC = () => {
         </div>
 
         {/* Team Members */}
-        <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
+        <div className="bg-white p-4 md:p-8 rounded-3xl border border-slate-100 shadow-sm">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-bold text-slate-800">Nhân viên trong bộ phận</h3>
             <Link to="/manager/staff" className="text-blue-600 text-sm font-semibold flex items-center gap-1">

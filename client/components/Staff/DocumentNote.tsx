@@ -19,7 +19,7 @@ export const DocumentNote: React.FC<DocumentNoteProps> = ({ isOpen, onClose, doc
     <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onClose}></div>
       <div className="bg-white w-full max-w-md rounded-[32px] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 duration-300">
-        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-sky-50/30">
+        <div className="p-4 md:p-6 border-b border-slate-100 flex justify-between items-center bg-sky-50/30">
           <div className="flex items-center gap-3 text-sky-600">
             <MessageSquare size={20} />
             <h3 className="text-sm font-black uppercase tracking-tight">Ghi chú tài liệu</h3>
@@ -29,7 +29,7 @@ export const DocumentNote: React.FC<DocumentNoteProps> = ({ isOpen, onClose, doc
           </button>
         </div>
 
-        <div className="p-8 space-y-4">
+        <div className="p-4 md:p-8 space-y-4">
           <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 mb-2">
             <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Tài liệu</p>
             <p className="text-xs font-bold text-slate-700">{docName}</p>

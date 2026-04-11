@@ -373,33 +373,7 @@ export const ChatManagement: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-black text-slate-800 tracking-tight uppercase italic">
-            Quan ly Chat noi bo
-          </h2>
-          <p className="text-slate-500 text-sm font-medium">
-            Giam sat va quan ly he thong chat nội bộ
-          </p>
-        </div>
-        <div className="flex gap-3">
-          {(isSuperAdmin || isAdmin) && (
-            <button
-              onClick={() => setIsPolicyOpen(true)}
-              className="bg-white border border-slate-200 px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-slate-50"
-            >
-              <Settings size={18} /> Cau hinh
-            </button>
-          )}
-          <button
-            onClick={() => handleExportLogs('csv')}
-            className="bg-emerald-600 text-white px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-emerald-700"
-          >
-            <Download size={18} /> Xuat log
-          </button>
-        </div>
-      </div>
+
 
       {/* Stats */}
       {stats && (
@@ -511,18 +485,18 @@ export const ChatManagement: React.FC = () => {
             <table className="w-full">
               <thead className="bg-slate-50 border-b border-slate-100">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-black text-slate-500 uppercase">Phong</th>
-                  <th className="px-6 py-4 text-left text-xs font-black text-slate-500 uppercase">Loai</th>
-                  <th className="px-6 py-4 text-left text-xs font-black text-slate-500 uppercase">Thanh vien</th>
-                  <th className="px-6 py-4 text-left text-xs font-black text-slate-500 uppercase">Tin nhan</th>
-                  <th className="px-6 py-4 text-left text-xs font-black text-slate-500 uppercase">Trang thai</th>
-                  <th className="px-6 py-4 text-right text-xs font-black text-slate-500 uppercase">Thao tac</th>
+                  <th className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-left text-xs font-black text-slate-500 uppercase">Phong</th>
+                  <th className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-left text-xs font-black text-slate-500 uppercase">Loai</th>
+                  <th className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-left text-xs font-black text-slate-500 uppercase">Thanh vien</th>
+                  <th className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-left text-xs font-black text-slate-500 uppercase">Tin nhan</th>
+                  <th className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-left text-xs font-black text-slate-500 uppercase">Trang thai</th>
+                  <th className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-right text-xs font-black text-slate-500 uppercase">Thao tac</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {filteredRooms.map(room => (
                   <tr key={room.id} className="hover:bg-blue-50/20">
-                    <td className="px-6 py-4">
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
                         <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
                           <MessageSquare size={18} />
@@ -533,21 +507,21 @@ export const ChatManagement: React.FC = () => {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                       <span className="text-xs font-bold px-2 py-1 rounded bg-slate-100 text-slate-600">
                         {room.type}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                       <div className="flex items-center gap-1 text-slate-600">
                         <Users size={16} />
                         <span className="font-bold">{room.memberCount}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-slate-600 font-bold">
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-slate-600 font-bold">
                       {room.messageCount}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                       {room.isLocked ? (
                         <span className="flex items-center gap-1 text-xs font-bold text-rose-600">
                           <Lock size={14} /> Bi khoa
@@ -558,7 +532,7 @@ export const ChatManagement: React.FC = () => {
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-right">
                       <button
                         onClick={() => {
                           setSelectedRoom(room);
@@ -605,23 +579,23 @@ export const ChatManagement: React.FC = () => {
             <table className="w-full">
               <thead className="bg-slate-50 border-b border-slate-100">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-black text-slate-500 uppercase">Nguoi gui</th>
-                  <th className="px-6 py-4 text-left text-xs font-black text-slate-500 uppercase">Noi dung</th>
-                  <th className="px-6 py-4 text-left text-xs font-black text-slate-500 uppercase">Phong</th>
-                  <th className="px-6 py-4 text-left text-xs font-black text-slate-500 uppercase">Thoi gian</th>
-                  <th className="px-6 py-4 text-right text-xs font-black text-slate-500 uppercase">Thao tac</th>
+                  <th className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-left text-xs font-black text-slate-500 uppercase">Nguoi gui</th>
+                  <th className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-left text-xs font-black text-slate-500 uppercase">Noi dung</th>
+                  <th className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-left text-xs font-black text-slate-500 uppercase">Phong</th>
+                  <th className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-left text-xs font-black text-slate-500 uppercase">Thoi gian</th>
+                  <th className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-right text-xs font-black text-slate-500 uppercase">Thao tac</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {messages.map(msg => (
                   <tr key={msg.id} className="hover:bg-blue-50/20">
-                    <td className="px-6 py-4 font-bold text-slate-800">{msg.userName}</td>
-                    <td className="px-6 py-4 text-slate-600 max-w-md truncate">{msg.text}</td>
-                    <td className="px-6 py-4 text-slate-500">{msg.room}</td>
-                    <td className="px-6 py-4 text-slate-400 text-sm">
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap font-bold text-slate-800">{msg.userName}</td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-slate-600 max-w-md truncate">{msg.text}</td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-slate-500">{msg.room}</td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-slate-400 text-sm">
                       {new Date(msg.createdAt).toLocaleString('vi-VN')}
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-right">
                       {(isSuperAdmin || isAdmin) && (
                         <button
                           onClick={() => {
@@ -644,10 +618,10 @@ export const ChatManagement: React.FC = () => {
 
       {/* Policy Tab */}
       {activeTab === 'policy' && policy && (
-        <div className="bg-white rounded-2xl border border-slate-100 p-6 space-y-6">
+        <div className="bg-white rounded-2xl border border-slate-100 p-4 md:p-6 space-y-6">
           <h3 className="text-lg font-bold text-slate-800">Cau hinh chinh sach Chat</h3>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
               <h4 className="font-bold text-slate-700 mb-3">Luu tru tin nhan</h4>
               <div className="space-y-3">

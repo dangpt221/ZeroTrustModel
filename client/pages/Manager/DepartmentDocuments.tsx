@@ -87,10 +87,7 @@ export const DepartmentDocuments: React.FC = () => {
   return (
     <div className="space-y-6 animate-in fade-in duration-700">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-black text-slate-800 tracking-tight uppercase italic">Tài liệu bộ phận</h2>
-          <p className="text-slate-500 text-sm font-medium">Quản lý và cấp quyền truy cập tài nguyên dữ liệu bộ phận</p>
-        </div>
+        
         <button
           onClick={() => setIsUploadOpen(true)}
           className="bg-sky-600 hover:bg-sky-700 text-white px-5 py-2.5 rounded-xl font-bold shadow-lg shadow-sky-500/20 flex items-center gap-2 transition-all active:scale-95"
@@ -128,11 +125,11 @@ export const DepartmentDocuments: React.FC = () => {
           <table className="w-full text-left">
             <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-widest">
               <tr>
-                <th className="px-6 py-4">Tài liệu</th>
-                <th className="px-6 py-4">Phân loại</th>
-                <th className="px-6 py-4">Người tải lên</th>
-                <th className="px-6 py-4">Ngày tải</th>
-                <th className="px-6 py-4 text-right">Hành động</th>
+                <th className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">Tài liệu</th>
+                <th className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">Phân loại</th>
+                <th className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">Người tải lên</th>
+                <th className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">Ngày tải</th>
+                <th className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-right">Hành động</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -149,7 +146,7 @@ export const DepartmentDocuments: React.FC = () => {
                   const d = getDocDisplay(doc);
                   return (
                     <tr key={doc.id} className="hover:bg-slate-50/50 transition-colors group">
-                      <td className="px-6 py-4">
+                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                         <div className="flex items-center gap-3">
                           <div className="p-2 bg-slate-100 rounded-lg">
                             <FileText size={18} className="text-slate-400" />
@@ -160,7 +157,7 @@ export const DepartmentDocuments: React.FC = () => {
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                         <span className={`text-[10px] font-bold px-2 py-1 rounded ${
                           d.sensitivity === 'CRITICAL' ? 'bg-rose-50 text-rose-600' :
                           d.sensitivity === 'HIGH' ? 'bg-amber-50 text-amber-600' :
@@ -170,9 +167,9 @@ export const DepartmentDocuments: React.FC = () => {
                           {d.sensitivity}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-slate-600">{d.uploadedBy}</td>
-                      <td className="px-6 py-4 text-sm text-slate-500">{d.uploadedAt}</td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-slate-600">{d.uploadedBy}</td>
+                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-slate-500">{d.uploadedAt}</td>
+                      <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                         <button
                           onClick={() => handleViewDoc(doc)}
                           className="p-2 text-sky-600 hover:bg-sky-50 rounded-lg"

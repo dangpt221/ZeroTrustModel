@@ -15,17 +15,17 @@ export const StaffTable: React.FC<StaffTableProps> = ({ staff, onAction }) => {
         <table className="w-full text-left border-collapse">
           <thead className="bg-sky-50/50 text-sky-600 text-[10px] font-black uppercase tracking-widest border-b border-sky-50">
             <tr>
-              <th className="px-8 py-6">Username / Staff</th>
-              <th className="px-8 py-6">Trạng thái</th>
-              <th className="px-8 py-6">Trust Score</th>
-              <th className="px-8 py-6">Bộ phận</th>
-              <th className="px-8 py-6 text-right">Hành động bảo mật</th>
+              <th className="px-4 md:px-8 py-4 md:py-6">Username / Staff</th>
+              <th className="px-4 md:px-8 py-4 md:py-6">Trạng thái</th>
+              <th className="px-4 md:px-8 py-4 md:py-6">Trust Score</th>
+              <th className="px-4 md:px-8 py-4 md:py-6">Bộ phận</th>
+              <th className="px-4 md:px-8 py-4 md:py-6 text-right">Hành động bảo mật</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
             {staff.map((member) => (
               <tr key={member.id} className="hover:bg-sky-50/30 transition-colors group">
-                <td className="px-8 py-5">
+                <td className="px-4 md:px-8 py-5">
                   <div className="flex items-center gap-4 cursor-pointer" onClick={() => onAction(member, 'VIEW_DETAILS')}>
                     <div className="relative">
                       <img src={member.avatar} className="w-11 h-11 rounded-2xl object-cover ring-2 ring-white shadow-sm" />
@@ -37,14 +37,14 @@ export const StaffTable: React.FC<StaffTableProps> = ({ staff, onAction }) => {
                     </div>
                   </div>
                 </td>
-                <td className="px-8 py-5">
+                <td className="px-4 md:px-8 py-5">
                   <span className={`text-[10px] font-black px-2.5 py-1 rounded-lg border uppercase ${
                     member.status === 'ACTIVE' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'
                   }`}>
                     {member.status}
                   </span>
                 </td>
-                <td className="px-8 py-5">
+                <td className="px-4 md:px-8 py-5">
                    <div className="flex flex-col gap-1.5">
                     <span className={`text-[10px] font-black uppercase ${member.trustScore > 80 ? 'text-emerald-500' : 'text-amber-500'}`}>
                       {member.trustScore}% Verified
@@ -54,10 +54,10 @@ export const StaffTable: React.FC<StaffTableProps> = ({ staff, onAction }) => {
                     </div>
                   </div>
                 </td>
-                <td className="px-8 py-5 text-xs font-bold text-slate-600">
+                <td className="px-4 md:px-8 py-5 text-xs font-bold text-slate-600">
                   {member.department}
                 </td>
-                <td className="px-8 py-5 text-right">
+                <td className="px-4 md:px-8 py-5 text-right">
                   <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button 
                       onClick={() => onAction(member, 'REQUEST_MFA')}

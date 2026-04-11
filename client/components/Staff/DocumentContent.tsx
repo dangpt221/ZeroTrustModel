@@ -183,7 +183,7 @@ export const DocumentContent: React.FC<DocumentContentProps> = ({
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-lg overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50">
+      <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap border-b border-slate-200 bg-slate-50">
         <div className="flex items-center gap-4">
           <div className="p-2 bg-sky-100 rounded-xl">
             <FileText size={20} className="text-sky-600" />
@@ -211,7 +211,7 @@ export const DocumentContent: React.FC<DocumentContentProps> = ({
             <p className="font-medium">{loadingProgress || 'Đang tải nội dung...'}</p>
           </div>
         ) : error ? (
-          <div className="h-full flex flex-col items-center justify-center gap-4 text-slate-400 max-w-md text-center p-8">
+          <div className="h-full flex flex-col items-center justify-center gap-4 text-slate-400 max-w-md text-center p-4 md:p-8">
             <div className="p-4 bg-red-100 rounded-full">
               <AlertCircle size={48} className="text-red-500" />
             </div>
@@ -246,7 +246,7 @@ export const DocumentContent: React.FC<DocumentContentProps> = ({
             {docxBlob && (
               <div
                 ref={docxContainerRef}
-                className="w-full h-full overflow-auto bg-white rounded-lg shadow-lg p-6 docx-preview-wrapper"
+                className="w-full h-full overflow-auto bg-white rounded-lg shadow-lg p-4 md:p-6 docx-preview-wrapper"
                 style={{ minHeight: '400px' }}
               />
             )}

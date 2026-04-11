@@ -104,7 +104,7 @@ export const NotificationDropdown: React.FC = () => {
 
           <div className="max-h-80 overflow-y-auto">
             {notifications.length === 0 ? (
-              <div className="p-8 text-center text-slate-400 text-sm">
+              <div className="p-4 md:p-8 text-center text-slate-400 text-sm">
                 Chưa có thông báo nào
               </div>
             ) : (

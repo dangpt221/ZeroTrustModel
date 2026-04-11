@@ -30,7 +30,7 @@ export const PendingApproval: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 font-sans">
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 md:p-6 font-sans">
             <div className="max-w-md w-full bg-white rounded-[40px] shadow-2xl shadow-indigo-100 p-10 text-center border border-slate-100">
                 <div className="w-24 h-24 bg-indigo-50 rounded-3xl flex items-center justify-center mx-auto mb-8 animate-pulse">
                     <Clock className="w-12 h-12 text-indigo-500" />
@@ -44,7 +44,7 @@ export const PendingApproval: React.FC = () => {
                     Chào <span className="text-indigo-600 font-bold">{user?.name}</span>, tài khoản của bạn đang được quản lý hệ thống xem xét. Vui lòng quay lại sau khi đã được phê duyệt.
                 </p>
 
-                <div className="bg-slate-50 rounded-3xl p-6 mb-8 border border-slate-100 text-left">
+                <div className="bg-slate-50 rounded-3xl p-4 md:p-6 mb-8 border border-slate-100 text-left">
                     <div className="flex items-center gap-3 mb-2">
                         <Shield className="w-5 h-5 text-slate-400" />
                         <span className="text-xs font-bold text-slate-400 uppercase tracking-widest text-shadow-sm">Trạng thái bảo mật</span>

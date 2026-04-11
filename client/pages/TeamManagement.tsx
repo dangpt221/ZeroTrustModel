@@ -126,9 +126,9 @@ export const TeamManagement: React.FC = () => {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
         {filteredTeams.map(team => (
-          <div key={team.id} className="bg-white rounded-[40px] border border-slate-100 shadow-sm hover:shadow-xl transition-all p-8 flex flex-col h-full group relative overflow-visible">
+          <div key={team.id} className="bg-white rounded-[40px] border border-slate-100 shadow-sm hover:shadow-xl transition-all p-4 md:p-8 flex flex-col h-full group relative overflow-visible">
             <div className="flex justify-between items-start mb-6">
               <div className="p-4 bg-blue-50 text-blue-600 rounded-2xl group-hover:bg-blue-600 group-hover:text-white transition-colors">
                 <LayoutGrid size={24} />
@@ -235,11 +235,11 @@ export const TeamManagement: React.FC = () => {
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
           <div className="bg-white w-full max-w-md rounded-[40px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-            <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+            <div className="p-4 md:p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
               <h3 className="text-xl font-black text-slate-800 italic uppercase tracking-tight">Tạo nhóm mới</h3>
               <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-white rounded-xl transition-all"><X size={20} /></button>
             </div>
-            <form onSubmit={handleCreateTeam} className="p-8 space-y-6">
+            <form onSubmit={handleCreateTeam} className="p-4 md:p-8 space-y-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tên nhóm</label>
                 <input
@@ -293,14 +293,14 @@ export const TeamManagement: React.FC = () => {
       {isAddMemberModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
           <div className="bg-white w-full max-w-md rounded-[40px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-            <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+            <div className="p-4 md:p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
               <div>
                 <h3 className="text-xl font-black text-slate-800 italic uppercase tracking-tight">Thêm thành viên</h3>
                 <p className="text-[10px] text-blue-600 font-bold uppercase tracking-widest mt-1">Nhóm: {selectedTeam?.name}</p>
               </div>
               <button onClick={() => setIsAddMemberModalOpen(false)} className="p-2 hover:bg-white rounded-xl transition-all"><X size={20} /></button>
             </div>
-            <div className="p-8 space-y-6">
+            <div className="p-4 md:p-8 space-y-6">
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                 <input 

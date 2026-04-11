@@ -76,41 +76,43 @@ export const AuditLogs: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="bg-slate-900 text-white p-8 rounded-2xl shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6 overflow-hidden relative">
+    <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-500">
+      <div className="bg-slate-900 text-white p-6 sm:p-8 rounded-xl sm:rounded-2xl shadow-xl flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-6 overflow-hidden relative">
         <div className="absolute top-0 right-0 p-4 opacity-10">
           <Terminal size={120} />
         </div>
-        <div>
-          <h2 className="text-2xl font-bold flex items-center gap-3">
+        <div className="relative z-10">
+          <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-3">
             <ShieldAlert className="text-red-400" />
             Security & Audit Control
           </h2>
-          <p className="text-slate-400 mt-1">Reviewing 24-hour system activity for compliance</p>
+          <p className="text-sm sm:text-base text-slate-400 mt-1">Reviewing 24-hour system activity for compliance</p>
         </div>
-        <div className="flex gap-4 items-center">
-          <div className="bg-white/10 px-4 py-2 rounded-xl border border-white/5">
+        <div className="flex flex-wrap gap-3 sm:gap-4 items-center relative z-10 mt-2 lg:mt-0">
+          <div className="bg-white/10 px-3 sm:px-4 py-2 rounded-xl border border-white/5 flex-1 min-w-[120px]">
             <p className="text-[10px] font-bold text-slate-400 uppercase">Alerts</p>
-            <p className="text-xl font-bold">{loading ? '...' : highRiskLogs} Active</p>
+            <p className="text-lg sm:text-xl font-bold">{loading ? '...' : highRiskLogs} Active</p>
           </div>
-          <div className="bg-white/10 px-4 py-2 rounded-xl border border-white/5">
+          <div className="bg-white/10 px-3 sm:px-4 py-2 rounded-xl border border-white/5 flex-1 min-w-[120px]">
             <p className="text-[10px] font-bold text-slate-400 uppercase">Logs</p>
-            <p className="text-xl font-bold">{loading ? '...' : logs.length}</p>
+            <p className="text-lg sm:text-xl font-bold">{loading ? '...' : logs.length}</p>
           </div>
-          <button
-            onClick={() => setAutoRefresh(!autoRefresh)}
-            className={`p-2 rounded-xl transition-all ${autoRefresh ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/10 text-slate-400'}`}
-            title={autoRefresh ? 'Tắt tự động làm mới' : 'Bật tự động làm mới'}
-          >
-            <RefreshCw size={20} className={autoRefresh ? 'animate-spin' : ''} />
-          </button>
-          <button
-            onClick={handleExport}
-            className="p-2 bg-white/10 rounded-xl text-slate-300 hover:text-white transition-all"
-            title="Xuất CSV"
-          >
-            <Download size={20} />
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setAutoRefresh(!autoRefresh)}
+              className={`p-2.5 sm:p-2 rounded-xl transition-all ${autoRefresh ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/10 text-slate-400'}`}
+              title={autoRefresh ? 'Tắt tự động làm mới' : 'Bật tự động làm mới'}
+            >
+              <RefreshCw size={20} className={autoRefresh ? 'animate-spin' : ''} />
+            </button>
+            <button
+              onClick={handleExport}
+              className="p-2.5 sm:p-2 bg-white/10 rounded-xl text-slate-300 hover:text-white transition-all"
+              title="Xuất CSV"
+            >
+              <Download size={20} />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -136,7 +138,7 @@ export const AuditLogs: React.FC = () => {
 
       {/* Filter Panel */}
       {isFilterOpen && (
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-lg animate-in slide-in-from-top-2">
+        <div className="bg-white p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-slate-200 shadow-lg animate-in slide-in-from-top-2">
           <div className="flex items-center justify-between mb-4">
             <h4 className="font-bold text-slate-800">Lọc logs</h4>
             <button onClick={clearFilters} className="text-sm text-blue-600 hover:underline">Xóa bộ lọc</button>
@@ -170,58 +172,58 @@ export const AuditLogs: React.FC = () => {
         </div>
       )}
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+      <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-widest">
               <tr>
-                <th className="px-6 py-4">Timestamp</th>
-                <th className="px-6 py-4">Identity</th>
-                <th className="px-6 py-4">Operation</th>
-                <th className="px-6 py-4">Details</th>
-                <th className="px-6 py-4">Node / IP</th>
-                <th className="px-6 py-4 text-right">Status</th>
+                <th className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">Timestamp</th>
+                <th className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">Identity</th>
+                <th className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">Operation</th>
+                <th className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">Details</th>
+                <th className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">Node / IP</th>
+                <th className="px-4 sm:px-6 py-3 sm:py-4 text-right whitespace-nowrap">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {filteredLogs.map((log) => (
                 <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="px-6 py-4">
+                  <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                     <div className="flex items-center gap-2 text-slate-400">
-                      <Clock size={14} />
+                      <Clock size={14} className="flex-shrink-0" />
                       <span className="text-xs font-mono">{new Date(log.timestamp).toLocaleTimeString()}</span>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-[10px] font-bold text-white">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0">
                         {(log.userName || 'U').charAt(0).toUpperCase()}
                       </div>
-                      <div>
-                        <p className="text-xs font-bold text-slate-700">{log.userName}</p>
+                      <div className="max-w-[120px] md:max-w-none truncate">
+                        <p className="text-xs font-bold text-slate-700 truncate">{log.userName}</p>
                         {log.userEmail && (
-                          <p className="text-[10px] text-slate-400">{log.userEmail}</p>
+                          <p className="text-[10px] text-slate-400 truncate">{log.userEmail}</p>
                         )}
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                     <span className="text-xs font-mono px-2 py-0.5 bg-slate-100 rounded text-slate-600">{log.action}</span>
                   </td>
-                  <td className="px-6 py-4">
-                    <p className="text-xs text-slate-500 max-w-xs truncate">{log.details}</p>
+                  <td className="px-4 sm:px-6 py-3 sm:py-4 min-w-[200px] max-w-[250px] md:max-w-xs whitespace-nowrap">
+                    <p className="text-xs text-slate-500 truncate" title={log.details}>{log.details}</p>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-medium">
-                        <MapPin size={10} /> {log.ipAddress || 'Unknown'}
+                  <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+                    <div className="flex flex-col gap-1 max-w-[120px] md:max-w-none">
+                      <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-medium truncate">
+                        <MapPin size={10} className="flex-shrink-0" /> <span className="truncate">{log.ipAddress || 'Unknown'}</span>
                       </div>
-                      <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-medium">
-                        <Monitor size={10} /> {log.device || 'Unknown Device'}
+                      <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-medium truncate">
+                        <Monitor size={10} className="flex-shrink-0" /> <span className="truncate" title={log.device}>{log.device || 'Unknown Device'}</span>
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-right">
+                  <td className="px-4 sm:px-6 py-3 sm:py-4 text-right whitespace-nowrap">
                     <div className="flex items-center justify-end gap-2">
                       <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${
                         log.riskLevel === 'HIGH' || log.riskLevel === 'CRITICAL' ? 'bg-rose-100 text-rose-600' :

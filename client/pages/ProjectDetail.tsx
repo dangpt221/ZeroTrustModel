@@ -49,8 +49,8 @@ export const ProjectDetail: React.FC = () => {
     fetchData();
   }, [id]);
 
-  if (loading) return <div className="p-8">Loading...</div>;
-  if (!project) return <div className="p-8">Project not found</div>;
+  if (loading) return <div className="p-4 md:p-8">Loading...</div>;
+  if (!project) return <div className="p-4 md:p-8">Project not found</div>;
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -58,10 +58,10 @@ export const ProjectDetail: React.FC = () => {
         <ArrowLeft size={16} /> Back to Dashboard
       </Link>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8">
         {/* Project Info */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
+          <div className="bg-white p-4 md:p-8 rounded-3xl border border-slate-100 shadow-sm">
             <div className="flex items-start justify-between mb-6">
               <div>
                 <h2 className="text-2xl font-black text-slate-800">{project.title}</h2>
@@ -103,25 +103,25 @@ export const ProjectDetail: React.FC = () => {
             <div className="flex border-b border-slate-100">
               <button
                 onClick={() => setActiveTab('tasks')}
-                className={`px-6 py-4 text-sm font-bold ${activeTab === 'tasks' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}
+                className={`px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm font-bold ${activeTab === 'tasks' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}
               >
                 Tasks ({tasks.length})
               </button>
               <button
                 onClick={() => setActiveTab('docs')}
-                className={`px-6 py-4 text-sm font-bold ${activeTab === 'docs' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}
+                className={`px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm font-bold ${activeTab === 'docs' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}
               >
                 Documents ({docs.length})
               </button>
               <button
                 onClick={() => setActiveTab('team')}
-                className={`px-6 py-4 text-sm font-bold ${activeTab === 'team' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}
+                className={`px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm font-bold ${activeTab === 'team' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}
               >
                 Team ({project.members.length})
               </button>
             </div>
 
-            <div className="p-6">
+            <div className="p-4 md:p-6">
               {activeTab === 'tasks' && (
                 <div className="space-y-3">
                   {tasks.map(task => (
@@ -174,7 +174,7 @@ export const ProjectDetail: React.FC = () => {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+          <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-100 shadow-sm">
             <h3 className="font-bold text-slate-800 mb-4">Project Details</h3>
             <div className="space-y-4 text-sm">
               <div>

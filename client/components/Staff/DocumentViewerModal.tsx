@@ -301,7 +301,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
 
       <div className="bg-white w-full h-[98vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap border-b border-slate-200 bg-slate-50">
           <div className="flex items-center gap-4">
             <div className={`p-2 rounded-xl ${isHighSecurity ? 'bg-rose-100' : 'bg-sky-100'}`}>
               <FileText size={20} className={isHighSecurity ? 'text-rose-600' : 'text-sky-600'} />
@@ -378,7 +378,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
               {/* Blur overlay when tab not active */}
               {isBlurred && hasPreview && (
                 <div className="absolute inset-0 bg-slate-100/80 flex items-center justify-center z-30 backdrop-blur-sm">
-                  <div className="text-center bg-white/90 p-8 rounded-2xl shadow-xl">
+                  <div className="text-center bg-white/90 p-4 md:p-8 rounded-2xl shadow-xl">
                     <div className="text-5xl mb-4">👁️</div>
                     <p className="text-lg font-bold text-slate-700">Nội dung đang được bảo vệ</p>
                     <p className="text-slate-500 mt-2">Quay lại tab này để tiếp tục xem</p>
@@ -484,7 +484,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
                     {docxBlob && (
                       <div
                         ref={docxContainerRef}
-                        className="w-full h-full overflow-auto bg-white rounded-lg shadow-2xl p-6 docx-preview-wrapper"
+                        className="w-full h-full overflow-auto bg-white rounded-lg shadow-2xl p-4 md:p-6 docx-preview-wrapper"
                         style={{ transform: `scale(${zoom / 100})`, transformOrigin: 'top left', minHeight: '400px' }}
                         onContextMenu={(e) => isHighSecurity ? e.preventDefault() : undefined}
                       />
@@ -501,9 +501,9 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
               </div>
             </div>
           ) : (
-            <div className="h-full overflow-y-auto p-6">
+            <div className="h-full overflow-y-auto p-4 md:p-6">
               <div className="max-w-2xl mx-auto space-y-6">
-                <div className="bg-white rounded-2xl p-6 border border-slate-200">
+                <div className="bg-white rounded-2xl p-4 md:p-6 border border-slate-200">
                   <h4 className="text-xs font-black text-slate-400 uppercase tracking-wider mb-4">Thông tin cơ bản</h4>
                   <div className="space-y-4">
                     <div>
@@ -523,7 +523,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
                   </div>
                 </div>
 
-                <div className="bg-white rounded-2xl p-6 border border-slate-200">
+                <div className="bg-white rounded-2xl p-4 md:p-6 border border-slate-200">
                   <h4 className="text-xs font-black text-slate-400 uppercase tracking-wider mb-4">Phân loại & Bảo mật</h4>
                   <div className="space-y-4">
                     <div className="flex gap-4">
@@ -579,7 +579,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
                   </div>
                 </div>
 
-                <div className="bg-white rounded-2xl p-6 border border-slate-200">
+                <div className="bg-white rounded-2xl p-4 md:p-6 border border-slate-200">
                   <h4 className="text-xs font-black text-slate-400 uppercase tracking-wider mb-4">Thông tin bổ sung</h4>
                   <div className="space-y-4">
                     <div>
@@ -611,7 +611,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
       {/* Print warning */}
       {showPrintWarning && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[200]">
-          <div className="bg-white rounded-2xl p-8 max-w-md text-center shadow-2xl">
+          <div className="bg-white rounded-2xl p-4 md:p-8 max-w-md text-center shadow-2xl">
             <div className="text-5xl mb-4">🖨️</div>
             <h3 className="text-xl font-bold text-slate-800 mb-2">Cảnh Báo In Ấn</h3>
             <p className="text-slate-600 mb-4">
@@ -703,7 +703,7 @@ const RequestAccessModal: React.FC<{
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[200]">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap border-b border-slate-200 bg-slate-50">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-100 text-blue-600 rounded-xl">
               <Key size={20} />
@@ -714,7 +714,7 @@ const RequestAccessModal: React.FC<{
             <X size={20} className="text-slate-500" />
           </button>
         </div>
-        <div className="p-6 space-y-4">
+        <div className="p-4 md:p-6 space-y-4">
           <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
             <p className="text-sm font-bold text-slate-800">{doc.title || 'Tài liệu'}</p>
             <p className="text-xs text-blue-600 mt-1">Tài liệu bảo mật cao. Admin cần duyệt trước khi bạn có thể xem.</p>

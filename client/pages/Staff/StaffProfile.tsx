@@ -13,7 +13,7 @@ export const StaffProfile: React.FC = () => {
     <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
 
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8">
         <div className="lg:col-span-2 space-y-8">
           <ProfileForm user={user} />
         </div>
@@ -21,7 +21,7 @@ export const StaffProfile: React.FC = () => {
         <div className="space-y-8">
           <DeviceList />
           
-          <div className="bg-emerald-600 p-8 rounded-[40px] text-white shadow-xl">
+          <div className="bg-emerald-600 p-4 md:p-8 rounded-[40px] text-white shadow-xl">
             <h4 className="font-black text-xs uppercase tracking-[0.2em] mb-4">Trạng thái Trust</h4>
             <div className="flex items-end gap-3 mb-6">
               <span className="text-5xl font-black leading-none">{user.trustScore}%</span>

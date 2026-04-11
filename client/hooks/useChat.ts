@@ -307,8 +307,7 @@ export function useChat() {
 
   // Join room - fetch messages and join socket room
   const joinRoom = useCallback((roomId: string) => {
-    if (!roomId) return;
-
+    if (roomId === null || roomId === undefined) return;
     // Leave previous room
     if (socketRef.current && isConnected && activeRoomRef.current) {
       socketRef.current.emit('leave_room', activeRoomRef.current);
@@ -316,6 +315,8 @@ export function useChat() {
 
     setActiveRoom(roomId);
     activeRoomRef.current = roomId;
+
+    if (!roomId) return;
 
     // Clear messages for new room
     setMessages([]);

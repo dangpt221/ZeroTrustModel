@@ -98,13 +98,13 @@ export const ManagerProfile: React.FC = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8">
 
         {/* Left: Profile Form + Password */}
         <div className="lg:col-span-2 space-y-8">
 
           {/* Profile Info */}
-          <form onSubmit={handleSaveProfile} className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm space-y-6">
+          <form onSubmit={handleSaveProfile} className="bg-white p-4 md:p-8 rounded-[32px] border border-slate-100 shadow-sm space-y-6">
             <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
               <UserCircle size={20} className="text-blue-500" />
               Thông tin cá nhân
@@ -151,7 +151,7 @@ export const ManagerProfile: React.FC = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email</label>
                 <input
@@ -205,7 +205,7 @@ export const ManagerProfile: React.FC = () => {
         <div className="space-y-8">
 
           {/* Trust Score Card */}
-          <div className={`p-8 rounded-[40px] text-white shadow-xl border-2 ${
+          <div className={`p-4 md:p-8 rounded-[40px] text-white shadow-xl border-2 ${
             trustColor === 'emerald' ? 'bg-emerald-600 border-emerald-700' :
             trustColor === 'amber' ? 'bg-amber-600 border-amber-700' :
             'bg-red-600 border-red-700'
@@ -229,7 +229,7 @@ export const ManagerProfile: React.FC = () => {
           </div>
 
           {/* Security Status */}
-          <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm space-y-4">
+          <div className="bg-white p-4 md:p-8 rounded-[32px] border border-slate-100 shadow-sm space-y-4">
             <h4 className="font-bold text-slate-800 flex items-center gap-2">
               <ShieldCheck size={18} className="text-emerald-500" />
               Trạng thái bảo mật

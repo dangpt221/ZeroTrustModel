@@ -194,16 +194,16 @@ export const AdminDashboard: React.FC = () => {
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="space-y-8"
+      className="space-y-4 md:space-y-8"
     >
       {/* Header Info */}
       <div>
-        <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Hệ thống Giám sát Zero Trust</h2>
-        <p className="text-slate-500 mt-1">Hôm nay: {new Date().toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+        <h2 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">Hệ thống Giám sát Zero Trust</h2>
+        <p className="text-sm md:text-base text-slate-500 mt-1">Hôm nay: {new Date().toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
         <motion.div variants={itemVariants}>
           <AdminStatsCard
             title="Tài khoản hoạt động"
@@ -237,10 +237,10 @@ export const AdminDashboard: React.FC = () => {
 
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8">
         {/* Main Chart */}
-        <motion.div variants={itemVariants} className="lg:col-span-2 bg-white p-8 rounded-3xl border border-slate-100 shadow-sm premium-card">
-          <div className="flex items-center justify-between mb-8">
+        <motion.div variants={itemVariants} className="lg:col-span-2 bg-white p-4 md:p-8 rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm premium-card">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 md:mb-8">
             <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
               <TrendingUp size={20} className="text-blue-500" />
               Lưu lượng truy cập & Bảo mật
@@ -254,7 +254,7 @@ export const AdminDashboard: React.FC = () => {
               </span>
             </div>
           </div>
-          <div className="h-[350px]">
+          <div className="h-[250px] sm:h-[300px] md:h-[350px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={dynamicChartData}>
                 <defs>
@@ -281,8 +281,8 @@ export const AdminDashboard: React.FC = () => {
         </motion.div>
 
         {/* Security Alerts List */}
-        <motion.div variants={itemVariants} className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm flex flex-col premium-card">
-          <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
+        <motion.div variants={itemVariants} className="bg-white p-4 md:p-8 rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm flex flex-col premium-card">
+          <h3 className="text-lg font-bold text-slate-800 mb-4 md:mb-6 flex items-center gap-2">
             <ShieldCheck size={20} className="text-rose-500" />
             Cảnh báo gần đây
           </h3>
@@ -307,16 +307,16 @@ export const AdminDashboard: React.FC = () => {
 
       {/* Pending Approvals Section */}
       {users.filter(u => u.status === 'PENDING').length > 0 && (
-        <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm animate-in fade-in zoom-in-95 duration-500">
-          <div className="flex items-center justify-between mb-8">
-            <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-              <UserPlus size={22} className="text-amber-500" />
+        <div className="bg-white p-4 md:p-8 rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm animate-in fade-in zoom-in-95 duration-500">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 md:mb-8">
+            <h3 className="text-lg md:text-xl font-bold text-slate-800 flex items-center gap-2">
+              <UserPlus size={22} className="text-amber-500 shrink-0" />
               Yêu cầu phê duyệt mới ({users.filter(u => u.status === 'PENDING').length})
             </h3>
-            <button onClick={() => navigate('/admin/users')} className="text-sm font-bold text-blue-600 hover:underline px-4 py-2 bg-blue-50 rounded-lg">Quản lý tất cả</button>
+            <button onClick={() => navigate('/admin/users')} className="text-sm font-bold text-blue-600 hover:underline px-4 py-2 bg-blue-50 rounded-lg shrink-0">Quản lý tất cả</button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {users.filter(u => u.status === 'PENDING').map(pendingUser => (
               <div key={pendingUser.id} className="bg-slate-50 border border-slate-100 p-5 rounded-2xl flex items-center justify-between group hover:border-blue-200 hover:bg-white transition-all shadow-sm hover:shadow-md">
                 <div className="flex items-center gap-4">
@@ -351,14 +351,14 @@ export const AdminDashboard: React.FC = () => {
       )}
 
       {/* Recent Logs Table */}
-      <motion.div variants={itemVariants} className="bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-slate-800">
-        <div className="p-8 border-b border-slate-800 flex items-center justify-between">
+      <motion.div variants={itemVariants} className="bg-slate-900 rounded-2xl md:rounded-3xl shadow-2xl overflow-hidden border border-slate-800">
+        <div className="p-4 md:p-8 border-b border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h3 className="text-xl font-bold text-white flex items-center gap-2">
-              <Globe size={22} className="text-blue-400" />
-              Nhật ký Hoạt động Toàn cầu
+            <h3 className="text-lg md:text-xl font-bold text-white flex items-center gap-2">
+              <Globe size={22} className="text-blue-400 shrink-0" />
+              <span className="truncate">Nhật ký Hoạt động Toàn cầu</span>
             </h3>
-            <p className="text-slate-500 text-sm mt-1">Giám sát các điểm truy cập theo cơ chế Zero Trust</p>
+            <p className="text-slate-500 text-xs md:text-sm mt-1">Giám sát các điểm truy cập theo cơ chế Zero Trust</p>
           </div>
           <button onClick={handleDownloadReport} className="text-slate-400 hover:text-white text-sm font-semibold flex items-center gap-2">
             <Download size={16} /> Tải báo cáo (CSV)
@@ -368,37 +368,37 @@ export const AdminDashboard: React.FC = () => {
           <table className="w-full text-left">
             <thead className="bg-slate-950/50 text-slate-500 text-[10px] font-black uppercase tracking-widest">
               <tr>
-                <th className="px-8 py-5">Thời gian</th>
-                <th className="px-8 py-5">Nhân sự</th>
-                <th className="px-8 py-5">Hành động</th>
-                <th className="px-8 py-5">IP & Vị trí</th>
-                <th className="px-8 py-5 text-right">Trạng thái</th>
+                <th className="px-4 md:px-8 py-3 md:py-5 whitespace-nowrap">Thời gian</th>
+                <th className="px-4 md:px-8 py-3 md:py-5 whitespace-nowrap">Nhân sự</th>
+                <th className="px-4 md:px-8 py-3 md:py-5 whitespace-nowrap">Hành động</th>
+                <th className="px-4 md:px-8 py-3 md:py-5 whitespace-nowrap">IP & Vị trí</th>
+                <th className="px-4 md:px-8 py-3 md:py-5 text-right whitespace-nowrap">Trạng thái</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800">
               {auditLogs?.slice && auditLogs.slice(0, 10).map((log: any) => (
                 <tr key={log.id} className="hover:bg-slate-800/30 transition-colors group">
-                  <td className="px-8 py-5">
+                  <td className="px-4 md:px-8 py-3 md:py-5 whitespace-nowrap">
                     <span className="text-xs font-mono text-slate-400">{formatTime(log.timestamp)}</span>
                   </td>
-                  <td className="px-8 py-5">
+                  <td className="px-4 md:px-8 py-3 md:py-5 whitespace-nowrap">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-xs border border-blue-500/20">
+                      <div className="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-xs shrink-0 border border-blue-500/20">
                         {(log.userName || 'U').charAt(0)}
                       </div>
-                      <span className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors">{log.userName || 'Unknown'}</span>
+                      <span className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors truncate max-w-[120px] md:max-w-none">{log.userName || 'Unknown'}</span>
                     </div>
                   </td>
-                  <td className="px-8 py-5">
+                  <td className="px-4 md:px-8 py-3 md:py-5 whitespace-nowrap">
                     <span className="text-xs font-semibold text-slate-300">{log.action}</span>
                   </td>
-                  <td className="px-8 py-5">
+                  <td className="px-4 md:px-8 py-3 md:py-5 whitespace-nowrap">
                     <div className="flex flex-col gap-1">
                       <div className="text-xs font-mono text-blue-300/80">{log.ipAddress}</div>
-                      <div className="text-[10px] text-slate-400 font-medium line-clamp-1" title={log.device}>{log.device || 'Unknown Device'}</div>
+                      <div className="text-[10px] text-slate-400 font-medium truncate max-w-[150px] md:max-w-[200px]" title={log.device}>{log.device || 'Unknown Device'}</div>
                     </div>
                   </td>
-                  <td className="px-8 py-5 text-right">
+                  <td className="px-4 md:px-8 py-3 md:py-5 text-right whitespace-nowrap">
                     <span className={`text-[10px] font-bold px-3 py-1 rounded-full border ${log.status === 'SUCCESS'
                       ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                       : 'bg-rose-500/10 text-rose-400 border-rose-500/20'

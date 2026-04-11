@@ -11,7 +11,9 @@ import {
   FolderKanban,
   Building2,
   FileText,
-  Loader2
+  Loader2,
+  Menu,
+  X
 } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -28,6 +30,18 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const { user, logout } = useAuth();
   const location = useLocation();
 
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 1024);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    setSidebarOpen(window.innerWidth >= 1024);
+  }, []);
+
   // Handle double-click on logo to toggle sidebar
   const handleLogoClick = () => {
     const newCount = clickCount + 1;
@@ -42,7 +56,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
   // Handle nav item click: navigate if different, toggle sidebar if same
   const handleNavItemClick = (e: React.MouseEvent, path: string) => {
-    if (location.pathname === path) {
+    if (isMobile) {
+      setSidebarOpen(false);
+    } else if (location.pathname === path) {
       setSidebarOpen(!isSidebarOpen);
     }
   };
@@ -107,32 +123,55 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   };
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden text-slate-900">
+    <div className="flex h-screen bg-slate-50 overflow-hidden text-slate-900 relative">
+      {/* Mobile Sidebar Overlay */}
+      <AnimatePresence>
+        {isMobile && isSidebarOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSidebarOpen(false)}
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 lg:hidden"
+          />
+        )}
+      </AnimatePresence>
+
       {/* Sidebar */}
       <motion.aside
         initial={false}
-        animate={{ width: isSidebarOpen ? 288 : 96 }}
+        animate={{
+          width: isMobile ? 288 : (isSidebarOpen ? 288 : 96),
+          x: isMobile ? (isSidebarOpen ? 0 : -300) : 0
+        }}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-        className={`${sidebarBg} flex flex-col z-50 shadow-2xl relative h-full`}
+        className={`${sidebarBg} flex flex-col z-50 shadow-2xl h-full ${isMobile ? 'fixed inset-y-0 left-0' : 'relative'}`}
       >
-        <div className="p-8 flex items-center gap-3" onClick={handleLogoClick} style={{ cursor: 'pointer' }}>
-          <div className={`w-10 h-10 ${sidebarLogoColor} rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg`}>
-            {isMember ? <Shield className="text-white" size={24} /> : isManager ? <UserCheck className="text-white" size={24} /> : <Shield className="text-white" size={24} />}
+        <div className="p-6 md:p-8 flex items-center justify-between gap-3" onClick={handleLogoClick} style={{ cursor: 'pointer' }}>
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 ${sidebarLogoColor} rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg`}>
+              {isMember ? <Shield className="text-white" size={24} /> : isManager ? <UserCheck className="text-white" size={24} /> : <Shield className="text-white" size={24} />}
+            </div>
+            <AnimatePresence>
+              {(isSidebarOpen || isMobile) && (
+                <motion.div
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="flex flex-col overflow-hidden whitespace-nowrap"
+                >
+                  <span className={`font-black text-xl tracking-tighter ${sidebarTextColor}`}>ZERO TRUST</span>
+                  <span className={`text-[10px] font-bold uppercase tracking-widest ${sidebarSubTextColor}`}>{user?.role} PORTAL</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
-          <AnimatePresence>
-            {isSidebarOpen && (
-              <motion.div
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -10 }}
-                transition={{ duration: 0.2 }}
-                className="flex flex-col overflow-hidden whitespace-nowrap"
-              >
-                <span className={`font-black text-xl tracking-tighter ${sidebarTextColor}`}>ZERO TRUST</span>
-                <span className={`text-[10px] font-bold uppercase tracking-widest ${sidebarSubTextColor}`}>{user?.role} PORTAL</span>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {isMobile && (
+            <button onClick={(e) => { e.stopPropagation(); setSidebarOpen(false); }} className="p-2 text-slate-400 hover:text-slate-600 transition-colors bg-slate-50 rounded-lg">
+              <X size={20} />
+            </button>
+          )}
         </div>
 
         <nav className="flex-1 mt-6 px-4 space-y-2">
@@ -148,7 +187,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
               >
                 <span className={`${isActive ? 'text-white' : 'group-hover:scale-110 transition-transform'}`}>{item.icon}</span>
                 <AnimatePresence>
-                  {isSidebarOpen && (
+                  {(isSidebarOpen || isMobile) && (
                     <motion.span
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
@@ -168,30 +207,42 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       </motion.aside>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         {/* Header */}
-        <header className="h-20 shrink-0 bg-white border-b border-slate-100 flex items-center justify-between px-8 z-40 lg:px-10">
-          <GlobalSearch isMember={isMember} isManager={isManager} />
+        <header className="h-16 lg:h-20 shrink-0 bg-white border-b border-slate-100 flex items-center justify-between px-3 sm:px-4 lg:px-10 z-30 gap-2">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            {isMobile && (
+              <button 
+                onClick={() => setSidebarOpen(true)}
+                className="p-1.5 xs:p-2 -ml-1 text-slate-500 hover:text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-100 rounded-lg transition-colors flex-shrink-0"
+              >
+                <Menu size={20} className="sm:w-6 sm:h-6" />
+              </button>
+            )}
+            <div className="flex-1 min-w-[60px] max-w-[450px]">
+              <GlobalSearch isMember={isMember} isManager={isManager} />
+            </div>
+          </div>
 
           {/* Right - Profile & Notifications */}
-          <div className="flex-1 flex items-center justify-end gap-6 min-w-0">
+          <div className="flex items-center justify-end gap-1.5 sm:gap-3 lg:gap-6 flex-shrink-0">
             <ChatBadge />
             <NotificationDropdown />
 
-            <div className="h-8 w-px bg-slate-200"></div>
+            <div className="h-6 sm:h-8 w-px bg-slate-200"></div>
 
-            <div className="relative">
+            <div className="relative flex-shrink-0">
               <button
                 onClick={() => setProfileOpen(!isProfileOpen)}
-                className="flex items-center gap-3 group hover:bg-slate-50/80 p-1.5 pr-4 rounded-[20px] transition-all border border-transparent hover:border-slate-100"
+                className="flex items-center gap-3 group hover:bg-slate-50/80 p-1 sm:p-1.5 lg:pr-4 rounded-full lg:rounded-[20px] transition-all border border-transparent hover:border-slate-100 flex-shrink-0"
               >
                 <div className="relative">
                   <img
                     src={user?.avatar}
                     alt="avatar"
-                    className={`w-10 h-10 rounded-[16px] object-cover transition-transform group-hover:scale-105 shadow-sm`}
+                    className="w-8 h-8 sm:w-10 sm:h-10 rounded-full lg:rounded-[16px] object-cover transition-transform group-hover:scale-105 shadow-sm"
                   />
-                  <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full"></div>
+                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 sm:w-3.5 sm:h-3.5 bg-emerald-500 border-2 border-white rounded-full"></div>
                 </div>
                 <div className="text-left hidden lg:block">
                   <p className="text-[14px] font-bold text-slate-800 leading-tight group-hover:text-blue-600 transition-colors">{user?.name}</p>
@@ -235,7 +286,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         </header>
 
         {/* Page Content */}
-        <main className={`flex-1 bg-[#fbfcfd] flex flex-col ${location.pathname.includes('/messaging') ? 'overflow-hidden' : 'overflow-y-auto p-8 lg:p-10'}`}>
+        <main className={`flex-1 bg-[#fbfcfd] flex flex-col ${location.pathname.includes('/messaging') ? 'overflow-hidden' : 'overflow-y-auto p-4 sm:p-6 lg:p-10'}`}>
           <motion.div
             key={location.pathname}
             initial={{ opacity: 0, y: 15 }}
@@ -509,23 +560,23 @@ const GlobalSearch: React.FC<{ isMember: boolean, isManager: boolean }> = ({ isM
   };
 
   return (
-    <div className="relative" ref={dropdownRef}>
-      <div className={`flex items-center bg-slate-100/80 rounded-2xl px-5 py-2.5 w-[450px] max-w-full focus-within:ring-2 transition-all border border-transparent ${ringColor}`}>
-        <Search size={18} className={`mr-3 transition-colors ${iconColor}`} />
+    <div className="relative w-full" ref={dropdownRef}>
+      <div className={`flex items-center bg-slate-100/80 rounded-2xl px-2.5 sm:px-5 py-1.5 sm:py-2.5 w-full focus-within:ring-2 transition-all border border-transparent ${ringColor}`}>
+        <Search size={16} className={`mr-2 sm:mr-3 transition-colors flex-shrink-0 ${iconColor} hidden sm:block`} />
         <input
           ref={inputRef}
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => query.trim() && setIsOpen(true)}
-          placeholder="Tìm kiếm tài nguyên bảo mật..."
-          className="bg-transparent border-none outline-none text-[15px] w-full font-medium placeholder:text-slate-400 text-slate-700"
+          placeholder="Tìm kiếm..."
+          className="bg-transparent border-none outline-none text-[13px] sm:text-[15px] w-full font-medium placeholder:text-slate-400 text-slate-700 truncate"
         />
         <button 
           onClick={() => inputRef.current?.focus()}
           className="p-1 hover:bg-slate-200 rounded-lg text-slate-400 hover:text-slate-600 transition-colors hidden sm:flex items-center justify-center gap-1 min-w-[30px]"
         >
-          {loading ? <Loader2 size={12} className="animate-spin text-slate-500" /> : <span className="text-[10px] font-bold border border-slate-300 rounded px-1.5 py-0.5">/</span>}
+          {loading ? <Loader2 size={12} className="animate-spin text-slate-500" /> : <span className="text-[10px] font-bold border border-slate-300 rounded px-1.5 py-0.5 flex-shrink-0">/</span>}
         </button>
       </div>
 
@@ -536,7 +587,7 @@ const GlobalSearch: React.FC<{ isMember: boolean, isManager: boolean }> = ({ isM
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
             transition={{ duration: 0.15 }}
-            className="absolute top-full left-0 mt-3 w-[450px] max-w-full bg-white/95 backdrop-blur-xl border border-slate-100 rounded-3xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] overflow-hidden z-50 p-2"
+            className="absolute top-full left-0 mt-3 w-screen max-w-[300px] sm:max-w-[450px] lg:w-[450px] lg:max-w-full bg-white/95 backdrop-blur-xl border border-slate-100 rounded-3xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] overflow-hidden z-50 p-2"
           >
             {loading && results.length === 0 ? (
               <div className="p-8 flex flex-col items-center justify-center gap-3">

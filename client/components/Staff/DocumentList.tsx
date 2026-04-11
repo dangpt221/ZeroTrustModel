@@ -8,7 +8,7 @@ interface DocumentListProps {
 }
 
 export const DocumentList: React.FC<DocumentListProps> = ({ documents }) => (
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
     {documents.map(doc => (
       <div key={doc.id} className="bg-white p-5 rounded-2xl border border-slate-100 hover:border-emerald-200 transition-all group shadow-sm hover:shadow-md">
         <div className="flex items-start justify-between mb-4">

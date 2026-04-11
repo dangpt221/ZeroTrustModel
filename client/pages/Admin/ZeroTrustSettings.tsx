@@ -80,9 +80,9 @@ export const ZeroTrustSettings: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
         {/* Auth Section */}
-        <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm space-y-6">
+        <div className="bg-white p-4 md:p-8 rounded-[32px] border border-slate-100 shadow-sm space-y-6">
           <h3 className="font-black text-slate-800 flex items-center gap-2 uppercase text-xs tracking-widest text-blue-600">
             <Fingerprint size={20} /> Chính sách Xác thực
           </h3>
@@ -117,7 +117,7 @@ export const ZeroTrustSettings: React.FC = () => {
         </div>
 
         {/* Network/IP Section */}
-        <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm space-y-6">
+        <div className="bg-white p-4 md:p-8 rounded-[32px] border border-slate-100 shadow-sm space-y-6">
           <h3 className="font-black text-slate-800 flex items-center gap-2 uppercase text-xs tracking-widest text-emerald-600">
             <Globe size={20} /> Kiểm soát Mạng lưới
           </h3>
@@ -211,7 +211,7 @@ export const ZeroTrustSettings: React.FC = () => {
         </div>
 
         {/* Device Section */}
-        <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm space-y-6">
+        <div className="bg-white p-4 md:p-8 rounded-[32px] border border-slate-100 shadow-sm space-y-6">
           <h3 className="font-black text-slate-800 flex items-center gap-2 uppercase text-xs tracking-widest text-indigo-600">
             <Monitor size={20} /> Quản lý Thiết bị
           </h3>
@@ -231,8 +231,8 @@ export const ZeroTrustSettings: React.FC = () => {
         </div>
 
         {/* Trust Score Engine */}
-        <div className="bg-slate-900 p-8 rounded-[32px] text-white space-y-6 shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-8 opacity-10">
+        <div className="bg-slate-900 p-4 md:p-8 rounded-[32px] text-white space-y-6 shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-4 md:p-8 opacity-10">
             <Zap size={60} />
           </div>
           <h3 className="font-black flex items-center gap-2 uppercase text-xs tracking-widest text-amber-400">

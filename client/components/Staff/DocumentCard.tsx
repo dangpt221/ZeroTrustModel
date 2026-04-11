@@ -32,7 +32,7 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({
   };
 
   return (
-    <div className="bg-white p-6 rounded-[32px] border border-slate-100 hover:border-emerald-200 transition-all group shadow-sm hover:shadow-xl relative overflow-hidden flex flex-col h-full">
+    <div className="bg-white p-4 md:p-6 rounded-[32px] border border-slate-100 hover:border-emerald-200 transition-all group shadow-sm hover:shadow-xl relative overflow-hidden flex flex-col h-full">
       {/* Security badge */}
       {isHighSecurity && (
         <div className="absolute top-0 right-0 p-2">
@@ -138,7 +138,7 @@ const DocumentNote: React.FC<DocumentNoteProps> = ({ isOpen, onClose, docName, i
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-in fade-in zoom-in-95">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-4 md:p-6 animate-in fade-in zoom-in-95">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-bold text-slate-800">Ghi chú: {docName}</h3>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600">✕</button>

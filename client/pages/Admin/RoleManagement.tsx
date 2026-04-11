@@ -149,13 +149,7 @@ export const RoleManagement: React.FC = () => {
   return (
     <div className="space-y-8 animate-in fade-in duration-700 relative h-[calc(100vh-120px)] flex flex-col">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 flex-shrink-0">
-        <div>
-          <h2 className="text-3xl font-black text-slate-800 tracking-tight uppercase italic flex items-center gap-3">
-            <ShieldAlert size={32} className="text-blue-600" />
-            Phân quyền hệ thống
-          </h2>
-          <p className="text-slate-500 text-sm font-medium mt-1">Gán vai trò và thiết lập quyền hạn truy cập tài nguyên doanh nghiệp</p>
-        </div>
+        
         
         <div className="flex bg-slate-100 p-1 rounded-2xl">
           <button 
@@ -179,7 +173,7 @@ export const RoleManagement: React.FC = () => {
           
           {/* Main List */}
           <div className="flex-1 bg-white rounded-[32px] border border-slate-100 shadow-sm flex flex-col overflow-hidden">
-            <div className="p-6 border-b border-slate-100/60 bg-slate-50/50">
+            <div className="p-4 md:p-6 border-b border-slate-100/60 bg-slate-50/50">
               <div className="relative">
                 <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input 
@@ -243,7 +237,7 @@ export const RoleManagement: React.FC = () => {
                 className="w-full lg:w-[450px] flex-shrink-0 bg-white rounded-[32px] border border-slate-200 shadow-2xl flex flex-col overflow-hidden z-20"
               >
                 {/* Drawer Header */}
-                <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-8 pb-10 text-white relative flex-shrink-0">
+                <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-4 md:p-8 pb-10 text-white relative flex-shrink-0">
                   <button 
                     onClick={() => setIsDrawerOpen(false)}
                     className="absolute top-6 right-6 p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
@@ -266,7 +260,7 @@ export const RoleManagement: React.FC = () => {
 
                 {/* Drawer Scrollable Content */}
                 <div className="flex-1 overflow-y-auto bg-slate-50 relative -mt-4 rounded-t-3xl border-t border-white shadow-[0_-10px_20px_-5px_rgba(0,0,0,0.1)]">
-                  <div className="p-8 space-y-8">
+                  <div className="p-4 md:p-8 space-y-8">
                     
                     {/* System Role Selection */}
                     <div className="space-y-4">
@@ -332,7 +326,7 @@ export const RoleManagement: React.FC = () => {
                       
                       <div className="bg-slate-900 text-white p-5 rounded-3xl space-y-3">
                         {userCombinedPermissions.length === 0 ? (
-                          <div className="text-slate-500 text-sm text-center py-6">Người dùng chưa được gán quyền mở rộng nào.</div>
+                          <div className="text-slate-500 text-sm text-center py-4 md:py-6">Người dùng chưa được gán quyền mở rộng nào.</div>
                         ) : (
                           // Render permissions as a tree/list
                           permissions.filter(p => userCombinedPermissions.includes(p.id)).map(p => (
@@ -352,7 +346,7 @@ export const RoleManagement: React.FC = () => {
                 </div>
                 
                 {/* Drawer Footer */}
-                <div className="p-6 bg-white border-t border-slate-100 flex-shrink-0 z-10 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)]">
+                <div className="p-4 md:p-6 bg-white border-t border-slate-100 flex-shrink-0 z-10 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)]">
                   <button 
                     onClick={handleSaveUserRoles}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-wider py-4 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-lg shadow-blue-500/30"
@@ -371,7 +365,7 @@ export const RoleManagement: React.FC = () => {
       {/* ===================== ROLES TAB (ORIGINAL VIEW) ===================== */}
       {activeTab === 'ROLES' && (
         <div className="flex-1 overflow-y-auto">
-          <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm animate-in slide-in-from-bottom-4 duration-500">
+          <div className="bg-white p-4 md:p-8 rounded-[32px] border border-slate-100 shadow-sm animate-in slide-in-from-bottom-4 duration-500">
             <div className="flex justify-between items-center mb-8">
               <div>
                 <h3 className="text-2xl font-black text-slate-800 tracking-tight">Danh sách Vai trò</h3>
@@ -385,9 +379,9 @@ export const RoleManagement: React.FC = () => {
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
               {roles.map(role => (
-                <div key={role.id} className="bg-slate-50 p-6 rounded-3xl border border-slate-200 hover:border-blue-300 transition-all group relative">
+                <div key={role.id} className="bg-slate-50 p-4 md:p-6 rounded-3xl border border-slate-200 hover:border-blue-300 transition-all group relative">
                   <div className="flex justify-between items-start mb-4">
                     <div className={`p-3 ${role.color || 'bg-indigo-500'} text-white rounded-2xl shadow-lg`}>
                       <Shield size={24} />

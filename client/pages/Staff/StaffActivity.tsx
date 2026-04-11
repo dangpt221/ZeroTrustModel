@@ -55,21 +55,21 @@ export const StaffActivity: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+        <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-100 shadow-sm">
           <div className="flex items-center gap-3 mb-2">
             <CheckCircle2 size={20} className="text-emerald-500" />
             <p className="text-xs text-slate-400 font-bold uppercase">Thao tác thành công</p>
           </div>
           <p className="text-3xl font-black text-slate-800">{loading ? '...' : logs.filter(l => l.status === 'SUCCESS').length}</p>
         </div>
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+        <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-100 shadow-sm">
           <div className="flex items-center gap-3 mb-2">
             <AlertTriangle size={20} className="text-amber-500" />
             <p className="text-xs text-slate-400 font-bold uppercase">Cảnh báo</p>
           </div>
           <p className="text-3xl font-black text-slate-800">{loading ? '...' : logs.filter(l => l.riskLevel === 'MEDIUM').length}</p>
         </div>
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+        <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-100 shadow-sm">
           <div className="flex items-center gap-3 mb-2">
             <History size={20} className="text-blue-500" />
             <p className="text-xs text-slate-400 font-bold uppercase">Tổng hoạt động</p>
@@ -83,31 +83,31 @@ export const StaffActivity: React.FC = () => {
           <table className="w-full text-left">
             <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-widest">
               <tr>
-                <th className="px-6 py-4">Thời gian</th>
-                <th className="px-6 py-4">Hành động</th>
-                <th className="px-6 py-4">Chi tiết</th>
-                <th className="px-6 py-4">IP</th>
-                <th className="px-6 py-4 text-right">Trạng thái</th>
+                <th className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">Thời gian</th>
+                <th className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">Hành động</th>
+                <th className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">Chi tiết</th>
+                <th className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">IP</th>
+                <th className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-right">Trạng thái</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {logs.slice(0, 20).map(log => (
                 <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="px-6 py-4 text-xs font-mono text-slate-400">
+                  <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs font-mono text-slate-400">
                     {new Date(log.timestamp).toLocaleString()}
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                     <span className="text-xs font-medium px-2 py-1 bg-slate-100 rounded text-slate-600">
                       {log.action}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-xs text-slate-500 max-w-xs truncate">
+                  <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs text-slate-500 max-w-xs truncate">
                     {log.details}
                   </td>
-                  <td className="px-6 py-4 text-xs font-mono text-slate-400">
+                  <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs font-mono text-slate-400">
                     {log.ipAddress}
                   </td>
-                  <td className="px-6 py-4 text-right">
+                  <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-right">
                     <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${
                       log.status === 'SUCCESS' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
                     }`}>

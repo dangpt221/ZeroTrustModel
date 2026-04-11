@@ -22,7 +22,7 @@ export const StaffActionModal: React.FC<StaffActionModalProps> = ({ user, isOpen
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-900/60" onClick={onClose}></div>
       <div className="bg-white w-full max-w-2xl rounded-[40px] shadow-2xl relative z-10 overflow-hidden">
-        <div className="p-8 border-b border-slate-50 flex justify-between items-center bg-sky-50/30">
+        <div className="p-4 md:p-8 border-b border-slate-50 flex justify-between items-center bg-sky-50/30">
           <div className="flex items-center gap-4">
             <img src={user.avatar} className="w-16 h-16 rounded-[24px] object-cover ring-4 ring-white" alt="" />
             <div>
@@ -35,7 +35,7 @@ export const StaffActionModal: React.FC<StaffActionModalProps> = ({ user, isOpen
           </button>
         </div>
 
-        <div className="p-8 grid grid-cols-2 gap-8">
+        <div className="p-4 md:p-8 grid grid-cols-2 gap-4 md:gap-8">
           <div className="space-y-4">
             <h4 className="font-black text-xs uppercase text-sky-600">Device Info</h4>
             <div className="bg-slate-50 p-4 rounded-2xl space-y-3">
@@ -63,7 +63,7 @@ export const StaffActionModal: React.FC<StaffActionModalProps> = ({ user, isOpen
           </div>
         </div>
 
-        <div className="p-6 bg-slate-50 flex justify-end gap-3">
+        <div className="p-4 md:p-6 bg-slate-50 flex justify-end gap-3">
           {onDelete && (
             <button
               onClick={() => {

@@ -110,7 +110,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user }) => {
   };
 
   return (
-    <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm space-y-8">
+    <div className="bg-white p-4 md:p-8 rounded-[32px] border border-slate-100 shadow-sm space-y-8">
       {message && (
         <div className={`p-3 rounded-xl text-sm font-semibold ${message.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
           {message.text}
@@ -149,7 +149,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user }) => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
         <div className="space-y-2">
           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email nội bộ</label>
           <input
@@ -174,7 +174,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user }) => {
         <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
           <Lock size={14} className="text-emerald-500" /> Bảo mật & Xác thực
         </h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <button 
             onClick={handleToggleMFA}
             disabled={mfaSaving}
@@ -211,7 +211,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user }) => {
 
         {/* Change Password Form Expansion */}
         <div className={`transition-all duration-500 origin-top overflow-hidden ${isChangingPassword ? 'max-h-[500px] opacity-100 mt-6' : 'max-h-0 opacity-0'}`}>
-          <div className="p-6 bg-slate-50 border border-slate-100 rounded-[24px] space-y-4">
+          <div className="p-4 md:p-6 bg-slate-50 border border-slate-100 rounded-[24px] space-y-4">
             <h5 className="font-bold text-slate-700 mb-4 text-sm">{user.hasPasswordSet === false ? 'Tạo Mật khẩu mới (Tài khoản Google)' : 'Thiết lập Mật khẩu Mới'}</h5>
             
             <div className="space-y-4">
@@ -233,7 +233,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ user }) => {
                 </div>
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-[10px] uppercase tracking-widest font-bold text-slate-500 pl-1">Mật khẩu mới</label>
                   <div className="relative">

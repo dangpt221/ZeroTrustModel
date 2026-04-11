@@ -201,29 +201,25 @@ export const DepartmentManagement: React.FC = () => {
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-black text-slate-800 tracking-tight uppercase italic">Cau truc to chuc</h2>
-          <p className="text-slate-500 text-sm font-medium">Quan ly cac phong ban va phan bo nhan su</p>
-        </div>
-        <div className="flex gap-3">
-          <div className="bg-white px-4 py-2 rounded-xl border border-slate-200 flex items-center gap-4">
+      <div className="flex justify-end mb-2">
+        <div className="flex flex-col md:flex-row w-full md:w-auto gap-3">
+          <div className="bg-white px-4 py-3 sm:py-2 rounded-xl border border-slate-200 flex flex-wrap justify-between md:justify-start items-center gap-3">
             <div className="flex items-center gap-2">
-              <Building2 size={16} className="text-blue-500" />
-              <span className="text-sm font-medium">{departments.length} bo phan</span>
+              <Building2 size={16} className="text-blue-500 shrink-0" />
+              <span className="text-sm font-medium whitespace-nowrap">{departments.length} bo phan</span>
             </div>
-            <div className="w-px h-4 bg-slate-200"></div>
+            <div className="hidden md:block w-px h-4 bg-slate-200"></div>
             <div className="flex items-center gap-2">
-              <Users size={16} className="text-emerald-500" />
-              <span className="text-sm font-medium">{totalMembers} nhan vien</span>
+              <Users size={16} className="text-emerald-500 shrink-0" />
+              <span className="text-sm font-medium whitespace-nowrap">{totalMembers} nhan vien</span>
             </div>
-            <div className="w-px h-4 bg-slate-200"></div>
-            <div className="flex items-center gap-2">
-              <FolderKanban size={16} className="text-amber-500" />
-              <span className="text-sm font-medium">{totalProjects} du an</span>
+            <div className="hidden md:block w-px h-4 bg-slate-200"></div>
+            <div className="flex items-center gap-2 w-full md:w-auto justify-center md:justify-start pt-2 md:pt-0 border-t md:border-0 border-slate-100">
+              <FolderKanban size={16} className="text-amber-500 shrink-0" />
+              <span className="text-sm font-medium whitespace-nowrap">{totalProjects} du an</span>
             </div>
           </div>
-          <button onClick={openCreateModal} className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-blue-500/20 active:scale-95 transition-all">
+          <button onClick={openCreateModal} className="w-full md:w-auto shrink-0 justify-center bg-blue-600 text-white px-6 py-3 md:py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-blue-500/20 active:scale-95 transition-all">
             <Plus size={18} /> Them bo phan
           </button>
         </div>
@@ -242,7 +238,7 @@ export const DepartmentManagement: React.FC = () => {
       </div>
 
       {/* Department Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {loading ? (
           <div className="col-span-full text-center py-12">
             <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto"></div>
@@ -261,11 +257,11 @@ export const DepartmentManagement: React.FC = () => {
             const parentDept = departments.find(d => d.id === dept.parentId);
 
             return (
-              <div key={dept.id} className={`bg-white p-6 rounded-[32px] border shadow-sm hover:shadow-md transition-all group relative overflow-hidden ${dept.isActive === false ? 'opacity-60' : ''}`}>
+              <div key={dept.id} className={`bg-white p-4 md:p-6 rounded-[32px] border shadow-sm hover:shadow-md transition-all group relative overflow-hidden ${dept.isActive === false ? 'opacity-60' : ''}`}>
                 {/* Color bar */}
                 <div className="absolute top-0 left-0 right-0 h-1" style={{ backgroundColor: dept.color || '#3B82F6' }}></div>
 
-                <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity">
+                <div className="absolute top-0 right-0 p-4 md:p-6 opacity-5 group-hover:opacity-10 transition-opacity">
                   <Building2 size={80} />
                 </div>
 
