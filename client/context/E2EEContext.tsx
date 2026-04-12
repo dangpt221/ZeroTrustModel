@@ -12,6 +12,7 @@ interface E2EEContextType {
   publicKeyStr: string | null;
   signaturePrivateKey: CryptoKey | null; // [PRO LEVEL]
   signaturePublicKeyStr: string | null; // [PRO LEVEL]
+  myDeviceIds: string[];
   registerDevice: () => Promise<void>;
   getDevicePrivateKey: () => Promise<CryptoKey | null>;
   setupRecoveryBackup: (pin: string) => Promise<boolean>;
@@ -27,6 +28,7 @@ const E2EEContext = createContext<E2EEContextType>({
   publicKeyStr: null,
   signaturePrivateKey: null,
   signaturePublicKeyStr: null,
+  myDeviceIds: [],
   registerDevice: async () => {},
   getDevicePrivateKey: async () => null,
   setupRecoveryBackup: async () => false,
@@ -45,6 +47,7 @@ export const E2EEProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [publicKeyStr, setPublicKeyStr] = useState<string | null>(null);
   const [signaturePrivateKey, setSignaturePrivateKey] = useState<CryptoKey | null>(null);
   const [signaturePublicKeyStr, setSignaturePublicKeyStr] = useState<string | null>(null);
+  const [myDeviceIds, setMyDeviceIds] = useState<string[]>([]);
 
   const initLocalKeys = async () => {
     try {
@@ -131,11 +134,22 @@ export const E2EEProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const fetchMyDevices = async () => {
+    try {
+      const res = await e2eeApi.getMyDevices();
+      if (res && res.devices) {
+        setMyDeviceIds(res.devices.map((d: any) => d.deviceId));
+      }
+    } catch (e) {}
+  };
+
   useEffect(() => {
     if (isAuthenticated && user?.id) {
       initLocalKeys();
+      fetchMyDevices();
     } else {
       setIsE2EEReady(false);
+      setMyDeviceIds([]);
     }
   }, [isAuthenticated, user?.id]);
 
@@ -222,6 +236,7 @@ export const E2EEProvider: React.FC<{ children: React.ReactNode }> = ({ children
       publicKeyStr,
       signaturePrivateKey,
       signaturePublicKeyStr,
+      myDeviceIds,
       registerDevice,
       getDevicePrivateKey,
       setupRecoveryBackup,

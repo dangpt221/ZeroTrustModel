@@ -69,7 +69,7 @@ export interface Conversation {
 
 export function useChat() {
   const { user } = useAuth();
-  const { isE2EEReady, deviceId, getDevicePrivateKey, publicKeyStr } = useE2EE();
+  const { isE2EEReady, deviceId, getDevicePrivateKey, publicKeyStr, myDeviceIds } = useE2EE();
   const [socket, setSocket] = useState<Socket | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isConnected, setIsConnected] = useState(false);
@@ -83,6 +83,7 @@ export function useChat() {
   const socketRef = useRef<Socket | null>(null);
   const userRef = useRef(user);
   const messageIdsRef = useRef<Set<string>>(new Set());
+  const myDeviceIdsRef = useRef<string[]>([]);
 
   // Keep refs in sync
   useEffect(() => {
@@ -92,6 +93,10 @@ export function useChat() {
   useEffect(() => {
     userRef.current = user;
   }, [user]);
+
+  useEffect(() => {
+    myDeviceIdsRef.current = myDeviceIds;
+  }, [myDeviceIds]);
 
     // Decrypt function
     const processIncomingMessage = useCallback(async (msg: any): Promise<ChatMessage> => {
@@ -104,7 +109,10 @@ export function useChat() {
       if (!Array.isArray(msg.encryptedContent)) return { ...msg, text: '[Lỗi Debug: encryptedContent bị lỗi định dạng mảng]' };
 
       if (msg.encryptedContent && Array.isArray(msg.encryptedContent) && currentDeviceId) {
-         const myEnc = msg.encryptedContent.find((e: any) => e.deviceId === currentDeviceId);
+         // Try current device ID first, fallback to any of my other device IDs (since they share the same key after recovery)
+         const myEnc = msg.encryptedContent.find((e: any) => e.deviceId === currentDeviceId) || 
+                       msg.encryptedContent.find((e: any) => myDeviceIdsRef.current.includes(e.deviceId));
+
          if (myEnc) {
             try {
               // We need private key
