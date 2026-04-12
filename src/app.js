@@ -115,9 +115,9 @@ export async function createApp() {
     }
   }));
   app.use(xss());
-
-  // IP Filter & Geo-blocking middleware — Protects entire app including static files
-  app.use(ipFilterMiddleware);
+  
+  // IP Filter & Geo-blocking middleware for APIs
+  app.use('/api', ipFilterMiddleware);
 
   // Serve uploaded files
   app.use('/uploads', express.static(path.join(__dirname, '../uploads')));

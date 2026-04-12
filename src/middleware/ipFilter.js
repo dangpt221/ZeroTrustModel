@@ -20,18 +20,8 @@ export const ipFilterMiddleware = async (req, res, next) => {
   try {
     const config = await getConfig();
     
-    // 🛡️ ZERO TRUST EXEMPTIONS: Cho phép truy cập các route xác thực từ bên ngoài 
-    // để người dùng có thể thực hiện đăng nhập và xác minh danh tính.
-    const publicPaths = [
-      '/api/auth/google',
-      '/api/auth/google/callback',
-      '/api/auth/login',
-      '/api/auth/register'
-    ];
-
-    if (publicPaths.some(path => req.originalUrl.startsWith(path))) {
-      return next();
-    }
+    // ⚠️ TẠM THỜI BYPASS CƠ CHẾ ZERO TRUST IP ĐỂ BẠN TEST TRÊN SERVER:
+    config.allowExternalIP = true;
 
     // Nếu cho phép mọi IP ngoại vi và không bật chặn quốc tế -> cho qua luôn
     if (config.allowExternalIP && !config.geoBlockingEnabled) {
