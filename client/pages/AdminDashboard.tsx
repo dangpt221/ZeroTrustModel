@@ -6,14 +6,19 @@ import {
   ShieldCheck,
   TrendingUp,
   UserCheck,
-  UserX
+  UserX,
+  ShieldAlert,
+  Activity,
+  History
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 import { motion } from 'framer-motion';
 import { AdminStatsCard } from '../components/Admin/AdminStatsCard';
-import { usersApi } from '../api';
+import { AdminAlertCard } from '../components/Admin/AdminAlertCard';
+import { auditLogsApi, usersApi } from '../api';
+import { AuditLog } from '../types';
 import { useNavigate } from 'react-router-dom';
 
 
@@ -21,13 +26,18 @@ import { useNavigate } from 'react-router-dom';
 export const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [users, setUsers] = useState<any[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
-      const usersData = await usersApi.getAll();
+      const [usersData, logsData] = await Promise.all([
+        usersApi.getAll(),
+        auditLogsApi.getAll()
+      ]);
       setUsers(usersData || []);
+      setAuditLogs(logsData || []);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
@@ -172,7 +182,7 @@ export const AdminDashboard: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8">
         {/* Main Chart */}
-        <motion.div variants={itemVariants} className="lg:col-span-3 bg-white p-4 md:p-8 rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm premium-card">
+        <motion.div variants={itemVariants} className="lg:col-span-2 bg-white p-4 md:p-8 rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm premium-card">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 md:mb-8">
             <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
               <TrendingUp size={20} className="text-blue-500" />
@@ -202,6 +212,48 @@ export const AdminDashboard: React.FC = () => {
                 <Area type="monotone" dataKey="users" stroke="#3b82f6" strokeWidth={4} fillOpacity={1} fill="url(#colorUsers)" activeDot={{ r: 6, strokeWidth: 0 }} />
               </AreaChart>
             </ResponsiveContainer>
+          </div>
+        </motion.div>
+
+        {/* Security Summary Card */}
+        <motion.div variants={itemVariants} className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm flex flex-col">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+              <ShieldAlert size={20} className="text-rose-500" />
+              Giám sát hệ thống
+            </h3>
+            <button onClick={() => navigate('/admin/audit-logs')} className="p-2 bg-slate-50 text-slate-400 hover:text-blue-600 rounded-xl transition-all">
+              <ArrowRight size={18} />
+            </button>
+          </div>
+
+          <div className="space-y-4 flex-1 overflow-y-auto max-h-[350px] pr-1">
+            {auditLogs.filter(l => l.riskLevel === 'HIGH' || l.riskLevel === 'CRITICAL').slice(0, 5).map((log, idx) => (
+              <AdminAlertCard
+                key={log.id || idx}
+                level={log.riskLevel === 'CRITICAL' ? 'HIGH' : (log.riskLevel as any)}
+                message={log.details || log.action}
+                time={new Date(log.timestamp).toLocaleTimeString('vi-VN')}
+              />
+            ))}
+            {auditLogs.filter(l => l.riskLevel === 'HIGH' || l.riskLevel === 'CRITICAL').length === 0 && (
+              <div className="flex flex-col items-center justify-center h-full py-10 opacity-40">
+                <ShieldCheck size={48} className="text-emerald-500 mb-2" />
+                <p className="text-sm font-bold">Hệ thống an toàn</p>
+                <p className="text-[10px]">Không phát hiện hoạt động rủi ro</p>
+              </div>
+            )}
+          </div>
+          
+          <div className="mt-6 pt-6 border-t border-slate-50">
+             <div className="bg-slate-900 rounded-2xl p-4 text-white relative overflow-hidden group">
+                <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
+                  <Activity size={80} />
+                </div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Trạng thái ghi log</p>
+                <p className="text-xl font-black">{auditLogs.length} sự kiện</p>
+                <p className="text-[10px] text-slate-500 mt-1 italic">Đang giám sát thời gian thực...</p>
+             </div>
           </div>
         </motion.div>
       </div>

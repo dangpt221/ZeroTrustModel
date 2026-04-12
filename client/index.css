@@ -53,3 +53,24 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #cbd5e1;
 }
+
+/* Security Protection Utilities */
+.security-protected {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+}
+
+@media print {
+  body {
+    display: none !important;
+  }
+}
+
+.protected-blur {
+  filter: blur(20px);
+  transition: filter 0.3s ease;
+  pointer-events: none;
+}
+

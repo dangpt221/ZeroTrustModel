@@ -22,6 +22,7 @@ import { ADMIN_NAVIGATION, MANAGER_NAVIGATION, STAFF_NAVIGATION } from '../const
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types';
 import { NotificationDropdown } from './NotificationDropdown';
+import { SecurityGuard } from './Security/SecurityGuard';
 
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
@@ -123,7 +124,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   };
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden text-slate-900 relative">
+    <SecurityGuard>
+      <div className="flex h-screen bg-slate-50 overflow-hidden text-slate-900 relative">
       {/* Mobile Sidebar Overlay */}
       <AnimatePresence>
         {isMobile && isSidebarOpen && (
@@ -299,6 +301,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         </main>
       </div>
     </div>
+    </SecurityGuard>
   );
 };
 // Chat notification badge - direct unread conversations with sender names + preview

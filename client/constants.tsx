@@ -45,6 +45,7 @@ export const ADMIN_NAVIGATION = [
   { name: 'Nhắn tin nội bộ', icon: <MessageCircle size={20} />, path: '/messaging', permissions: [] },
   { name: 'Quản lý Chat nội bộ', icon: <MessageSquare size={20} />, path: '/admin/chat', permissions: ['ROLE_VIEW'] }, // using ROLE_VIEW temporarily
   { name: 'Cấu hình Zero Trust', icon: <Fingerprint size={20} />, path: '/admin/zero-trust', permissions: ['ZT_VIEW', 'ZT_MANAGE'] },
+  { name: 'Giám sát hệ thống', icon: <History size={20} />, path: '/admin/audit-logs', permissions: ['ZT_VIEW'] },
   { name: 'Quản lý thông báo', icon: <Bell size={20} />, path: '/admin/notifications', permissions: ['NOTIF_SEND'] },
 ];
 

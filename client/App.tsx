@@ -112,6 +112,12 @@ const App: React.FC = () => {
             </PrivateRoute>
           } />
 
+          <Route path="/admin/audit-logs" element={
+            <PrivateRoute roles={[UserRole.ADMIN]} permissions={['ZT_VIEW']}>
+              <Layout><AuditLogs /></Layout>
+            </PrivateRoute>
+          } />
+
           {/* Manager Specific Routes (Admin can also access) */}
           <Route path="/manager/staff" element={
             <PrivateRoute roles={[UserRole.ADMIN, UserRole.MANAGER]}>
