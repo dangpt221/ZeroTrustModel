@@ -84,6 +84,7 @@ export function useChat() {
   const userRef = useRef(user);
   const messageIdsRef = useRef<Set<string>>(new Set());
   const myDeviceIdsRef = useRef<string[]>([]);
+  const deviceIdRef = useRef<string | null>(null);
 
   // Keep refs in sync
   useEffect(() => {
@@ -98,15 +99,23 @@ export function useChat() {
     myDeviceIdsRef.current = myDeviceIds;
   }, [myDeviceIds]);
 
+  useEffect(() => {
+    deviceIdRef.current = deviceId;
+  }, [deviceId]);
+
     // Decrypt function
     const processIncomingMessage = useCallback(async (msg: any): Promise<ChatMessage> => {
-      // Access the latest context via refs if needed, but since we are inside useCallback, we can use the E2EE hook variables if they are fresh.
-      // Better to check localStorage directly if hook is stale, but let's assume they are injected.
-      const currentDeviceId = localStorage.getItem(`e2ee_device_id_${userRef.current?.id}`);
+      // Use the verified deviceId from E2EEContext
+      const currentDeviceId = deviceIdRef.current;
       
-      if (!currentDeviceId) return { ...msg, text: '[Lỗi Debug: Thiết bị chưa đăng ký trên trình duyệt này]' };
-      if (!msg.encryptedContent) return { ...msg, text: '[Lỗi Debug: Database không trả về encryptedContent]' };
-      if (!Array.isArray(msg.encryptedContent)) return { ...msg, text: '[Lỗi Debug: encryptedContent bị lỗi định dạng mảng]' };
+      if (!isE2EEReady || !currentDeviceId) {
+        // If E2EE is not ready but has encrypted content, show waiting message instead of hard error
+        if (msg.encryptedContent) return { ...msg, text: '[Đang khởi tạo mã hóa E2EE...]' };
+        return msg;
+      }
+      
+      if (!msg.encryptedContent) return { ...msg, text: '[Tin nhắn không có nội dung mã hóa]' };
+      if (!Array.isArray(msg.encryptedContent)) return { ...msg, text: '[Lỗi: Dữ liệu mã hóa không hợp lệ]' };
 
       if (msg.encryptedContent && Array.isArray(msg.encryptedContent) && currentDeviceId) {
          // Try current device ID first, fallback to any of my other device IDs (since they share the same key after recovery)
@@ -115,11 +124,10 @@ export function useChat() {
 
          if (myEnc) {
             try {
-              // We need private key
-               const storedPrivKey = localStorage.getItem(`e2ee_private_key_jwk_${userRef.current?.id}`);
-               if (storedPrivKey) {
-                  const privKey = await importPrivateKey(JSON.parse(storedPrivKey), "ECDH", true);
-                  
+              // We need private key - Get it from the verified context function
+              const privKey = await getDevicePrivateKey();
+              
+              if (privKey) {
                   // [PRO LEVEL] Double Ratchet - Derived from ephemeral
                   const aesKey = await processEphemeralRatchet(privKey, myEnc.senderPublicKey);
                   
