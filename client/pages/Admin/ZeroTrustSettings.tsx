@@ -49,8 +49,9 @@ export const ZeroTrustSettings: React.FC = () => {
   }, [config, isLoaded]);
 
   const handleAddIP = () => {
-    if (newIP && !config.ipWhitelist?.includes(newIP)) {
-      setConfig({ ...config, ipWhitelist: [...(config.ipWhitelist || []), newIP] });
+    const trimmedIP = newIP.trim();
+    if (trimmedIP && !config.ipWhitelist?.includes(trimmedIP)) {
+      setConfig({ ...config, ipWhitelist: [...(config.ipWhitelist || []), trimmedIP] });
       setNewIP('');
     }
   };

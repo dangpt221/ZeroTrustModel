@@ -70,8 +70,9 @@ export const ipFilterMiddleware = async (req, res, next) => {
       let isWhitelisted = (range === 'loopback');
 
       if (!isWhitelisted) {
-        for (const allowRule of config.ipWhitelist || []) {
+        for (let allowRule of config.ipWhitelist || []) {
           try {
+            allowRule = allowRule.trim();
             if (allowRule.includes('/')) {
               const parsedCidr = ipaddr.parseCIDR(allowRule);
               if (processedIp.kind() === parsedCidr[0].kind() && processedIp.match(parsedCidr)) {
