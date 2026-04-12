@@ -14,6 +14,8 @@ async function getConfig() {
   configCache = await ZeroTrustConfig.findOne() || new ZeroTrustConfig();
   lastCacheTime = now;
   return configCache;
+}
+
 export const ipFilterMiddleware = async (req, res, next) => {
   try {
     const config = await getConfig();
@@ -37,8 +39,7 @@ export const ipFilterMiddleware = async (req, res, next) => {
     }
 
     const rawIp = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.ip || req.connection.remoteAddress;
-    if (!rawIp) return next();
-
+    
     let clientIp;
     try {
       clientIp = ipaddr.process(rawIp);
@@ -47,8 +48,17 @@ export const ipFilterMiddleware = async (req, res, next) => {
       return res.status(403).json({ message: 'Forbidden: Invalid IP Address' });
     }
 
-    const clientIpString = clientIp.toString();
-    const range = clientIp.range();
+    // NORMALIZE: If it's an IPv4-mapped IPv6 address (::ffff:x.x.x.x), convert to IPv4
+    const clientIpString = clientIp.kind() === 'ipv6' && clientIp.isIPv4MappedAddress() 
+      ? clientIp.toIPv4Address().toString() 
+      : clientIp.toString();
+    
+    const processedIp = ipaddr.process(clientIpString);
+
+    console.log(`[IP_DEBUG] Client IP detected: ${rawIp} -> Normalized: ${clientIpString} (Kind: ${processedIp.kind()})`);
+    console.log(`[IP_DEBUG] config.allowExternalIP: ${config.allowExternalIP}, Whitelist size: ${config.ipWhitelist?.length}`);
+
+    const range = processedIp.range();
 
     // Always allow loopback (localhost) requests to prevent locking out local development & internal services
     if (range === 'loopback') {
@@ -57,35 +67,42 @@ export const ipFilterMiddleware = async (req, res, next) => {
 
     // 1. IP WHITELIST CHECK (INTRANET)
     if (!config.allowExternalIP) {
-      const range = clientIp.range();
       let isWhitelisted = (range === 'loopback');
 
-      for (const allowRule of config.ipWhitelist) {
-        try {
-          if (allowRule.includes('/')) {
-            const parsedCidr = ipaddr.parseCIDR(allowRule);
-            // Đảm bảo cùng loại ipv4 / ipv6
-            if (clientIp.kind() === parsedCidr[0].kind() && clientIp.match(parsedCidr)) {
-              isWhitelisted = true;
-              break;
+      if (!isWhitelisted) {
+        for (const allowRule of config.ipWhitelist || []) {
+          try {
+            if (allowRule.includes('/')) {
+              const parsedCidr = ipaddr.parseCIDR(allowRule);
+              if (processedIp.kind() === parsedCidr[0].kind() && processedIp.match(parsedCidr)) {
+                console.log(`[IP_DEBUG] Match found (CIDR): ${allowRule}`);
+                isWhitelisted = true;
+                break;
+              }
+            } else {
+              const parsedAllow = ipaddr.process(allowRule);
+              const normalizedAllow = parsedAllow.kind() === 'ipv6' && parsedAllow.isIPv4MappedAddress()
+                ? parsedAllow.toIPv4Address().toString()
+                : parsedAllow.toString();
+              
+              if (clientIpString === normalizedAllow) {
+                console.log(`[IP_DEBUG] Match found (Static): ${allowRule}`);
+                isWhitelisted = true;
+                break;
+              }
             }
-          } else {
-            const parsedAllow = ipaddr.process(allowRule);
-            if (clientIp.kind() === parsedAllow.kind() && clientIpString === parsedAllow.toString()) {
-              isWhitelisted = true;
-              break;
-            }
+          } catch (err) {
+            console.warn(`[IP_DEBUG] Error parsing rule ${allowRule}:`, err.message);
           }
-        } catch (err) {
-          // Ignore invalid rules in DB
         }
       }
 
       if (!isWhitelisted) {
-        console.warn(`[IP_FILTER] Blocked IP ${clientIpString} -> Not in Intranet Whitelist`);
+        console.warn(`[IP_FILTER] Blocked IP ${clientIpString} -> Not in Whitelist. Whitelist rules checked: ${config.ipWhitelist?.join(', ')}`);
         return res.status(403).json({ 
           error: 'Access Denied', 
-          message: 'IP address lies outside the allowed corporate network perimeter (Extranet blocked).' 
+          message: 'IP address lies outside the allowed corporate network perimeter (Extranet blocked).',
+          yourIp: clientIpString
         });
       }
     }
