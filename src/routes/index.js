@@ -14,7 +14,6 @@ import { registerAuditLogRoutes } from "./auditLogs.js";
 import { registerNotificationRoutes } from "./notificationRoutes.js";
 import rolesRouter from "./roles.js";
 import passport from "../configs/passport.js";
-import honeytokenRouter from "./honeytoken.js";
 import emergencyLockRouter from "./emergencyLock.js";
 import e2eeRouter from "./e2eeRoutes.js";
 import searchRouter from "./search.js";
@@ -80,7 +79,6 @@ export function registerRoutes(app, io) {
   registerZeroTrustRoutes(router);
   registerAuditLogRoutes(router);
   registerNotificationRoutes(router);
-  router.use(honeytokenRouter);
   router.use(emergencyLockRouter);
   router.use('/e2ee', e2eeRouter);
   router.use(searchRouter);

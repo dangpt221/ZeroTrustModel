@@ -9,7 +9,8 @@ import {
   UserX,
   ShieldAlert,
   Activity,
-  History
+  History,
+  ArrowRight
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer

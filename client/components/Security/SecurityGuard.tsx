@@ -27,7 +27,10 @@ export const SecurityGuard: React.FC<SecurityGuardProps> = ({ children }) => {
         </text>
       </svg>
     `;
-    return `data:image/svg+xml;base64,${btoa(svg)}`;
+
+    // Unicode-safe base64 encoding
+    const encoded = btoa(unescape(encodeURIComponent(svg)));
+    return `data:image/svg+xml;base64,${encoded}`;
   }, [user]);
 
   const logSecurityAttempt = useCallback(async (action: string) => {
