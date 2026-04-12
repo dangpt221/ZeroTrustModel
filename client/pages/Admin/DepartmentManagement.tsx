@@ -351,7 +351,12 @@ export const DepartmentManagement: React.FC = () => {
                   </div>
                 )}
               </div>
-                <Modal
+            );
+          })
+        )}
+      </div>
+
+      <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title={editingDept ? 'Chỉnh sửa bộ phận' : 'Thêm bộ phận mới'}
@@ -675,10 +680,6 @@ export const DepartmentManagement: React.FC = () => {
           <div className="text-center py-8">
             <div className="animate-spin w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full mx-auto"></div>
             <p className="text-slate-500 mt-2">Đang tải...</p>
-          </div>
-        )}
-      </Modal>
--2">Dang tai...</p>
           </div>
         )}
       </Modal>
