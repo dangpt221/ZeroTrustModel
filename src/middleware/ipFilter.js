@@ -20,9 +20,6 @@ export const ipFilterMiddleware = async (req, res, next) => {
   try {
     const config = await getConfig();
     
-    // ⚠️ TẠM THỜI BYPASS CƠ CHẾ ZERO TRUST IP ĐỂ BẠN TEST TRÊN SERVER:
-    config.allowExternalIP = true;
-
     // Nếu cho phép mọi IP ngoại vi và không bật chặn quốc tế -> cho qua luôn
     if (config.allowExternalIP && !config.geoBlockingEnabled) {
       return next();
