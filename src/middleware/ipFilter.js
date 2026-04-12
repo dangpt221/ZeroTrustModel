@@ -14,8 +14,8 @@ async function getConfig() {
   configCache = await ZeroTrustConfig.findOne() || new ZeroTrustConfig();
   lastCacheTime = now;
   return configCache;
-}
-
+export const ipFilterMiddleware = async (req, res, next) => {
+  try {
     const config = await getConfig();
     
     // 🛡️ ZERO TRUST EXEMPTIONS: Cho phép truy cập các route xác thực từ bên ngoài 
