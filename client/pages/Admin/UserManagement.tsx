@@ -242,6 +242,11 @@ export const UserManagement: React.FC = () => {
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="relative">
+          <div className="absolute -left-4 top-0 w-1.5 h-full bg-blue-600 rounded-full shadow-[0_0_15px_rgba(37,99,235,0.5)]"></div>
+          <h2 className="text-3xl font-black text-slate-800 tracking-tight italic uppercase">QUẢN LÝ NHÂN SỰ</h2>
+          <p className="text-slate-500 font-medium mt-1">Phê duyệt, phân quyền và quản lý tài khoản người dùng</p>
+        </div>
         
         <button onClick={() => setIsModalOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold shadow-lg shadow-blue-500/20 flex items-center gap-2 transition-all active:scale-95">
           <UserPlus size={18} /> Thêm nhân sự mới

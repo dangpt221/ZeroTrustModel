@@ -76,37 +76,37 @@ export const DepartmentManagement: React.FC = () => {
     if (membersInDept.length > 0) {
       const otherDepts = departments.filter(d => d.id !== id);
       if (otherDepts.length === 0) {
-        alert('Khong the xoa bo phan nay vi co nhan vien va khong co bo phan nao khac de chuyen.');
+        alert('Không thể xóa bộ phận này vì có nhân viên và không có bộ phận nào khác để chuyển.');
         return;
       }
 
-      const moveTo = prompt(`Bo phan nay co ${membersInDept.length} nhan vien. Nhap ID bo phan de chuyen nhan vien den:\n\nCac bo phan hien co:\n${otherDepts.map(d => `- ${d.name} (ID: ${d.id})`).join('\n')}`);
+      const moveTo = prompt(`Bộ phận này có ${membersInDept.length} nhân viên. Nhập ID bộ phận để chuyển nhân viên đến:\n\nCác bộ phận hiện có:\n${otherDepts.map(d => `- ${d.name} (ID: ${d.id})`).join('\n')}`);
 
       if (!moveTo) return;
 
       const targetDept = otherDepts.find(d => d.id === moveTo || d.name === moveTo);
       if (!targetDept) {
-        alert('Khong tim thay bo phan dich!');
+        alert('Không tìm thấy bộ phận đích!');
         return;
       }
 
       try {
         await departmentsApi.delete(id, targetDept.id);
         setDepartments(departments.filter(d => d.id !== id));
-        alert('Xoa bo phan thanh cong! Nhan vien da duoc chuyen den ' + targetDept.name);
+        alert('Xóa bộ phận thành công! Nhân viên đã được chuyển đến ' + targetDept.name);
       } catch (err) {
         console.error('Delete department error:', err);
-        alert('Xoa bo phan that bai!');
+        alert('Xóa bộ phận thất bại!');
       }
     } else {
-      if (confirm('Ban co chan chan muon xoa bo phan nay?')) {
+      if (confirm('Bạn có chắc chắn muốn xóa bộ phận này?')) {
         try {
           await departmentsApi.delete(id);
           setDepartments(departments.filter(d => d.id !== id));
-          alert('Xoa bo phan thanh cong!');
+          alert('Xóa bộ phận thành công!');
         } catch (err) {
           console.error('Delete department error:', err);
-          alert('Xoa bo phan that bai!');
+          alert('Xóa bộ phận thất bại!');
         }
       }
     }
@@ -127,18 +127,18 @@ export const DepartmentManagement: React.FC = () => {
       if (editingDept) {
         const updated = await departmentsApi.update(editingDept.id, data);
         setDepartments(departments.map(d => d.id === editingDept.id ? { ...d, ...updated } : d));
-        alert('Cap nhat bo phan thanh cong!');
+        alert('Cập nhật bộ phận thành công!');
       } else {
         const created = await departmentsApi.create(data);
         setDepartments([...departments, { ...created, memberCount: 0, projectCount: 0 }]);
-        alert('Tao bo phan thanh cong!');
+        alert('Tạo bộ phận thành công!');
       }
       setIsModalOpen(false);
       setEditingDept(null);
       resetForm();
     } catch (err: any) {
       console.error('Save department error:', err);
-      alert(err.response?.data?.message || 'Thao tac that bai!');
+      alert(err.response?.data?.message || 'Thao tác thất bại!');
     }
   };
 
@@ -201,26 +201,27 @@ export const DepartmentManagement: React.FC = () => {
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
       {/* Header */}
+      <div className="relative">
+        <div className="absolute -left-4 top-0 w-1.5 h-full bg-blue-600 rounded-full shadow-[0_0_15px_rgba(37,99,235,0.5)]"></div>
+        <h2 className="text-3xl font-black text-slate-800 tracking-tight italic uppercase">CẤU TRÚC TỔ CHỨC</h2>
+        <p className="text-slate-500 font-medium mt-1">Quản lý các phòng ban và phân bổ nhân sự trong hệ thống</p>
+      </div>
+
       <div className="flex justify-end mb-2">
         <div className="flex flex-col md:flex-row w-full md:w-auto gap-3">
           <div className="bg-white px-4 py-3 sm:py-2 rounded-xl border border-slate-200 flex flex-wrap justify-between md:justify-start items-center gap-3">
             <div className="flex items-center gap-2">
               <Building2 size={16} className="text-blue-500 shrink-0" />
-              <span className="text-sm font-medium whitespace-nowrap">{departments.length} bo phan</span>
+              <span className="text-sm font-medium whitespace-nowrap">{departments.length} bộ phận</span>
             </div>
             <div className="hidden md:block w-px h-4 bg-slate-200"></div>
             <div className="flex items-center gap-2">
               <Users size={16} className="text-emerald-500 shrink-0" />
-              <span className="text-sm font-medium whitespace-nowrap">{totalMembers} nhan vien</span>
-            </div>
-            <div className="hidden md:block w-px h-4 bg-slate-200"></div>
-            <div className="flex items-center gap-2 w-full md:w-auto justify-center md:justify-start pt-2 md:pt-0 border-t md:border-0 border-slate-100">
-              <FolderKanban size={16} className="text-amber-500 shrink-0" />
-              <span className="text-sm font-medium whitespace-nowrap">{totalProjects} du an</span>
+              <span className="text-sm font-medium whitespace-nowrap">{totalMembers} nhân sự</span>
             </div>
           </div>
           <button onClick={openCreateModal} className="w-full md:w-auto shrink-0 justify-center bg-blue-600 text-white px-6 py-3 md:py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-blue-500/20 active:scale-95 transition-all">
-            <Plus size={18} /> Them bo phan
+            <Plus size={18} /> Thêm bộ phận
           </button>
         </div>
       </div>
@@ -242,12 +243,12 @@ export const DepartmentManagement: React.FC = () => {
         {loading ? (
           <div className="col-span-full text-center py-12">
             <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto"></div>
-            <p className="text-slate-500 mt-2">Dang tai...</p>
+            <p className="text-slate-500 mt-2">Đang tải...</p>
           </div>
         ) : filteredDepartments.length === 0 ? (
           <div className="col-span-full text-center py-12">
             <Building2 size={48} className="mx-auto text-slate-300" />
-            <p className="text-slate-500 mt-2">Khong tim thay bo phan nao</p>
+            <p className="text-slate-500 mt-2">Không tìm thấy bộ phận nào</p>
           </div>
         ) : (
           filteredDepartments.map(dept => {
@@ -301,12 +302,12 @@ export const DepartmentManagement: React.FC = () => {
                   </div>
                 </div>
 
-                <p className="text-xs text-slate-400 font-medium leading-relaxed mb-4 line-clamp-2">{dept.description || 'Khong co mo ta'}</p>
+                <p className="text-xs text-slate-400 font-medium leading-relaxed mb-4 line-clamp-2">{dept.description || 'Không có mô tả'}</p>
 
                 {parentDept && (
                   <div className="text-xs text-slate-500 mb-3 flex items-center gap-1">
                     <FolderOpen size={12} />
-                    <span>Thuoc: {parentDept.name}</span>
+                    <span>Thuộc: {parentDept.name}</span>
                   </div>
                 )}
 
@@ -314,7 +315,7 @@ export const DepartmentManagement: React.FC = () => {
                   <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
                     <div className="flex items-center gap-2 text-slate-500">
                       <Users size={14} />
-                      <span className="text-[10px] font-black uppercase">Nhan su</span>
+                      <span className="text-[10px] font-black uppercase">Nhân sự</span>
                     </div>
                     <span className="text-sm font-bold text-slate-800">{memberCount}</span>
                   </div>
@@ -322,7 +323,7 @@ export const DepartmentManagement: React.FC = () => {
                   <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
                     <div className="flex items-center gap-2 text-slate-500">
                       <UserCheck size={14} />
-                      <span className="text-[10px] font-black uppercase">Quan ly</span>
+                      <span className="text-[10px] font-black uppercase">Quản lý</span>
                     </div>
                     {manager ? (
                       <div className="flex items-center gap-2">
@@ -330,7 +331,7 @@ export const DepartmentManagement: React.FC = () => {
                         <span className="text-xs font-bold" style={{ color: dept.color || '#3B82F6' }}>{manager.name}</span>
                       </div>
                     ) : (
-                      <span className="text-xs text-slate-400">Chua co</span>
+                      <span className="text-xs text-slate-400">Chưa có</span>
                     )}
                   </div>
                 </div>
@@ -340,7 +341,7 @@ export const DepartmentManagement: React.FC = () => {
                     onClick={() => openDetailModal(dept)}
                     className="flex-1 py-2.5 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-colors"
                   >
-                    Chi tiet
+                    Chi tiết
                   </button>
                 </div>
 
@@ -350,31 +351,25 @@ export const DepartmentManagement: React.FC = () => {
                   </div>
                 )}
               </div>
-            );
-          })
-        )}
-      </div>
-
-      {/* Create/Edit Modal */}
-      <Modal
+                <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={editingDept ? 'Chinh sua bo phan' : 'Them bo phan moi'}
+        title={editingDept ? 'Chỉnh sửa bộ phận' : 'Thêm bộ phận mới'}
       >
         <div className="space-y-4">
           <div>
-            <label className="text-xs font-bold text-slate-500 uppercase">Ten bo phan *</label>
+            <label className="text-xs font-bold text-slate-500 uppercase">Tên bộ phận *</label>
             <input
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               className="w-full mt-1 px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-              placeholder="Phong Ky thuat"
+              placeholder="Phòng Kỹ thuật"
             />
           </div>
 
           <div>
-            <label className="text-xs font-bold text-slate-500 uppercase">Ma bo phan</label>
+            <label className="text-xs font-bold text-slate-500 uppercase">Mã bộ phận</label>
             <input
               type="text"
               value={formData.code}
@@ -386,24 +381,24 @@ export const DepartmentManagement: React.FC = () => {
           </div>
 
           <div>
-            <label className="text-xs font-bold text-slate-500 uppercase">Mo ta</label>
+            <label className="text-xs font-bold text-slate-500 uppercase">Mô tả</label>
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="w-full mt-1 px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none resize-none"
               rows={3}
-              placeholder="Mo ta bo phan..."
+              placeholder="Mô tả bộ phận..."
             />
           </div>
 
           <div>
-            <label className="text-xs font-bold text-slate-500 uppercase">Bo phan cha</label>
+            <label className="text-xs font-bold text-slate-500 uppercase">Bộ phận cha</label>
             <select
               value={formData.parentId}
               onChange={(e) => setFormData({ ...formData, parentId: e.target.value })}
               className="w-full mt-1 px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
             >
-              <option value="">Khong co (Bo phan goc)</option>
+              <option value="">Không có (Bộ phận gốc)</option>
               {departments.filter(d => d.id !== editingDept?.id).map(dept => (
                 <option key={dept.id} value={dept.id}>{dept.name}</option>
               ))}
@@ -411,13 +406,13 @@ export const DepartmentManagement: React.FC = () => {
           </div>
 
           <div>
-            <label className="text-xs font-bold text-slate-500 uppercase">Quan ly bo phan</label>
+            <label className="text-xs font-bold text-slate-500 uppercase">Quản lý bộ phận</label>
             <select
               value={formData.managerId}
               onChange={(e) => setFormData({ ...formData, managerId: e.target.value })}
               className="w-full mt-1 px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
             >
-              <option value="">Chon quan ly</option>
+              <option value="">Chọn quản lý</option>
               {users.filter(u => u.role === 'MANAGER').map(user => (
                 <option key={user.id} value={user.id}>{user.name} ({user.email})</option>
               ))}
@@ -425,7 +420,7 @@ export const DepartmentManagement: React.FC = () => {
           </div>
 
           <div>
-            <label className="text-xs font-bold text-slate-500 uppercase">Mau sac</label>
+            <label className="text-xs font-bold text-slate-500 uppercase">Màu sắc</label>
             <div className="flex gap-2 mt-2 flex-wrap">
               {colorOptions.map(color => (
                 <button
@@ -450,7 +445,7 @@ export const DepartmentManagement: React.FC = () => {
                 onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
                 className="w-4 h-4 rounded"
               />
-              <label htmlFor="isActive" className="text-sm font-medium text-slate-700">Bo phan hoat dong</label>
+              <label htmlFor="isActive" className="text-sm font-medium text-slate-700">Bộ phận hoạt động</label>
             </div>
           )}
 
@@ -459,7 +454,7 @@ export const DepartmentManagement: React.FC = () => {
             disabled={!formData.name}
             className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white py-3 rounded-xl font-bold transition-all"
           >
-            {editingDept ? 'Cap nhat' : 'Tao bo phan'}
+            {editingDept ? 'Cập nhật' : 'Tạo bộ phận'}
           </button>
         </div>
       </Modal>
@@ -468,7 +463,7 @@ export const DepartmentManagement: React.FC = () => {
       <Modal
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
-        title={detailDept?.name || 'Chi tiet bo phan'}
+        title={detailDept?.name || 'Chi tiết bộ phận'}
       >
         {detailData ? (
           <div className="space-y-6">
@@ -483,10 +478,10 @@ export const DepartmentManagement: React.FC = () => {
                   {detailData.code && <span className="text-xs text-slate-400 uppercase">{detailData.code}</span>}
                 </div>
               </div>
-              <p className="text-sm text-slate-600">{detailData.description || 'Khong co mo ta'}</p>
+              <p className="text-sm text-slate-600">{detailData.description || 'Không có mô tả'}</p>
               {detailData.parentName && (
                 <p className="text-xs text-slate-500 mt-2 flex items-center gap-1">
-                  <FolderOpen size={12} /> Thuoc bo phan: {detailData.parentName}
+                  <FolderOpen size={12} /> Thuộc bộ phận: {detailData.parentName}
                 </p>
               )}
             </div>
@@ -494,7 +489,7 @@ export const DepartmentManagement: React.FC = () => {
             {/* Manager */}
             <div>
               <div className="flex items-center justify-between mb-3">
-                <h5 className="text-xs font-bold text-slate-400 uppercase">Quan ly bo phan</h5>
+                <h5 className="text-xs font-bold text-slate-400 uppercase">Quản lý bộ phận</h5>
                 <button
                   onClick={() => {
                     setSelectedManagerId(detailData.manager?.id || '');
@@ -502,7 +497,7 @@ export const DepartmentManagement: React.FC = () => {
                   }}
                   className="text-xs text-blue-600 hover:underline"
                 >
-                  Thay doi
+                  Thay đổi
                 </button>
               </div>
               {isChangingManager ? (
@@ -512,7 +507,7 @@ export const DepartmentManagement: React.FC = () => {
                     onChange={(e) => setSelectedManagerId(e.target.value)}
                     className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
                   >
-                    <option value="">Chon quan ly moi</option>
+                    <option value="">Chọn quản lý mới</option>
                     {users
                       .filter(u => (u.role === 'MANAGER' || u.role === 'ADMIN'))
                       .map(user => (
@@ -524,7 +519,7 @@ export const DepartmentManagement: React.FC = () => {
                     <button
                       onClick={async () => {
                         if (!selectedManagerId) {
-                          alert('Vui long chon nguoi quan ly moi');
+                          alert('Vui lòng chọn người quản lý mới');
                           return;
                         }
                         try {
@@ -535,21 +530,21 @@ export const DepartmentManagement: React.FC = () => {
                           // Update departments list
                           setDepartments(departments.map(d => d.id === detailData.id ? { ...d, managerId: selectedManagerId } : d));
                           setIsChangingManager(false);
-                          alert('Cap nhat quan ly thanh cong!');
+                          alert('Cập nhật quản lý thành công!');
                         } catch (err) {
                           console.error('Update manager error:', err);
-                          alert('Cap nhat that bai!');
+                          alert('Cập nhật thất bại!');
                         }
                       }}
                       className="flex-1 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium"
                     >
-                      Luu
+                      Lưu
                     </button>
                     <button
                       onClick={() => setIsChangingManager(false)}
                       className="px-4 py-2 border border-slate-200 rounded-lg text-sm"
                     >
-                      Huy
+                      Hủy
                     </button>
                   </div>
                 </div>
@@ -562,21 +557,16 @@ export const DepartmentManagement: React.FC = () => {
                   </div>
                 </div>
               ) : (
-                <p className="text-sm text-slate-400">Chua co quan ly</p>
+                <p className="text-sm text-slate-400">Chưa có quản lý</p>
               )}
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="p-4 bg-slate-50 rounded-xl text-center">
+            <div className="grid grid-cols-1 gap-3">
+              <div className="p-4 bg-slate-100 rounded-xl text-center">
                 <Users size={20} className="mx-auto text-blue-500 mb-1" />
                 <p className="text-2xl font-black text-slate-800">{detailData.memberCount}</p>
-                <p className="text-xs text-slate-500">Nhan vien</p>
-              </div>
-              <div className="p-4 bg-slate-50 rounded-xl text-center">
-                <FolderKanban size={20} className="mx-auto text-amber-500 mb-1" />
-                <p className="text-2xl font-black text-slate-800">{detailData.projectCount}</p>
-                <p className="text-xs text-slate-500">Du an</p>
+                <p className="text-xs text-slate-500">Nhân sự</p>
               </div>
             </div>
 
@@ -584,13 +574,13 @@ export const DepartmentManagement: React.FC = () => {
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h5 className="text-xs font-bold text-slate-400 uppercase">
-                  Danh sach nhan vien ({detailData.members?.length || 0})
+                  Danh sách nhân viên ({detailData.members?.length || 0})
                 </h5>
                 <button
                   onClick={() => setIsAddingMember(true)}
                   className="text-xs text-blue-600 hover:underline flex items-center gap-1"
                 >
-                  <Plus size={14} /> Them nhan vien
+                  <Plus size={14} /> Thêm nhân viên
                 </button>
               </div>
 
@@ -601,7 +591,7 @@ export const DepartmentManagement: React.FC = () => {
                     onChange={(e) => setSelectedMemberId(e.target.value)}
                     className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm mb-2"
                   >
-                    <option value="">Chon nhan vien</option>
+                    <option value="">Chọn nhân viên</option>
                     {users
                       .filter(u => {
                         // Lọc: không phải ADMIN/MANAGER
@@ -618,7 +608,7 @@ export const DepartmentManagement: React.FC = () => {
                     <button
                       onClick={async () => {
                         if (!selectedMemberId) {
-                          alert('Vui long chon nhan vien');
+                          alert('Vui lòng chọn nhân viên');
                           return;
                         }
                         try {
@@ -633,15 +623,15 @@ export const DepartmentManagement: React.FC = () => {
                           }
                           setIsAddingMember(false);
                           setSelectedMemberId('');
-                          alert('Them nhan vien thanh cong!');
+                          alert('Thêm nhân viên thành công!');
                         } catch (err) {
                           console.error('Add member error:', err);
-                          alert('Them nhan vien that bai!');
+                          alert('Thêm nhân viên thất bại!');
                         }
                       }}
                       className="flex-1 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium"
                     >
-                      Them
+                      Thêm
                     </button>
                     <button
                       onClick={() => {
@@ -650,7 +640,7 @@ export const DepartmentManagement: React.FC = () => {
                       }}
                       className="px-4 py-2 border border-slate-200 rounded-lg text-sm"
                     >
-                      Huy
+                      Hủy
                     </button>
                   </div>
                 </div>
@@ -677,14 +667,18 @@ export const DepartmentManagement: React.FC = () => {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-slate-400 text-center py-4">Chua co nhan vien</p>
+                <p className="text-sm text-slate-400 text-center py-4">Chưa có nhân viên</p>
               )}
             </div>
           </div>
         ) : (
           <div className="text-center py-8">
             <div className="animate-spin w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full mx-auto"></div>
-            <p className="text-slate-500 mt-2">Dang tai...</p>
+            <p className="text-slate-500 mt-2">Đang tải...</p>
+          </div>
+        )}
+      </Modal>
+-2">Dang tai...</p>
           </div>
         )}
       </Modal>

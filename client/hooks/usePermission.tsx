@@ -8,23 +8,15 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     // User Management - full
     'USER_VIEW', 'USER_CREATE', 'USER_EDIT', 'USER_DELETE', 'USER_APPROVE', 'USER_LOCK',
     // Role Management - can manage but cannot delete SuperAdmin
-    'ROLE_VIEW', 'ROLE_CREATE', 'ROLE_EDIT',
+    'ROLE_VIEW', 'ROLE_MANAGE',
     // Department - full
-    'DEPT_VIEW', 'DEPT_CREATE', 'DEPT_EDIT', 'DEPT_DELETE',
-    // Project - full
-    'PROJECT_VIEW', 'PROJECT_CREATE', 'PROJECT_EDIT', 'PROJECT_DELETE', 'PROJECT_ASSIGN',
+    'DEPT_CREATE', 'DEPT_EDIT', 'DEPT_DELETE',
     // Document - full
     'DOC_VIEW', 'DOC_UPLOAD', 'DOC_EDIT', 'DOC_APPROVE', 'DOC_DELETE',
-    // Attendance - view & manage
-    'ATTENDANCE_VIEW', 'ATTENDANCE_MANAGE',
-    // Audit - view & export
-    'AUDIT_VIEW', 'AUDIT_EXPORT',
     // Zero Trust - full
     'ZT_VIEW', 'ZT_MANAGE',
     // Notifications - view & send
-    'NOTIF_VIEW', 'NOTIF_SEND',
-    // Reports - view & export
-    'REPORT_VIEW', 'REPORT_EXPORT',
+    'NOTIF_SEND',
     // Chat Management - full access
     'CHAT_VIEW', 'CHAT_MANAGE', 'CHAT_DELETE', 'CHAT_EXPORT', 'CHAT_POLICY',
   ],
@@ -33,22 +25,12 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     'USER_VIEW',
     // Role - view only
     'ROLE_VIEW',
-    // Department - view only
-    'DEPT_VIEW',
-    // Project - create, edit, assign (within department)
-    'PROJECT_VIEW', 'PROJECT_CREATE', 'PROJECT_EDIT', 'PROJECT_ASSIGN',
     // Document - view, upload, edit, approve (department level)
     'DOC_VIEW', 'DOC_UPLOAD', 'DOC_EDIT', 'DOC_APPROVE',
-    // Attendance - view & manage team
-    'ATTENDANCE_VIEW', 'ATTENDANCE_MANAGE',
-    // Audit - view department logs
-    'AUDIT_VIEW',
     // Zero Trust - view only
     'ZT_VIEW',
     // Notifications - view & send
-    'NOTIF_VIEW', 'NOTIF_SEND',
-    // Reports - view & export department reports
-    'REPORT_VIEW', 'REPORT_EXPORT',
+    'NOTIF_SEND',
     // Chat Management - department level
     'CHAT_VIEW',
   ],
@@ -56,20 +38,10 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     // User - view self only
     'USER_VIEW',
     // Role - no access
-    // Department - view
-    'DEPT_VIEW',
-    // Project - view assigned projects only
-    'PROJECT_VIEW',
     // Document - view & upload own
     'DOC_VIEW', 'DOC_UPLOAD',
-    // Attendance - check in/out & view own
-    'ATTENDANCE_VIEW', 'ATTENDANCE_CHECKIN',
-    // Audit - no access
     // Zero Trust - no access
-    // Notifications - view
-    'NOTIF_VIEW',
-    // Reports - view own
-    'REPORT_VIEW',
+    // Chat Management - no access
   ],
 
 };

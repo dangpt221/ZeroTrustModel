@@ -74,9 +74,10 @@ export const ZeroTrustSettings: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="flex justify-between items-end">
-        <div>
-          <h2 className="text-2xl font-black text-slate-800 uppercase italic">Cấu hình Zero Trust</h2>
-          <p className="text-slate-500 text-sm">Thiết lập các rào cản bảo mật và quy tắc xác thực động</p>
+        <div className="relative">
+          <div className="absolute -left-4 top-0 w-1.5 h-full bg-slate-800 rounded-full shadow-[0_0_15px_rgba(30,41,59,0.5)]"></div>
+          <h2 className="text-3xl font-black text-slate-800 tracking-tight italic uppercase">CẤU HÌNH ZERO TRUST</h2>
+          <p className="text-slate-500 font-medium mt-1">Thiết lập các rào cản bảo mật và quy tắc xác thực động cho hệ thống</p>
         </div>
       </div>
 

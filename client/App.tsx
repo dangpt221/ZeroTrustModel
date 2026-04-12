@@ -157,17 +157,6 @@ const App: React.FC = () => {
               <Layout><Messaging /></Layout>
             </PrivateRoute>
           } />
-          <Route path="/projects/:id" element={
-            <PrivateRoute>
-              <Layout><ProjectDetail /></Layout>
-            </PrivateRoute>
-          } />
-
-          <Route path="/audit-logs" element={
-            <PrivateRoute roles={[UserRole.ADMIN]} permissions={['AUDIT_VIEW']}>
-              <Layout><AuditLogs /></Layout>
-            </PrivateRoute>
-          } />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

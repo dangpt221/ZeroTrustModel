@@ -247,6 +247,11 @@ export const DocumentManagement: React.FC = () => {
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="relative">
+          <div className="absolute -left-4 top-0 w-1.5 h-full bg-blue-600 rounded-full shadow-[0_0_15px_rgba(37,99,235,0.5)]"></div>
+          <h2 className="text-3xl font-black text-slate-800 tracking-tight italic uppercase">QUẢN LÝ TÀI LIỆU</h2>
+          <p className="text-slate-500 font-medium mt-1">Lưu trữ bảo mật, mã hóa mã nguồn và phân quyền truy cập E2EE</p>
+        </div>
         
         <div className="flex gap-3">
           <button
@@ -268,7 +273,7 @@ export const DocumentManagement: React.FC = () => {
           </button>
           <div className="bg-amber-50 px-4 py-2 rounded-2xl border border-amber-100 flex items-center gap-2">
             <ShieldAlert size={18} className="text-amber-500" />
-            <span className="text-xs font-bold uppercase tracking-widest text-amber-700">Critical Docs: {loading ? '...' : criticalDocs}</span>
+            <span className="text-xs font-bold uppercase tracking-widest text-amber-700">Tài liệu quan trọng: {loading ? '...' : criticalDocs}</span>
           </div>
         </div>
       </div>
@@ -278,7 +283,7 @@ export const DocumentManagement: React.FC = () => {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} />
           <input
             type="text"
-            placeholder="Tìm tài liệu theo tên hoặc dự án..."
+            placeholder="Tìm tài liệu theo tên hoặc từ khóa..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full bg-white border border-slate-200 rounded-2xl py-3.5 pl-12 pr-4 focus:ring-2 focus:ring-blue-500 outline-none transition-all shadow-sm font-medium"

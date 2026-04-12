@@ -552,7 +552,6 @@ const GlobalSearch: React.FC<{ isMember: boolean, isManager: boolean }> = ({ isM
   const getIcon = (type: string) => {
     switch (type) {
       case 'USER': return <User size={18} className="text-blue-500" />;
-      case 'PROJECT': return <FolderKanban size={18} className="text-emerald-500" />;
       case 'DEPARTMENT': return <Building2 size={18} className="text-sky-500" />;
       case 'DOCUMENT': return <FileText size={18} className="text-amber-500" />;
       default: return <Search size={18} />;

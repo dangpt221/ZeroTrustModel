@@ -149,7 +149,11 @@ export const RoleManagement: React.FC = () => {
   return (
     <div className="space-y-8 animate-in fade-in duration-700 relative h-[calc(100vh-120px)] flex flex-col">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 flex-shrink-0">
-        
+        <div className="relative">
+          <div className="absolute -left-4 top-0 w-1.5 h-full bg-indigo-600 rounded-full shadow-[0_0_15px_rgba(79,70,229,0.5)]"></div>
+          <h2 className="text-3xl font-black text-slate-800 tracking-tight italic uppercase">VAI TRÒ & PHÂN QUYỀN</h2>
+          <p className="text-slate-500 font-medium mt-1">Quản lý các nhóm quyền và gán vai trò truy cập cho nhân sự</p>
+        </div>
         
         <div className="flex bg-slate-100 p-1 rounded-2xl">
           <button 

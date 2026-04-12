@@ -95,7 +95,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
 
   // Render DOCX when blob is loaded
   useEffect(() => {
-    if (docxBlob && docxContainerRef.current) {
+    if (activeTab === 'preview' && docxBlob && docxContainerRef.current) {
       console.log('[DocumentViewerModal] Rendering DOCX blob, size:', docxBlob.size);
       docxContainerRef.current.innerHTML = '';
       renderAsync(docxBlob, docxContainerRef.current, undefined, {
@@ -122,7 +122,7 @@ export const DocumentViewerModal: React.FC<DocumentViewerModalProps> = ({
         setError('Lỗi hiển thị DOCX: ' + err.message);
       });
     }
-  }, [docxBlob]);
+  }, [docxBlob, activeTab]);
 
   const loadPreview = async () => {
     if (!doc) return;

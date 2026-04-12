@@ -41,6 +41,7 @@ async function main() {
         passwordHash,
         role: info.role,
         isLocked: false,
+        status: 'ACTIVE',
         mfaEnabled: info.mfaEnabled,
         trustScore: info.trustScore,
       });

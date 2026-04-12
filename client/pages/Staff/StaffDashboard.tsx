@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { projectsApi, documentsApi, teamsApi } from '../../api';
+import { documentsApi } from '../../api';
 import { Document } from '../../types';
 import { ShieldCheck, FileText, Zap, Clock, CheckCircle2, LayoutGrid, ArrowRight, Lock, Key, Users } from 'lucide-react';
 import { DocumentViewerModal } from '../../components/Staff/DocumentViewerModal';
@@ -10,21 +10,14 @@ import { Modal } from '../../components/Admin/Modal';
 
 export const StaffDashboard: React.FC = () => {
   const { user } = useAuth();
-  const [projects, setProjects] = useState<any[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
-  const [teams, setTeams] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewingDoc, setViewingDoc] = useState<Document | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [projectsData, docsData, teamsData] = await Promise.all([
-          projectsApi.getAll(),
-          documentsApi.getAll(),
-          teamsApi.getMyTeams()
-        ]);
-        setProjects(projectsData || []);
+        const docsData = await documentsApi.getAll();
         // Handle both array and { documents: [] } response
         if (Array.isArray(docsData)) {
           setDocuments(docsData);
@@ -33,7 +26,6 @@ export const StaffDashboard: React.FC = () => {
         } else {
           setDocuments([]);
         }
-        setTeams(teamsData || []);
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -42,10 +34,6 @@ export const StaffDashboard: React.FC = () => {
     };
     fetchData();
   }, []);
-
-  const myProjects = useMemo(() => {
-    return projects.filter(p => (p.members || []).includes(user?.id || ''));
-  }, [projects, user]);
 
   const handleViewDoc = async (doc: Document) => {
     setViewingDoc(doc);
@@ -65,7 +53,7 @@ export const StaffDashboard: React.FC = () => {
         <div className="mt-8 p-4 md:p-6 bg-blue-50 border border-blue-100 rounded-2xl flex items-start gap-4 max-w-md">
           <Zap className="text-blue-600 shrink-0 mt-1" size={20} />
           <p className="text-sm text-blue-700 leading-relaxed font-medium">
-            Vui lòng liên hệ với quản trị viên (Admin) hoặc quản lý bộ phận để được phân quyền vào dự án và truy cập tài liệu.
+            VUI LÒNG LIÊN HỆ VỚI QUẢN TRỊ VIÊN (ADMIN) ĐỂ ĐƯỢC PHÂN PHỐI BỘ PHẬN VÀ TRUY CẬP TÀI LIỆU.
           </p>
         </div>
       </div>
@@ -96,18 +84,7 @@ export const StaffDashboard: React.FC = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-100 shadow-sm">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center">
-              <LayoutGrid size={24} />
-            </div>
-            <div>
-              <p className="text-xs text-slate-400 font-bold uppercase">Dự án</p>
-              <p className="text-2xl font-black text-slate-800">{loading ? '...' : myProjects.length}</p>
-            </div>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-100 shadow-sm">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-violet-100 text-violet-600 rounded-xl flex items-center justify-center">
@@ -136,7 +113,7 @@ export const StaffDashboard: React.FC = () => {
               <Clock size={24} />
             </div>
             <div>
-              <p className="text-xs text-slate-400 font-bold uppercase">Đăng nhập mới</p>
+              <p className="text-xs text-slate-400 font-bold uppercase">Đăng nhập</p>
               <p className="text-lg font-black text-slate-800">{(user as any)?.lastLogin ? new Date((user as any).lastLogin).toLocaleDateString('vi-VN') : 'N/A'}</p>
             </div>
           </div>
@@ -144,47 +121,14 @@ export const StaffDashboard: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8">
-        {/* Projects */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-100 shadow-sm">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="font-bold text-slate-800">Dự án của tôi</h3>
-              <Link to="/" className="text-blue-600 text-sm font-semibold flex items-center gap-1">
-                Xem tất cả <ArrowRight size={16} />
-              </Link>
-            </div>
-            <div className="space-y-4">
-              {myProjects.slice(0, 3).map(project => (
-                <div key={project.id} className="p-4 bg-slate-50 rounded-xl">
-                  <div className="flex justify-between items-start mb-2">
-                    <h4 className="font-bold text-slate-700">{project.title}</h4>
-                    <span className={`text-[10px] font-bold px-2 py-1 rounded ${
-                      project.status === 'IN_PROGRESS' ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-600'
-                    }`}>
-                      {project.status}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-4 text-xs text-slate-500">
-                    <span>{project.progress}% complete</span>
-                    <div className="flex-1 h-1 bg-slate-200 rounded-full overflow-hidden">
-                      <div className="h-full bg-blue-500" style={{ width: `${project.progress}%` }}></div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-              {myProjects.length === 0 && !loading && (
-                <p className="text-slate-400 text-sm">Bạn chưa có dự án nào</p>
-              )}
-            </div>
-          </div>
-
           {/* Documents */}
           <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-100 shadow-sm">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="font-bold text-slate-800">Tài liệu</h3>
+              <h3 className="font-bold text-slate-800">Tài liệu gần đây</h3>
             </div>
             <div className="space-y-3">
-              {documents.slice(0, 5).map(doc => {
+              {documents.slice(0, 8).map(doc => {
                 const docName = doc.title || (doc as any).name || 'Không có tiêu đề';
                 const docDate = doc.createdAt ? new Date(doc.createdAt).toLocaleDateString('vi-VN') : '';
                 const docSize = doc.fileSize || (doc as any).size || '';
@@ -239,78 +183,36 @@ export const StaffDashboard: React.FC = () => {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Teams */}
-          <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-100 shadow-sm">
-            <div className="flex items-center gap-2 mb-4">
-              <Users size={18} className="text-blue-500" />
-              <h3 className="font-bold text-slate-800">Đội ngũ của tôi</h3>
-            </div>
-            {teams.length === 0 ? (
-              <p className="text-sm text-slate-400 italic">Bạn chưa thuộc đội ngũ nào</p>
-            ) : (
-              <div className="space-y-4">
-                {teams.map(team => (
-                  <div key={team.id} className="space-y-2">
-                    <div className="p-3 bg-blue-50 rounded-xl border border-blue-100">
-                      <p className="font-semibold text-slate-700 text-sm">{team.name}</p>
-                      {team.description && (
-                        <p className="text-xs text-slate-500 mt-1">{team.description}</p>
-                      )}
-                      {team.managerName && (
-                        <p className="text-xs text-blue-600 mt-1 font-medium">
-                          Trưởng nhóm: {team.managerName}
-                        </p>
-                      )}
-                    </div>
-                    {/* Thành viên */}
-                    {(team.members || []).length > 0 && (
-                      <div className="pl-2 space-y-1.5">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase">Thành viên</p>
-                        {(team.members || []).map((member: any) => (
-                          <div key={member.id} className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-lg">
-                            <div className="w-6 h-6 bg-slate-200 rounded-full flex items-center justify-center">
-                              <span className="text-[10px] font-bold text-slate-500">
-                                {member.name?.charAt(0)?.toUpperCase() || '?'}
-                              </span>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-medium text-slate-700 truncate">{member.name}</p>
-                              <p className="text-[10px] text-slate-400 truncate">{member.email}</p>
-                            </div>
-                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                              member.role === 'MANAGER' ? 'bg-amber-100 text-amber-700' :
-                              member.role === 'ADMIN' ? 'bg-red-100 text-red-700' :
-                              'bg-slate-100 text-slate-600'
-                            }`}>
-                              {member.role}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
           {/* Personal Info */}
           <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-100 shadow-sm">
-            <h3 className="font-bold text-slate-800 mb-4">Thông tin cá nhân</h3>
+            <h3 className="font-bold text-slate-800 mb-4">Thông tin tài khoản</h3>
             <div className="space-y-3">
-              <div>
-                <p className="text-xs text-slate-400">Email</p>
-                <p className="text-sm font-medium text-slate-700">{user?.email}</p>
+              <div className="p-3 bg-slate-50 rounded-xl">
+                <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Họ và tên</p>
+                <p className="text-sm font-bold text-slate-800">{user?.name}</p>
               </div>
-              <div>
-                <p className="text-xs text-slate-400">Phòng ban</p>
-                <p className="text-sm font-medium text-slate-700">{user?.department || 'Chưa phân phối'}</p>
+              <div className="p-3 bg-slate-50 rounded-xl">
+                <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Email</p>
+                <p className="text-sm font-bold text-slate-800">{user?.email}</p>
               </div>
-              <div>
-                <p className="text-xs text-slate-400">Thiết bị</p>
-                <p className="text-sm font-medium text-slate-700">{user?.device}</p>
+              <div className="p-3 bg-slate-50 rounded-xl">
+                <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Bộ phận</p>
+                <p className="text-sm font-bold text-blue-600">{user?.department || 'Chưa phân phối'}</p>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-xl">
+                <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Vai trò</p>
+                <p className="text-sm font-bold text-emerald-600">{user?.role}</p>
               </div>
             </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-6 rounded-3xl text-white shadow-lg shadow-blue-500/20">
+            <h4 className="font-bold mb-2 flex items-center gap-2">
+              <ShieldCheck size={20} /> Bảo mật
+            </h4>
+            <p className="text-xs text-blue-100 leading-relaxed">
+              Tài khoản được bảo vệ bởi cơ chế Zero Trust. Mọi hoạt động truy cập tài liệu đều được mã hóa đầu cuối (E2EE) và ghi nhận nhật ký bảo mật.
+            </p>
           </div>
         </div>
       </div>

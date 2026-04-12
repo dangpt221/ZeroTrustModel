@@ -194,26 +194,15 @@ export const getAllPermissions = async (req, res) => {
     { id: "USER_EDIT", name: "Sửa người dùng", code: "USER_EDIT", description: "Chỉnh sửa thông tin người dùng", category: "User Management" },
     { id: "USER_DELETE", name: "Xóa người dùng", code: "USER_DELETE", description: "Xóa người dùng", category: "User Management" },
     { id: "USER_APPROVE", name: "Phê duyệt người dùng", code: "USER_APPROVE", description: "Phê duyệt đăng ký mới", category: "User Management" },
-    { id: "USER_LOCK", name: "Khóa/Mở khóa người dùng", code: "USER_LOCK", description: "Khóa hoặc mở khóa tài khoản", category: "User Management" },
 
     // Role Management
     { id: "ROLE_VIEW", name: "Xem vai trò", code: "ROLE_VIEW", description: "Xem danh sách vai trò", category: "Role Management" },
-    { id: "ROLE_CREATE", name: "Tạo vai trò", code: "ROLE_CREATE", description: "Tạo mới vai trò", category: "Role Management" },
-    { id: "ROLE_EDIT", name: "Sửa vai trò", code: "ROLE_EDIT", description: "Chỉnh sửa vai trò", category: "Role Management" },
-    { id: "ROLE_DELETE", name: "Xóa vai trò", code: "ROLE_DELETE", description: "Xóa vai trò", category: "Role Management" },
+    { id: "ROLE_MANAGE", name: "Quản lý vai trò", code: "ROLE_MANAGE", description: "Tạo, sửa và xóa vai trò", category: "Role Management" },
 
     // Department Management
-    { id: "DEPT_VIEW", name: "Xem phòng ban", code: "DEPT_VIEW", description: "Xem danh sách phòng ban", category: "Department" },
     { id: "DEPT_CREATE", name: "Tạo phòng ban", code: "DEPT_CREATE", description: "Tạo mới phòng ban", category: "Department" },
     { id: "DEPT_EDIT", name: "Sửa phòng ban", code: "DEPT_EDIT", description: "Chỉnh sửa phòng ban", category: "Department" },
     { id: "DEPT_DELETE", name: "Xóa phòng ban", code: "DEPT_DELETE", description: "Xóa phòng ban", category: "Department" },
-
-    // Project Management
-    { id: "PROJECT_VIEW", name: "Xem dự án", code: "PROJECT_VIEW", description: "Xem danh sách dự án", category: "Project" },
-    { id: "PROJECT_CREATE", name: "Tạo dự án", code: "PROJECT_CREATE", description: "Tạo mới dự án", category: "Project" },
-    { id: "PROJECT_EDIT", name: "Sửa dự án", code: "PROJECT_EDIT", description: "Chỉnh sửa dự án", category: "Project" },
-    { id: "PROJECT_DELETE", name: "Xóa dự án", code: "PROJECT_DELETE", description: "Xóa dự án", category: "Project" },
-    { id: "PROJECT_ASSIGN", name: "Giao việc dự án", code: "PROJECT_ASSIGN", description: "Giao thành viên vào dự án", category: "Project" },
 
     // Document Management
     { id: "DOC_VIEW", name: "Xem tài liệu", code: "DOC_VIEW", description: "Xem tài liệu", category: "Document" },
@@ -222,25 +211,11 @@ export const getAllPermissions = async (req, res) => {
     { id: "DOC_APPROVE", name: "Phê duyệt tài liệu", code: "DOC_APPROVE", description: "Phê duyệt tài liệu", category: "Document" },
     { id: "DOC_DELETE", name: "Xóa tài liệu", code: "DOC_DELETE", description: "Xóa tài liệu", category: "Document" },
 
-    // Attendance
-    { id: "ATTENDANCE_VIEW", name: "Xem chấm công", code: "ATTENDANCE_VIEW", description: "Xem lịch sử chấm công", category: "Attendance" },
-    { id: "ATTENDANCE_MANAGE", name: "Quản lý chấm công", code: "ATTENDANCE_MANAGE", description: "Quản lý chấm công", category: "Attendance" },
-    { id: "ATTENDANCE_CHECKIN", name: "Chấm công", code: "ATTENDANCE_CHECKIN", description: "Chấm công vào/ra", category: "Attendance" },
-
-    // Audit Logs
-    { id: "AUDIT_VIEW", name: "Xem nhật ký", code: "AUDIT_VIEW", description: "Xem nhật ký hoạt động", category: "Audit" },
-    { id: "AUDIT_EXPORT", name: "Xuất nhật ký", code: "AUDIT_EXPORT", description: "Xuất báo cáo nhật ký", category: "Audit" },
-
     // Zero Trust Settings
     { id: "ZT_VIEW", name: "Xem cấu hình bảo mật", code: "ZT_VIEW", description: "Xem cấu hình Zero Trust", category: "Security" },
     { id: "ZT_MANAGE", name: "Quản lý bảo mật", code: "ZT_MANAGE", description: "Thay đổi cấu hình bảo mật", category: "Security" },
 
     // Notifications
-    { id: "NOTIF_VIEW", name: "Xem thông báo", code: "NOTIF_VIEW", description: "Xem thông báo", category: "Notifications" },
     { id: "NOTIF_SEND", name: "Gửi thông báo", code: "NOTIF_SEND", description: "Gửi thông báo hệ thống", category: "Notifications" },
-
-    // Reports
-    { id: "REPORT_VIEW", name: "Xem báo cáo", code: "REPORT_VIEW", description: "Xem báo cáo thống kê", category: "Reports" },
-    { id: "REPORT_EXPORT", name: "Xuất báo cáo", code: "REPORT_EXPORT", description: "Xuất báo cáo", category: "Reports" },
   ]);
 };

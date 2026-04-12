@@ -44,7 +44,6 @@ export const ADMIN_NAVIGATION = [
   { name: 'Quản lý tài liệu', icon: <FolderLock size={20} />, path: '/admin/documents', permissions: ['DOC_VIEW', 'DOC_UPLOAD', 'DOC_APPROVE', 'DOC_DELETE'] },
   { name: 'Nhắn tin nội bộ', icon: <MessageCircle size={20} />, path: '/messaging', permissions: [] },
   { name: 'Quản lý Chat nội bộ', icon: <MessageSquare size={20} />, path: '/admin/chat', permissions: ['ROLE_VIEW'] }, // using ROLE_VIEW temporarily
-  { name: 'Giám sát SOC Log', icon: <Activity size={20} />, path: '/audit-logs', permissions: ['AUDIT_VIEW'] },
   { name: 'Cấu hình Zero Trust', icon: <Fingerprint size={20} />, path: '/admin/zero-trust', permissions: ['ZT_VIEW', 'ZT_MANAGE'] },
   { name: 'Quản lý thông báo', icon: <Bell size={20} />, path: '/admin/notifications', permissions: ['NOTIF_SEND'] },
 ];
@@ -52,7 +51,6 @@ export const ADMIN_NAVIGATION = [
 export const MANAGER_NAVIGATION = [
   { name: 'Dashboard nhóm', icon: <LayoutDashboard size={20} />, path: '/' },
   { name: 'Quản lý Staff', icon: <Users size={20} />, path: '/manager/staff' },
-  { name: 'Quản lý Đội ngũ', icon: <LayoutGrid size={20} />, path: '/manager/teams' },
   { name: 'Tài liệu bộ phận', icon: <FolderLock size={20} />, path: '/manager/documents' },
   { name: 'Nhắn tin nội bộ', icon: <MessageSquare size={20} />, path: '/messaging' },
   { name: 'Hồ sơ & Bảo mật', icon: <User size={20} />, path: '/manager/profile' },
@@ -60,7 +58,6 @@ export const MANAGER_NAVIGATION = [
 
 export const STAFF_NAVIGATION = [
   { name: 'Tài liệu của tôi', icon: <FolderLock size={20} />, path: '/' },
-  { name: 'Lịch sử hoạt động', icon: <History size={20} />, path: '/member/activity' },
   { name: 'Nhắn tin nội bộ', icon: <MessageSquare size={20} />, path: '/messaging' },
   { name: 'Hồ sơ & Bảo mật', icon: <User size={20} />, path: '/profile' },
 ];
